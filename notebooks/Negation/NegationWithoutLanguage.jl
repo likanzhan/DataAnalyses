@@ -5,7 +5,7 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ aa13f80d-87d5-4c88-af19-6ffe76d737bd
-using PlutoUI; PlutoUI.TableOfContents()
+using PlutoUI; PlutoUI.TableOfContents(title = "否定加工")
 
 # ╔═╡ 6348357e-37c8-11ec-3496-412eef0a1045
 using CSV, DataFrames, Pipe # @pipe
@@ -33,7 +33,24 @@ md"""
 """
 
 # ╔═╡ b18f8835-dfb2-491b-b4f6-1cf885abdddd
-cd(@__DIR__)
+cd(@__DIR__) # 根据实际情况设定当前路径， 合理的路径应该指向 `data` 的上位路径， 该路径下还应该包含 "Image_Object_Correspondance.csv" 和 "Video_Object_Correspondance.csv" 两个文件， 示例如下：
+
+# ╔═╡ d3dfe0b2-0035-430b-bb7c-d39a64353d91
+md"""
+```bash
+Negation
+├── Image_Object_Correspondance.csv
+├── NegationWithoutLanguage.jl
+├── Object_Number_Correspondance.csv
+├── Video_Object_Correspondance.csv
+├── data
+│   ├── baixu_untitled_groupA_k_2021_Oct_20_1957.csv
+│   ├── .....
+│   └── ...
+├── ...
+└── ...
+```
+"""
 
 # ╔═╡ 9c770fa1-616b-493e-9027-84adbface247
 # describe(df)
@@ -1391,6 +1408,7 @@ version = "0.9.1+5"
 # ╠═0d458587-9858-45f8-b548-a8e249697404
 # ╟─06e1c3ef-5efa-4327-a2b4-77db1f76c47a
 # ╠═b18f8835-dfb2-491b-b4f6-1cf885abdddd
+# ╟─d3dfe0b2-0035-430b-bb7c-d39a64353d91
 # ╠═6a357e17-282a-4219-afcb-377c95fc6b39
 # ╠═9c770fa1-616b-493e-9027-84adbface247
 # ╟─6b66d803-491c-4d18-a981-b917fe2c9e9c
