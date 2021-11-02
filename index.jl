@@ -26,9 +26,9 @@ DataAnalyses.header(title = "项目数据汇总", author = "")
 # ╔═╡ 29bad371-6dd9-4ec1-8f9e-95b034a07a21
 md"""
 
-本站整理了项目组近期开展的项目的一些原始数据和数据分析过程。
+本站整理了项目组近期开展项目的一些原始数据和数据分析过程。
 
-Julia 语言是一门面向未来的技术型编程语言。 本站将以 [Julia语言](https://www.julialang.org) 为基本工具，对我们的项目数据进行分析。 想要了解更多 Julia 语言本身的一般知识， 请参看 Julia 语言 的[官方文档](https://docs.julialang.org)。
+Julia 语言是一门面向未来的技术型编程语言。 本站将以 [Julia语言](https://www.julialang.org) 为基本工具，对项目组数据进行分析。 要了解更多 Julia 语言本身的一般知识， 请参看 Julia 语言 的[官方文档](https://docs.julialang.org)。
 
 """
 
@@ -37,7 +37,7 @@ DataAnalyses.list_notebooks(@__FILE__, "notebooks")
 
 # ╔═╡ 31b32b9b-326e-4bd4-9ca2-fbd249394a87
 md"""
-要在本地运行该课程，请在 Julia REPL 下执行以下代码：
+要在本地运行该站，请在 Julia REPL 下执行以下代码：
 
 ```julia
 julia> using Pkg
