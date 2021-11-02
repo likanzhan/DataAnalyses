@@ -8,10 +8,7 @@ using InteractiveUtils
 using PlutoUI; PlutoUI.TableOfContents(title = "否定加工")
 
 # ╔═╡ 6348357e-37c8-11ec-3496-412eef0a1045
-using CSV, DataFrames, Pipe # @pipe
-
-# ╔═╡ 0a67987a-36b7-440f-aa2e-64ede6684003
-using FreqTables # freqtable
+using CSV, DataFrames
 
 # ╔═╡ 4103469b-a5b5-4edf-b9dc-5200d5bc0503
 using Statistics# Statistics : mean
@@ -27,13 +24,19 @@ md"""
 ### 加载额外包
 """
 
+# ╔═╡ 0cc9ff19-a55f-44c2-af17-e4e6d5ad083e
+import Pipe: @pipe
+
+# ╔═╡ 16a949c1-8dc0-4a4b-970c-252277a3a579
+import FreqTables: freqtable
+
 # ╔═╡ 06e1c3ef-5efa-4327-a2b4-77db1f76c47a
 md"""
 ### 数据载入
 """
 
 # ╔═╡ b18f8835-dfb2-491b-b4f6-1cf885abdddd
-cd(@__DIR__) # 根据实际情况设定当前路径， 合理的路径应该指向 `data` 的上位路径， 该路径下还应该包含 "Image_Object_Correspondance.csv" 和 "Video_Object_Correspondance.csv" 两个文件， 示例如下：
+cd(@__DIR__) # 根据实际情况设定当前路径， 合理的路径应该指向 `data` 的上位路径， 该路径下还应该包含 "Image_Object_Correspondance.csv" 和 "Video_Object_Correspondance.csv" 两个文件。 示例如下：
 
 # ╔═╡ d3dfe0b2-0035-430b-bb7c-d39a64353d91
 md"""
@@ -52,19 +55,10 @@ Negation
 ```
 """
 
-# ╔═╡ 9c770fa1-616b-493e-9027-84adbface247
-# describe(df)
-
 # ╔═╡ 6b66d803-491c-4d18-a981-b917fe2c9e9c
 md"""
 ### 数据筛选
 """
-
-# ╔═╡ 793852a9-73bb-4e48-a3d5-65ce76b44800
-# freqtable(Other_Box, :Trial_Number, :Box_Transparency)
-
-# ╔═╡ dfea6f9e-4732-4cf2-bb45-467b869e4289
-# @pipe Other_Box |> groupby(_, :Box_Transparency) |>  combine(_, :Object_Rate => mean)
 
 # ╔═╡ 6f2a3697-fe1c-4324-aeb8-e6a0b78268b3
 md"""
@@ -172,11 +166,23 @@ end
 # ╔═╡ 6a357e17-282a-4219-afcb-377c95fc6b39
 df = read_combine_csv_list(); # 函数的定义在附录部分
 
+# ╔═╡ c545040a-1b7b-4b62-afbe-e65385d99227
+df
+
+# ╔═╡ 9c770fa1-616b-493e-9027-84adbface247
+describe(df)
+
+# ╔═╡ 7ea67cfb-847c-48e9-8ee1-053199ddabe6
+replace!(df.Box_Transparency, "OT" => "TO"); # 把`OT` 变成 `TO`, 即合并 TO 和 OT
+
 # ╔═╡ 8d55961b-c9e5-4d03-be13-69209b7123ea
 Other_Box = df[(df.Object_Number .!= df.Basket) .& (df.Object_Number .!= df.Agent_Choice), :]; # 筛选主体没选择， 且不在篮子里的物体的评分。
 
-# ╔═╡ dc6a1097-aa23-4460-9f81-f333832a330b
-replace!(Other_Box.Box_Transparency, "OT" => "TO"); # 把`OT` 变成 `TO`, 即合并 TO 和 OT
+# ╔═╡ 793852a9-73bb-4e48-a3d5-65ce76b44800
+freqtable(Other_Box, :Trial_Number, :Box_Transparency)
+
+# ╔═╡ dfea6f9e-4732-4cf2-bb45-467b869e4289
+@pipe Other_Box |> groupby(_, :Box_Transparency) |>  combine(_, :Object_Rate => mean)
 
 # ╔═╡ 1748ab04-910b-4a98-9d30-1cd88ad7f220
 Other_Sum = @pipe Other_Box |> 
@@ -1402,7 +1408,8 @@ version = "0.9.1+5"
 # ╟─aa13f80d-87d5-4c88-af19-6ffe76d737bd
 # ╟─214b6943-7672-47ce-99f8-f7c253d6490d
 # ╠═6348357e-37c8-11ec-3496-412eef0a1045
-# ╠═0a67987a-36b7-440f-aa2e-64ede6684003
+# ╠═0cc9ff19-a55f-44c2-af17-e4e6d5ad083e
+# ╠═16a949c1-8dc0-4a4b-970c-252277a3a579
 # ╠═4103469b-a5b5-4edf-b9dc-5200d5bc0503
 # ╠═1372caca-9bd5-47a7-b702-dfd3cf2d4234
 # ╠═0d458587-9858-45f8-b548-a8e249697404
@@ -1410,13 +1417,14 @@ version = "0.9.1+5"
 # ╠═b18f8835-dfb2-491b-b4f6-1cf885abdddd
 # ╟─d3dfe0b2-0035-430b-bb7c-d39a64353d91
 # ╠═6a357e17-282a-4219-afcb-377c95fc6b39
+# ╠═c545040a-1b7b-4b62-afbe-e65385d99227
 # ╠═9c770fa1-616b-493e-9027-84adbface247
 # ╟─6b66d803-491c-4d18-a981-b917fe2c9e9c
+# ╠═7ea67cfb-847c-48e9-8ee1-053199ddabe6
 # ╠═8d55961b-c9e5-4d03-be13-69209b7123ea
-# ╠═dc6a1097-aa23-4460-9f81-f333832a330b
+# ╟─6f2a3697-fe1c-4324-aeb8-e6a0b78268b3
 # ╠═793852a9-73bb-4e48-a3d5-65ce76b44800
 # ╠═dfea6f9e-4732-4cf2-bb45-467b869e4289
-# ╟─6f2a3697-fe1c-4324-aeb8-e6a0b78268b3
 # ╠═1748ab04-910b-4a98-9d30-1cd88ad7f220
 # ╠═f362c4e2-25f6-4e66-a6dc-f7f68c8033e2
 # ╟─8bc8d9a8-1c91-4365-ade9-8a9802da578d
