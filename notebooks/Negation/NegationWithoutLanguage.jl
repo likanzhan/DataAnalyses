@@ -182,7 +182,9 @@ Other_Box = df[(df.Object_Number .!= df.Basket) .& (df.Object_Number .!= df.Agen
 freqtable(Other_Box, :Trial_Number, :Box_Transparency)
 
 # ╔═╡ dfea6f9e-4732-4cf2-bb45-467b869e4289
-@pipe Other_Box |> groupby(_, :Box_Transparency) |>  combine(_, :Object_Rate => mean)
+@pipe Other_Box |>
+	groupby(_, :Box_Transparency) |>
+	combine(_, :Object_Rate => mean)
 
 # ╔═╡ 1748ab04-910b-4a98-9d30-1cd88ad7f220
 Other_Sum = @pipe Other_Box |> 
@@ -192,7 +194,7 @@ Other_Sum = @pipe Other_Box |>
 # ╔═╡ f362c4e2-25f6-4e66-a6dc-f7f68c8033e2
 @df Other_Sum plot(:Box_Transparency, :Object_Rate, 
 	seriestype = [:dotplot, :boxplot], fill = [1 0.5], 
-	xlim = (0, 3), xlabel = "Conditon", ylabel = "Preference Rate", 
+	xlim = (0, 3), xlabel = "Condition", ylabel = "Preference Rate", 
 	legend = false, ratio = 0.5
 )
 
