@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.17.0
+# v0.17.1
 
 using Markdown
 using InteractiveUtils
@@ -21,7 +21,7 @@ begin
 end
 
 # ╔═╡ a888c516-dba1-4cda-9ada-2e516fc106e9
-DataAnalyses.header(title = "项目数据汇总", author = "")
+DataAnalyses.header(title = "数据汇总", author = "")
 
 # ╔═╡ 29bad371-6dd9-4ec1-8f9e-95b034a07a21
 md"""
