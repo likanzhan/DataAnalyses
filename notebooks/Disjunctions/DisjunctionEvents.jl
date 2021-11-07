@@ -88,7 +88,7 @@ md"""
 
 # ╔═╡ a141d9f2-b6ba-49b9-8456-6ea330638ae5
 function retrieve_connective_pause(dt)
- 	res = @pipe dt                                                      |>
+ 	@pipe dt                                                            |>
 	
 	# 去掉 'Annotation' 行
 	filter!(:Type => !=("Annotation"), _)                               |>
@@ -109,24 +109,18 @@ function retrieve_connective_pause(dt)
 	#   `Trial`:      用 `Type` 列的第二个数据填充;
 	#   `Connective`: 由 `Type` 列第一个数据的第二位数决定: 1 -> And; 2 -> Or
 	#   `Pause`:      由 `Type` 列第一个数据的第三位数决定: 1 -> NoPause; 2 -> 200ms
-	# 用 `combine` 函数合并成一个数据框
-	combine(_) do subdf
-		insertcols!(
-			DataFrame(subdf), 
-			:Trial      => subdf.Type[2],
-			:Connective => SubString.(subdf.Type[1], 2, 2) .== "1" ? "And" : "Or",
-			:Pause    => SubString.(subdf.Type[1], 3, 3) .== "1" ? "NoPause" : "200ms"
-		)
-		end                                                              |>
-	
+	transform(_, 
+		:Type => (x -> x[2]) => :Trial,
+		:Type => (x -> SubString(x[1], 2, 2) == "1" ? "And" : "Or") => :Connective,
+		:Type => (x -> SubString(x[1], 3, 3) == "1" ? "NoPause" : "200ms") => :Pause
+	)                                                                    |>
+
 	# 删掉 `Placehodler` 列
 	select(_, Not(:Placeholder))                                         |>
 
 	# 把秒转化成毫秒
 	transform(_, :Latency => ByRow(x -> x * 1000) => :Latency)
 
-	# 确定返回数据
-	return res
 end
 
 # ╔═╡ a810fb79-edfa-465e-bbbd-564290d2790d
@@ -162,7 +156,7 @@ signals = evtfile.signals    # 信号信息： 两个 channel, 实际有用的�
 event_signal = signals[2]    # 提取第二 channel 的信息
 
 # ╔═╡ 6fbf4365-8a84-40ac-9ab2-895fc6aa24d6
-typeof(event_signal)        # 查看第二个 channel 的信息储类型
+typeof(event_signal)        # 查看第二个 channel 的信息存储类型
 
 # ╔═╡ a4fb8c4d-1f86-4715-b075-d17a7f29efda
 propertynames(event_signal) # 类型为 `AnnotationsSignal` 的对象有两个字段， `:samples_per_second` - 采样率, `:records` - 事件信息
@@ -180,7 +174,7 @@ event_first_pair = evtss[2]  # 每个事件由两个`时间事件列表`组成, 
 event_two = event_first_pair[2]
 
 # ╔═╡ f98cfe5b-afbb-49c8-82ef-87965c395d3e
-propertynames(event_two)     # 每个`时间事件列表`有三个字段： `onset_in_seconds` - 事件开始时间 (s), `duration_in_seconds` - 事件持续时间, `:annotations` - 事件文字信息
+propertynames(event_two)       # 每个`时间事件列表`有三个字段： `onset_in_seconds` - 事件开始时间 (s), `duration_in_seconds` - 事件持续时间, `:annotations` - 事件文字信息
 
 # ╔═╡ 2849dca1-5886-4c77-90e0-3b72b8a2901c
 event_two.onset_in_seconds
