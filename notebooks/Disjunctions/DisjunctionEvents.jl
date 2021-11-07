@@ -79,7 +79,7 @@ base_line(bdf) = @pipe read_bdfplus_event(bdf) |>
 	transform(_, :Latency => ByRow(x -> x * 1000) => :Latency)
 
 # ╔═╡ a423d6fa-2243-424b-ac2d-42278d01053d
-sbj = base_line("evt.bdf")
+sbj = base_line("08/evt.bdf")
 
 # ╔═╡ e926ed83-c2b0-40d7-9f27-db34fa135a7d
 md"""
@@ -127,7 +127,7 @@ end
 retrieve_triggers(bdf) = @pipe read_bdfplus_event(bdf) |> retrieve_connective_pause(_)
 
 # ╔═╡ 4a6348de-c4e9-4d3c-bdee-7d34eaf9ce40
-evts = retrieve_triggers("evt.bdf")
+evts = retrieve_triggers("08/evt.bdf")
 
 # ╔═╡ dc73980b-e532-4f2a-8bad-a41b8c58b0c7
 describe(evts)
@@ -138,7 +138,7 @@ md"""
 """
 
 # ╔═╡ bb8626e9-bb55-47ca-9372-30f27a58fe4d
-evtfile = EDF.read("evt.bdf")
+evtfile = EDF.read("08/evt.bdf")
 
 # ╔═╡ 54efce69-939d-479c-bcf9-60d1ec9aa776
 propertynames(evtfile)        # 数据记录了三个字段: `io`, `header`, `signals`
@@ -192,7 +192,7 @@ typeof(annot)                 # 事件文字信息是一个`数组`
 annot[1]                      # 把文字信息从数组中提取出来
 
 # ╔═╡ 7aa5c780-e0df-4273-b41c-299f6f450ae2
-annot[]                       # 如果数组中只有一个值，可以这样提取
+annot[]                       # 如果数组中只有一个值， 可以这样提取
 
 # ╔═╡ 0d3f8d18-ec69-48cb-a30f-731673388059
 md"""
