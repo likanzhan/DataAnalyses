@@ -15,14 +15,19 @@ using DataFrames
 
 # ╔═╡ 1949fef3-1c95-4c3b-85d7-3ee7c20908c3
 md"""
-## 载入包并设定当前路径
+## 载入包
+"""
+
+# ╔═╡ d57abd01-4081-48ce-b1eb-9515d011665b
+import Pipe: @pipe
+
+# ╔═╡ 91c41e82-f69f-4e34-b05d-b981a7c0009e
+md"""
+## 设定当前文件夹
 """
 
 # ╔═╡ 517a6404-4448-40d8-b867-666a03335618
 cd(@__DIR__) # 把当下 notebook 所在文件夹定义为当前文件夹
-
-# ╔═╡ d57abd01-4081-48ce-b1eb-9515d011665b
-import Pipe: @pipe
 
 # ╔═╡ 6116fed2-1cef-443b-b0b8-81de40037769
 md"""
@@ -41,7 +46,7 @@ md"""
 
 # ╔═╡ c5341c98-0773-43ba-a9b7-f369f920cb40
 md"""
-- 定义函数 `retrieve_triggers()` 把下面两个函数组合在一起
+- 定义函数 `retrieve_triggers()` 把函数 `read_bdfplus_event()` 和 `retrieve_connective_pause()` 组合起来
 """
 
 # ╔═╡ 9ee7b8a6-14c1-447a-9311-19584a9ee814
@@ -65,19 +70,20 @@ function read_bdfplus_event(evtbdf)
 		[evntpair[2].annotations[1] for evntpair in evtfile.signals[2].records]
 
 	# 汇总成一个数据框
-
 	return DataFrame(Number = index, Latency = onset, Type = annotation)
 end
 
 # ╔═╡ f07abe75-7079-4f18-8f6e-7bb46aa90da7
-base_line(bdf) = @pipe read_bdfplus_event(bdf) |> filter(:Type => ==("Annotation"), _)
+base_line(bdf) = @pipe read_bdfplus_event(bdf) |> 
+	filter(:Type => ==("Annotation"), _)       |>
+	transform(_, :Latency => ByRow(x -> x * 1000) => :Latency)
 
 # ╔═╡ a423d6fa-2243-424b-ac2d-42278d01053d
 sbj = base_line("evt.bdf")
 
 # ╔═╡ e926ed83-c2b0-40d7-9f27-db34fa135a7d
 md"""
-- 定义函数 `retrieve_connective_pause` 以从 `annotation` 中提取的连接词和停顿信息。
+- 定义函数 `retrieve_connective_pause` 以从读取的`事件文件`中提取的连接词和停顿信息。
 """
 
 # ╔═╡ a141d9f2-b6ba-49b9-8456-6ea330638ae5
@@ -99,10 +105,11 @@ function retrieve_connective_pause(dt)
 	# 用 `Placeholder` 列把数据框分成 180 个子数据框
 	groupby(_, :Placeholder)                                            |>
 
-	# 在每一个子数据中添加三列, 并合并成一个数据框
-	# `Trial`: 子数据框中 `Type` 列的第二个数据;
-	# `Connective`: 由子数据框中第一个数据的第二个数决定: 1 -> And; 2 -> Or
-	# `Pause`: 由子数据框中第三个数决定: 1 -> NoPause; 2 -> 200ms
+	# 在每一个子数据中依据 `Type` 列添加三个新列
+	#   `Trial`:      用 `Type` 列的第二个数据填充;
+	#   `Connective`: 由 `Type` 列第一个数据的第二位数决定: 1 -> And; 2 -> Or
+	#   `Pause`:      由 `Type` 列第一个数据的第三位数决定: 1 -> NoPause; 2 -> 200ms
+	# 用 `combine` 函数合并成一个数据框
 	combine(_) do subdf
 		insertcols!(
 			DataFrame(subdf), 
@@ -133,53 +140,65 @@ describe(evts)
 
 # ╔═╡ 6f3df1c5-71d1-4faf-9c6c-3c3130da40ff
 md"""
-## 数据相关说明
+## 数据结构说明
 """
 
 # ╔═╡ bb8626e9-bb55-47ca-9372-30f27a58fe4d
 evtfile = EDF.read("evt.bdf")
 
 # ╔═╡ 54efce69-939d-479c-bcf9-60d1ec9aa776
-propertynames(evtfile)        # 数据记录了三特征: `io`, `header`, `signals`
+propertynames(evtfile)        # 数据记录了三个字段: `io`, `header`, `signals`
 
 # ╔═╡ 725d9991-7e5a-4d07-a963-d822ddb3ad58
-evtfile.io     # 数据文件
+evtfile.io                    # 原始文件
 
 # ╔═╡ 5b1423fc-7f8f-40d7-b625-b83d4f16cd60
-evtfile.header # 被试信息等
+evtfile.header               # 文件信息， 包括被试信息、 采集日期等
 
 # ╔═╡ c0ab84d4-841c-4029-83d5-36d73a48a3b2
-signals = evtfile.signals # 信号信息： 有两个 channel, 实际有用的是 `AnnotationalSignal`
+signals = evtfile.signals    # 信号信息： 两个 channel, 实际有用的是 `AnnotationalSignal`
 
 # ╔═╡ f731b484-b506-4441-aff4-44a5a0b25240
-event_signal = signals[2] # 提取第二组信息
+event_signal = signals[2]    # 提取第二 channel 的信息
 
 # ╔═╡ 6fbf4365-8a84-40ac-9ab2-895fc6aa24d6
-typeof(event_signal)        # 事件信息的存储类型
+typeof(event_signal)        # 查看第二个 channel 的信息储类型
 
 # ╔═╡ a4fb8c4d-1f86-4715-b075-d17a7f29efda
-propertynames(event_signal) # 类型为 ``AnnotationsSignal` 的对象有两个特征， `:samples_per_second` 表示采样率, `:records` 表示记录到的事件信号
+propertynames(event_signal) # 类型为 `AnnotationsSignal` 的对象有两个字段， `:samples_per_second` - 采样率, `:records` - 事件信息
 
 # ╔═╡ 1ea979b9-644d-4b91-af79-13d9206375ca
 evtss = event_signal.records # 实际记录到的事件
 
 # ╔═╡ 3ab3caff-bd9f-4a40-953b-9817e4aa5cdd
-length(evtss) # 共1081 个事件
+length(evtss)                # 共 1081 个事件
 
 # ╔═╡ 6c34d2ee-0d21-4b78-b32f-bcf5cb15ae95
-event_first_pair = evtss[2] # ， 其中每一个事件细分为两个事件列表
+event_first_pair = evtss[2]  # 每个事件由两个`时间事件列表`组成, `TimestampedAnnotationList`
 
 # ╔═╡ d14d6f11-ed68-4307-a746-32685422f88a
 event_two = event_first_pair[2]
 
 # ╔═╡ f98cfe5b-afbb-49c8-82ef-87965c395d3e
-propertynames(event_two) # 有三个特征数据： `onset_in_seconds`, `duration_in_seconds`, `:annotations`
+propertynames(event_two)     # 每个`时间事件列表`有三个字段： `onset_in_seconds` - 事件开始时间 (s), `duration_in_seconds` - 事件持续时间, `:annotations` - 事件文字信息
 
 # ╔═╡ 2849dca1-5886-4c77-90e0-3b72b8a2901c
 event_two.onset_in_seconds
 
+# ╔═╡ 9a278aee-b22f-4b95-8f5d-595ed89ef953
+event_two.duration_in_seconds # 事件持续时间默认为零
+
 # ╔═╡ ad91ea6e-c626-4b97-9622-2986aaf99c6a
-event_two.annotations
+annot = event_two.annotations # 事件文字信息
+
+# ╔═╡ 2dc037d5-972a-46c1-b9cb-fb2658741532
+typeof(annot)                 # 事件文字信息是一个`数组`
+
+# ╔═╡ 6aa6c49c-4657-4fb1-8cf1-7604ef7a8e19
+annot[1]                      # 把文字信息从数组中提取出来
+
+# ╔═╡ 7aa5c780-e0df-4273-b41c-299f6f450ae2
+annot[]                       # 如果
 
 # ╔═╡ 0d3f8d18-ec69-48cb-a30f-731673388059
 md"""
@@ -509,10 +528,11 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╔═╡ Cell order:
 # ╟─a57a7e52-f314-4bd5-8a23-644085702ed6
 # ╟─1949fef3-1c95-4c3b-85d7-3ee7c20908c3
-# ╠═517a6404-4448-40d8-b867-666a03335618
 # ╠═35cda3c5-f6a9-4be5-86c5-e265a417f5fc
 # ╠═4a805a3f-51d5-4271-8353-a6d10f1cda74
 # ╠═d57abd01-4081-48ce-b1eb-9515d011665b
+# ╟─91c41e82-f69f-4e34-b05d-b981a7c0009e
+# ╠═517a6404-4448-40d8-b867-666a03335618
 # ╟─6116fed2-1cef-443b-b0b8-81de40037769
 # ╠═4a6348de-c4e9-4d3c-bdee-7d34eaf9ce40
 # ╠═dc73980b-e532-4f2a-8bad-a41b8c58b0c7
@@ -541,7 +561,11 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╠═d14d6f11-ed68-4307-a746-32685422f88a
 # ╠═f98cfe5b-afbb-49c8-82ef-87965c395d3e
 # ╠═2849dca1-5886-4c77-90e0-3b72b8a2901c
+# ╠═9a278aee-b22f-4b95-8f5d-595ed89ef953
 # ╠═ad91ea6e-c626-4b97-9622-2986aaf99c6a
+# ╠═2dc037d5-972a-46c1-b9cb-fb2658741532
+# ╠═6aa6c49c-4657-4fb1-8cf1-7604ef7a8e19
+# ╠═7aa5c780-e0df-4273-b41c-299f6f450ae2
 # ╟─0d3f8d18-ec69-48cb-a30f-731673388059
 # ╠═d7bfd9b4-9fb6-4fa3-9725-5feb26c8ee78
 # ╟─00000000-0000-0000-0000-000000000001
