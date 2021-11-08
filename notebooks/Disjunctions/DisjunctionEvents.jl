@@ -8,7 +8,7 @@ using InteractiveUtils
 using PlutoUI; PlutoUI.TableOfContents(title="目录")
 
 # ╔═╡ 35cda3c5-f6a9-4be5-86c5-e265a417f5fc
-using EDF # EDF.read() # 读入 bdf+ 数据
+using EDF # EDF.read() 读入 bdf+ 数据
 
 # ╔═╡ 4a805a3f-51d5-4271-8353-a6d10f1cda74
 using DataFrames
@@ -98,21 +98,28 @@ function retrieve_connective_pause(dt)
 
 	# 把 `Type` 和 `Number` 列修正成长度相同, 即 3个字符和4个字符, 用 `0` 填充
 	transform(_, 
-		:Type   => ByRow(x -> rpad(x, 3, '0'))              => :Type,
+		:Type   => ByRow(x -> lpad(x, 3, '0'))              => :Type,
 		:Number => ByRow(x -> lpad(string(Int(x)), 4, '0')) => :Number
 	)                                                                   |>
 
 	# 用 `Placeholder` 列把数据框分成 180 个子数据框
 	groupby(_, :Placeholder)                                            |>
 
-	# 在每一个子数据中依据 `Type` 列添加三个新列
+	# 在每一个子数据中依据 `Type` 列添加 9 个新列
 	#   `Trial`:      用 `Type` 列的第二个数据填充;
 	#   `Connective`: 由 `Type` 列第一个数据的第二位数决定: 1 -> And; 2 -> Or
 	#   `Pause`:      由 `Type` 列第一个数据的第三位数决定: 1 -> NoPause; 2 -> 200ms
+	#   `Sentence_Onset` 等 trigger 出现时间
 	transform(_, 
 		:Type => (x -> x[2]) => :Trial,
-		:Type => (x -> SubString(x[1], 2, 2) == "1" ? "And" : "Or") => :Connective,
-		:Type => (x -> SubString(x[1], 3, 3) == "1" ? "NoPause" : "200ms") => :Pause
+		:Type => (x -> SubString(x[1], 2, 2) == "1" ? "And" : "Or")    => :Connective,
+		:Type => (x -> SubString(x[1], 3, 3) == "1" ? "NoPause" : "200ms") => :Pause,
+		:Type => ByRow(x -> x in ["211", "212", "221", "222"]) => :Sentence_Onset,
+		:Type => ByRow(x -> x in lpad.(1:180, 3, '0'))         => :Verb_Onset,		
+		:Type => ByRow(==("202"))                              => :Noun2_Onset,
+		:Type => ByRow(==("203"))                              => :Connective_Onset,
+		:Type => ByRow(==("204"))                              => :Noun3_Onset,
+		:Type => ByRow(==("255"))                              => :Sentence_Offset
 	)                                                                    |>
 
 	# 删掉 `Placehodler` 列
@@ -131,6 +138,14 @@ evts = retrieve_triggers("08/evt.bdf")
 
 # ╔═╡ dc73980b-e532-4f2a-8bad-a41b8c58b0c7
 describe(evts)
+
+# ╔═╡ 45505a7e-1e7a-42d4-b828-30fb25704f08
+md"""
+## 事件信息
+"""
+
+# ╔═╡ fe2ab09d-68c6-4cef-9d03-a05d67856b76
+PlutoUI.LocalResource("TriggerInformation.png")
 
 # ╔═╡ 6f3df1c5-71d1-4faf-9c6c-3c3130da40ff
 md"""
@@ -540,6 +555,8 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╠═ed357abb-551e-4bc6-8d30-1b35bc2af390
 # ╟─e926ed83-c2b0-40d7-9f27-db34fa135a7d
 # ╠═a141d9f2-b6ba-49b9-8456-6ea330638ae5
+# ╟─45505a7e-1e7a-42d4-b828-30fb25704f08
+# ╠═fe2ab09d-68c6-4cef-9d03-a05d67856b76
 # ╟─6f3df1c5-71d1-4faf-9c6c-3c3130da40ff
 # ╠═bb8626e9-bb55-47ca-9372-30f27a58fe4d
 # ╠═54efce69-939d-479c-bcf9-60d1ec9aa776

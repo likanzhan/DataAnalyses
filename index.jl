@@ -36,7 +36,7 @@ DataAnalyses.list_notebooks(@__FILE__, "notebooks")
 md"""
 ## Julia 语言
 
-项目组数据将以 [Julia语言](https://www.julialang.org) 为基本分析工具。 
+数据分析的基本工具是 [Julia语言](https://www.julialang.org)。 
 下面是 Julia 语言的一些常见描述：
 
 - _**Walks like Python, runs like C.**_
