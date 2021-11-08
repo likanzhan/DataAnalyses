@@ -25,7 +25,7 @@ DataAnalyses.header(title = "数据汇总", author = "")
 # ╔═╡ 29bad371-6dd9-4ec1-8f9e-95b034a07a21
 md"""
 
-为了提高科学研究中的可重复性， 本站汇总了项目组近期开展的一系列项目的原始数据， 以及数据分析过程。
+为提高科学研究可重复性， 本站汇总了项目组近期开展项目的原始数据及数据分析过程。
 
 """
 
@@ -36,7 +36,7 @@ DataAnalyses.list_notebooks(@__FILE__, "notebooks")
 md"""
 ## Julia 语言
 
-数据分析的基本工具是 [Julia语言](https://www.julialang.org)。 
+本站数据分析的基本工具是 [Julia语言](https://www.julialang.org)。 
 下面是 Julia 语言的一些常见描述：
 
 - _**Walks like Python, runs like C.**_

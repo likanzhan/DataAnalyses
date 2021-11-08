@@ -81,6 +81,24 @@ base_line(bdf) = @pipe read_bdfplus_event(bdf) |>
 # ╔═╡ a423d6fa-2243-424b-ac2d-42278d01053d
 sbj = base_line("08/evt.bdf")
 
+# ╔═╡ 04838004-a30e-4bfa-81e4-f4b2f222568f
+md"""
+- 定义 `trigger` 信息中的编码常数
+"""
+
+# ╔═╡ 6f6f8f19-f0ea-4193-bdd8-5f4f2ee627ac
+begin
+	const Conditions      = ["211", "212", "221", "222"]
+	const TrialNumber     = lpad.(1:180, 3, '0')
+	const Noun2Onset      = "202"
+	const ConnectiveOnset = "203"
+	const Noun3Onset      = "204"
+	const TrialOffset     = "255"
+end;
+
+# ╔═╡ fe2ab09d-68c6-4cef-9d03-a05d67856b76
+PlutoUI.LocalResource("TriggerInformation.png")
+
 # ╔═╡ e926ed83-c2b0-40d7-9f27-db34fa135a7d
 md"""
 - 定义函数 `retrieve_connective_pause` 以从读取的`事件文件`中提取的连接词和停顿信息。
@@ -88,42 +106,45 @@ md"""
 
 # ╔═╡ a141d9f2-b6ba-49b9-8456-6ea330638ae5
 function retrieve_connective_pause(dt)
- 	@pipe dt                                                            |>
-	
-	# 去掉 'Annotation' 行
-	filter!(:Type => !=("Annotation"), _)                               |>
+ 	@pipe dt                                                                |>
 
-	# 实验共有个 180 个试次， 每个试次有 6 个trigger， 添加 `Placeholder` 列以划分不同试次
-	insertcols!(_, :Placeholder => repeat(1:180, inner = 6))            |>
+	# 添加 `TrialOnset` 列, 表示该行是否处于试次开始, 注： `Ref` 用法参见 `?∈`
+	transform(_, :Type => ByRow(x -> x .∈ Ref(Conditions) ) => :TrialOnset) |>
+
+	# 添加 `TrialCount` 列顺序累加试次的个数, 接下来用于分组 `groupby`
+	transform(_, :TrialOnset => (cumsum) => :TrialCount)                    |>
+
+	# 去掉 'Annotation' 行
+	filter!(:Type => !=("Annotation"), _)                                   |>
 
 	# 把 `Type` 和 `Number` 列修正成长度相同, 即 3个字符和4个字符, 用 `0` 填充
 	transform(_, 
 		:Type   => ByRow(x -> lpad(x, 3, '0'))              => :Type,
 		:Number => ByRow(x -> lpad(string(Int(x)), 4, '0')) => :Number
-	)                                                                   |>
-
-	# 用 `Placeholder` 列把数据框分成 180 个子数据框
-	groupby(_, :Placeholder)                                            |>
+	)                                                                       |>
+	
+	# 用 `TrialCount` 列把数据框分成 180 个子数据框
+	groupby(_, :TrialCount)                                                 |>
 
 	# 在每一个子数据中依据 `Type` 列添加 9 个新列
 	#   `Trial`:      用 `Type` 列的第二个数据填充;
 	#   `Connective`: 由 `Type` 列第一个数据的第二位数决定: 1 -> And; 2 -> Or
 	#   `Pause`:      由 `Type` 列第一个数据的第三位数决定: 1 -> NoPause; 2 -> 200ms
-	#   `Sentence_Onset` 等 trigger 出现时间
+	#   `Sentence_Onset` 等 triggers 出现时间
 	transform(_, 
 		:Type => (x -> x[2]) => :Trial,
 		:Type => (x -> SubString(x[1], 2, 2) == "1" ? "And" : "Or")    => :Connective,
 		:Type => (x -> SubString(x[1], 3, 3) == "1" ? "NoPause" : "200ms") => :Pause,
-		:Type => ByRow(x -> x in ["211", "212", "221", "222"]) => :Sentence_Onset,
-		:Type => ByRow(x -> x in lpad.(1:180, 3, '0'))         => :Verb_Onset,		
-		:Type => ByRow(==("202"))                              => :Noun2_Onset,
-		:Type => ByRow(==("203"))                              => :Connective_Onset,
-		:Type => ByRow(==("204"))                              => :Noun3_Onset,
-		:Type => ByRow(==("255"))                              => :Sentence_Offset
-	)                                                                    |>
+		:Type => ByRow(∈(Conditions))       => :Sentence_Onset,
+		:Type => ByRow(∈(TrialNumber))      => :Verb_Onset,		
+		:Type => ByRow(==(Noun2Onset))      => :Noun2_Onset,
+		:Type => ByRow(==(ConnectiveOnset)) => :Connective_Onset,
+		:Type => ByRow(==(Noun3Onset))      => :Noun3_Onset,
+		:Type => ByRow(==(TrialOffset))     => :Sentence_Offset
+	)                                                                     |>
 
-	# 删掉 `Placehodler` 列
-	select(_, Not(:Placeholder))                                         |>
+	# 删掉 `TrialCount` 列
+	select(_, Not(:TrialCount))                                           |>
 
 	# 把秒转化成毫秒
 	transform(_, :Latency => ByRow(x -> x * 1000) => :Latency)
@@ -138,14 +159,6 @@ evts = retrieve_triggers("08/evt.bdf")
 
 # ╔═╡ dc73980b-e532-4f2a-8bad-a41b8c58b0c7
 describe(evts)
-
-# ╔═╡ 45505a7e-1e7a-42d4-b828-30fb25704f08
-md"""
-## 事件信息
-"""
-
-# ╔═╡ fe2ab09d-68c6-4cef-9d03-a05d67856b76
-PlutoUI.LocalResource("TriggerInformation.png")
 
 # ╔═╡ 6f3df1c5-71d1-4faf-9c6c-3c3130da40ff
 md"""
@@ -553,10 +566,11 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╠═a810fb79-edfa-465e-bbbd-564290d2790d
 # ╟─9ee7b8a6-14c1-447a-9311-19584a9ee814
 # ╠═ed357abb-551e-4bc6-8d30-1b35bc2af390
+# ╟─04838004-a30e-4bfa-81e4-f4b2f222568f
+# ╠═6f6f8f19-f0ea-4193-bdd8-5f4f2ee627ac
+# ╟─fe2ab09d-68c6-4cef-9d03-a05d67856b76
 # ╟─e926ed83-c2b0-40d7-9f27-db34fa135a7d
 # ╠═a141d9f2-b6ba-49b9-8456-6ea330638ae5
-# ╟─45505a7e-1e7a-42d4-b828-30fb25704f08
-# ╠═fe2ab09d-68c6-4cef-9d03-a05d67856b76
 # ╟─6f3df1c5-71d1-4faf-9c6c-3c3130da40ff
 # ╠═bb8626e9-bb55-47ca-9372-30f27a58fe4d
 # ╠═54efce69-939d-479c-bcf9-60d1ec9aa776

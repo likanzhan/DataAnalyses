@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.17.0
+# v0.17.1
 
 using Markdown
 using InteractiveUtils
@@ -78,7 +78,7 @@ contr = Dict(:Box_Transparency => DummyCoding(base = "TO"));
 
 # ╔═╡ 03af8427-ec54-47f3-b184-2ce5c788e280
 md"""
-- 简单结论： `OO` 和 `TT` 条件下， 被试对行为主体没选择物体的偏好判断均低于 `TO` 条件， 符合我们最初的预期， 也与上图中的观察结果一致。
+- 简单结论： `OO` 和 `TT` 条件下， 被试对行为主体没选择物体的偏好判断均**高于** `TO` 条件， 符合我们最初的预期， 也与上图中的观察结果一致。
 """
 
 # ╔═╡ 94de6b92-89d8-435f-9ded-201027647072
