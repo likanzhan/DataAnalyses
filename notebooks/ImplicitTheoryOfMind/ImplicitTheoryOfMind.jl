@@ -37,135 +37,68 @@ md"""
 ## 数据整理
 """
 
-# ╔═╡ cad82c86-1d1d-4e7d-a122-3ae011dade8c
-md"""
-1. 读取文件夹 ` E2data` 下扩展名为 `.csv` 的文件列表。
-"""
+# ╔═╡ b5ba1715-e30e-4c62-8d81-663ca157013d
+begin
+	# 1. 读取文件夹 ` E2data` 下扩展名为 `.csv` 的文件列表。
+	csv_list = filter(endswith(".csv"), readdir("E2data", join = true))
+	
+	# 2. 把 `.csv` 文件列表转化为数据框列表。 部分数据有 44 列, 但最后一列为空值, 故只选前 43 列。
+	df_list = [CSV.read(csv, DataFrame, stringtype = String, select = 1:43) 
+		for csv in csv_list ]
+	
+	# 3. 把数据框列表合并成一个数据框 `df`。
+	df = reduce(vcat, df_list)
+	
+	# 4. 删除练习部分数据， 即 `:Movie1` 列为缺失值, 另按 `participant` 删除 `李加厉` 问题数据。
+	dropmissing!(df, [:Movie1, :participant])
+	
+	# 5. 为使用方便， 重命名两列数据.
+	rename!(df, Dict("key_resp_Judge.keys" => "key_Judge", 
+			         "key_resp_Judge.rt"   => "RTs"))
+	
+	# 6. 计算 `Go/No-Go` 任务正确率并存为列 `Corr_Rates`： 
+	#    若 `corrAns == key_Judge`， 反应正确； 否则错误。
+	transform!(df, [:corrAns, :key_Judge] => ByRow(==) => :Corr_Rates)
+	
+	# 7. 只保留有用的列。 
+	select!(df, 
+		["participant", "corrAns", "key_Judge", "Condition", "RTs", "Corr_Rates"])
 
-# ╔═╡ 1978cda4-c0f2-495d-b428-1c1c6c7734d2
-csv_list = filter(endswith(".csv"), readdir("E2data", join = true));
-
-# ╔═╡ 5f852df9-f063-4b66-9b82-12e17b777b30
-md"""
-2. 把 `.csv` 文件列表转化为数据框列表。 部分数据有 44 列, 但最后一列为空值, 故只选前 43 列。
-"""
-
-# ╔═╡ 6fbf09f6-0c83-44d6-a809-906e527de314
-df_list = [CSV.read(csv, DataFrame, stringtype = String, select = 1:43) 
-	for csv in csv_list ];
-
-# ╔═╡ 35e0f105-6d05-42c0-9e3c-3e02c4a12b76
-md"""
-3. 把数据框列表合并成一个数据框 `df`。
-"""
-
-# ╔═╡ 646fce02-dbdf-491f-abff-58014d03fcc2
-df = reduce(vcat, df_list);
-
-# ╔═╡ a8d3f62f-e839-41db-b99a-6d91501ef0d1
-md"""
-4. 删除练习部分数据， 即 `:Movie1` 列为缺失值, 另按 `participant` 删除 `李加厉` 问题数据。
-"""
-
-# ╔═╡ 1d20bda5-ec78-40ff-9c76-3677b62d3154
-dropmissing!(df, [:Movie1, :participant]);
-
-# ╔═╡ 91a88d9f-92d5-4997-bed2-b36c6f9e7496
-md"""
-5. 为使用方便， 重命名两列数据.
-"""
-
-# ╔═╡ 6bd7b2e2-513b-4206-8da2-4c854f1bc250
-rename!(df, Dict("key_resp_Judge.keys" => "key_Judge", 
-		         "key_resp_Judge.rt"   => "RTs"));
-
-# ╔═╡ 725c65d0-6a7a-4629-8bf0-bae64e0185b4
-md"""
-6. 计算 `Go/NoGo` 任务正确率并存为列 `Corr_Rates`： 若 `corrAns == key_Judge`， 反应正确； 否则错误。
-"""
-
-# ╔═╡ 47a66d6b-0809-4137-9906-88ec9fbeefeb
-transform!(df, [:corrAns, :key_Judge] => ByRow(==) => :Corr_Rates);
-
-# ╔═╡ 5aac986e-aa55-47b4-b0c8-4e8828f55929
-md"""
-7. 只保留有用的列。 
-"""
-
-# ╔═╡ 0982d5be-adf8-4c9f-8e54-86987fb870c1
-select!(df, 
-	["participant", "corrAns", "key_Judge", "Condition", "RTs", "Corr_Rates"]);
+end;
 
 # ╔═╡ 01c3787e-b7f6-4e15-a1ba-d726ae885396
 md"""
 ## 数据筛选
 """
 
-# ╔═╡ 1e5d05c3-a85b-4acd-a364-b662494ec26e
-md"""
-1. 按被试计算正确率
-"""
-
-# ╔═╡ 3d1f250a-ceef-49c3-a732-475980e5ad7a
-sbj_corr_rate = @pipe df     |> 
-	groupby(_, :participant) |> 
-	combine(_, :Corr_Rates => (x -> (sum(x) / length(x))) => :Corr_Rates);
-
-# ╔═╡ fb0271c5-490e-4177-b943-9c061d1a2847
-md"""
-2. 找出正确率较低被试： 其中正确率小于 70% 有两人, 小于 80% 的有三人。
-"""
-
-# ╔═╡ ced01816-5104-4766-b64a-2484cf8dc9bf
-low_rate_sbj = filter(:Corr_Rates => <(0.7), sbj_corr_rate)
-
-# ╔═╡ 12a061d9-fb86-436d-9ceb-205e90a7a7c7
-md"""
-3. 删除准确率较低的被试
-"""
-
-# ╔═╡ ce6cfc3d-42f1-49e9-a12f-76b331b1c8b7
-filter!(:participant => x -> x .∉ Ref(low_rate_sbj.participant), df);
-
-# ╔═╡ 25ae329d-0824-4fda-81d7-fcc7494041af
-md"""
-4. 删除反应错误的数据
-"""
-
-# ╔═╡ f0af7106-c4a5-441f-8de2-309aff3d9042
-filter!(:Corr_Rates => ==(true), df);
-
-# ╔═╡ fde48316-916f-490e-8a3c-dc48d0512f5b
-md"""
-5. 仅保留需要按键， 即 `Go` 条件下的数据
-"""
-
-# ╔═╡ 2382363c-959d-4770-b1fb-9031643ee304
-filter!(:corrAns => ==("space"), df);
-
-# ╔═╡ d2d2095c-da31-40eb-8674-7f893b053824
-md"""
-6. 在每种实验条件下， `RT` 是否位于两个标准差以内, 即介于 `M-2*SD` 和 `M+2SD` 之间， 并把返回的逻辑值记在新列 `WithIn` 中。 并把 `WithIn` 列添加到原始数据框中。
-
-"""
-
-# ╔═╡ e08a804f-f548-4ae4-90b9-8e2f7c54441f
-ExtrInfo = @pipe df |>  groupby(_, :Condition) |> transform(_, 
-		:RTs => (x -> (mean(x)-2std(x)) .<= x .<= (mean(x)+2std(x))) => :WithIn);
-
-# ╔═╡ 06f6b41d-bdfc-4563-b200-34d76e15bfed
-insertcols!(df, :WithIn => ExtrInfo.WithIn);
-
-# ╔═╡ 9d809a66-983e-407d-a126-590ee719b0ac
-freqtable(df, :participant, :WithIn)
-
-# ╔═╡ 8ae749ad-f903-4bbf-bba0-4efd21b63437
-md"""
-7. 只保留 `WithIn` 为真， 即位于两个标准差之内的数据
-"""
-
-# ╔═╡ 9603c615-25e1-4aac-afde-1e992689bd1e
-filter!(:WithIn => ==(true), df);
+# ╔═╡ 9c2b343c-e27a-4508-9a71-12466e585792
+begin
+	# 1. 按被试计算正确率
+	sbj_corr_rate = @pipe df     |> 
+		groupby(_, :participant) |> 
+		combine(_, :Corr_Rates => (x -> (sum(x) / length(x))) => :Corr_Rates)
+	
+	# 2. 找出正确率较低被试： 其中正确率小于 70% 有两人, 小于 80% 的有三人。
+	low_rate_sbj = filter(:Corr_Rates => <(0.7), sbj_corr_rate)
+	
+	# 3. 删除准确率较低的被试
+	filter!(:participant => x -> x .∉ Ref(low_rate_sbj.participant), df)
+	
+	# 4. 删除反应错误的数据
+	filter!(:Corr_Rates => ==(true), df)
+	
+	# 5. 仅保留需要按键， 即 `Go` 条件下的数据
+	filter!(:corrAns => ==("space"), df)
+	
+	# 6. 在每种实验条件下， `RT` 是否位于两个标准差以内, 即介于 `M-2*SD` 和 `M+2SD` 之间， 
+	#    并把返回的逻辑值记在新列 `WithIn` 中。 并把 `WithIn` 列添加到原始数据框中。
+	ExtrInfo = @pipe df |>  groupby(_, :Condition) |> transform(_, 
+			:RTs => (x -> (mean(x)-2std(x)) .<= x .<= (mean(x)+2std(x))) => :WithIn)
+	insertcols!(df, :WithIn => ExtrInfo.WithIn)
+	
+	# 7. 只保留 `WithIn` 为真， 即位于两个标准差之内的数据
+	filter!(:WithIn => ==(true), df)
+end;
 
 # ╔═╡ 3dd9c1cf-16f2-4170-97bc-d40a56a7efbc
 freqtable(df, :Condition, :key_Judge)
@@ -1428,37 +1361,9 @@ version = "0.9.1+5"
 # ╟─a5022ce6-0b2a-4a0e-9115-32e68a268182
 # ╠═098c2ab1-3d20-4334-92a1-d70d66a6e0f1
 # ╟─783ba3fa-fe97-4d26-b131-61dbd79e8909
-# ╟─cad82c86-1d1d-4e7d-a122-3ae011dade8c
-# ╠═1978cda4-c0f2-495d-b428-1c1c6c7734d2
-# ╟─5f852df9-f063-4b66-9b82-12e17b777b30
-# ╠═6fbf09f6-0c83-44d6-a809-906e527de314
-# ╟─35e0f105-6d05-42c0-9e3c-3e02c4a12b76
-# ╠═646fce02-dbdf-491f-abff-58014d03fcc2
-# ╟─a8d3f62f-e839-41db-b99a-6d91501ef0d1
-# ╠═1d20bda5-ec78-40ff-9c76-3677b62d3154
-# ╟─91a88d9f-92d5-4997-bed2-b36c6f9e7496
-# ╠═6bd7b2e2-513b-4206-8da2-4c854f1bc250
-# ╟─725c65d0-6a7a-4629-8bf0-bae64e0185b4
-# ╠═47a66d6b-0809-4137-9906-88ec9fbeefeb
-# ╟─5aac986e-aa55-47b4-b0c8-4e8828f55929
-# ╠═0982d5be-adf8-4c9f-8e54-86987fb870c1
+# ╠═b5ba1715-e30e-4c62-8d81-663ca157013d
 # ╟─01c3787e-b7f6-4e15-a1ba-d726ae885396
-# ╟─1e5d05c3-a85b-4acd-a364-b662494ec26e
-# ╠═3d1f250a-ceef-49c3-a732-475980e5ad7a
-# ╟─fb0271c5-490e-4177-b943-9c061d1a2847
-# ╠═ced01816-5104-4766-b64a-2484cf8dc9bf
-# ╟─12a061d9-fb86-436d-9ceb-205e90a7a7c7
-# ╠═ce6cfc3d-42f1-49e9-a12f-76b331b1c8b7
-# ╟─25ae329d-0824-4fda-81d7-fcc7494041af
-# ╠═f0af7106-c4a5-441f-8de2-309aff3d9042
-# ╟─fde48316-916f-490e-8a3c-dc48d0512f5b
-# ╠═2382363c-959d-4770-b1fb-9031643ee304
-# ╟─d2d2095c-da31-40eb-8674-7f893b053824
-# ╠═e08a804f-f548-4ae4-90b9-8e2f7c54441f
-# ╠═06f6b41d-bdfc-4563-b200-34d76e15bfed
-# ╠═9d809a66-983e-407d-a126-590ee719b0ac
-# ╟─8ae749ad-f903-4bbf-bba0-4efd21b63437
-# ╠═9603c615-25e1-4aac-afde-1e992689bd1e
+# ╠═9c2b343c-e27a-4508-9a71-12466e585792
 # ╠═3dd9c1cf-16f2-4170-97bc-d40a56a7efbc
 # ╟─49521b31-7cdd-49be-9db3-10b891af893e
 # ╠═fe3f2faa-67f6-44bc-86d5-9485a4a4e53c
