@@ -129,12 +129,12 @@ function retrieve_connective_pause(dt)
 	# 在每一个子数据中依据 `Type` 列添加 9 个新列
 	#   `Trial`:      用 `Type` 列的第二个数据填充;
 	#   `Connective`: 由 `Type` 列第一个数据的第二位数决定: 1 -> And; 2 -> Or
-	#   `Pause`:      由 `Type` 列第一个数据的第三位数决定: 1 -> NoPause; 2 -> 200ms
+	#   `Pause`:      由 `Type` 列第一个数据的第三位数决定: 1 -> 000ms; 2 -> 200ms
 	#   `Sentence_Onset` 等 triggers 出现时间
 	transform(_, 
 		:Type => (x -> x[2]) => :Trial,
-		:Type => (x -> SubString(x[1], 2, 2) == "1" ? "And" : "Or")    => :Connective,
-		:Type => (x -> SubString(x[1], 3, 3) == "1" ? "NoPause" : "200ms") => :Pause,
+		:Type => (x -> SubString(x[1], 2, 2) == "1" ? "And" : "Or") => :Connective,
+		:Type => (x -> SubString(x[1], 3, 3) == "1" ? "000ms" : "200ms") => :Pause,
 		:Type => ByRow(∈(Conditions))       => :Sentence_Onset,
 		:Type => ByRow(∈(TrialNumber))      => :Verb_Onset,		
 		:Type => ByRow(==(Noun2Onset))      => :Noun2_Onset,
