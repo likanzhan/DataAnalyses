@@ -43,7 +43,7 @@ md"""
 
 - [Come for the Syntax, Stay for the Speed.](https://media.nature.com/original/magazine-assets/d41586-019-02310-3/d41586-019-02310-3.pdf) - Nature
 
-- [A programming language to heal the planet together](https://www.ted.com/talks/alan_edelman_a_programming_language_to_heal_the_planet_together_julia?language=en) - Alan Edlman
+- [A Programming Language to Heal the Planet Together](https://www.ted.com/talks/alan_edelman_a_programming_language_to_heal_the_planet_together_julia?language=en) - Alan Edlman
 
 - [The Technical Programming Language of the Future](http://pages.stat.wisc.edu/~bates/JuliaForRProgrammers.pdf) - Douglas Bates
 

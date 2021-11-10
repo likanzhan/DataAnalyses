@@ -30,7 +30,7 @@ md"""
 """
 
 # ╔═╡ 098c2ab1-3d20-4334-92a1-d70d66a6e0f1
-cd(@__DIR__) # `cd(@__DIR__)` 的意思是把当下文件所在位置设定为当前文件夹
+cd(@__DIR__) # `cd(@__DIR__)` 把当前文件所在位置设定为当前文件夹
 
 # ╔═╡ 783ba3fa-fe97-4d26-b131-61dbd79e8909
 md"""
@@ -90,18 +90,32 @@ begin
 	# 5. 仅保留需要按键， 即 `Go` 条件下的数据
 	filter!(:corrAns => ==("space"), df)
 	
-	# 6. 在每种实验条件下， `RT` 是否位于两个标准差以内, 即介于 `M-2*SD` 和 `M+2SD` 之间， 
-	#    并把返回的逻辑值记在新列 `WithIn` 中。 并把 `WithIn` 列添加到原始数据框中。
-	ExtrInfo = @pipe df |>  groupby(_, :Condition) |> transform(_, 
-			:RTs => (x -> (mean(x)-2std(x)) .<= x .<= (mean(x)+2std(x))) => :WithIn)
+	# 6. 在每种实验条件下， `RT` 是否位于两个标准差以内, 即介于 `M-2*SD` 和 `M+2SD` 之间,
+	#    返回的逻辑值记在新列 `WithIn` 中。     
+	ExtrInfo = @pipe df        |>  
+		groupby(_, :Condition) |> 
+		transform(_, 
+			:RTs => (x -> (mean(x) - 2std(x)) .<= x .<= (mean(x) + 2std(x))) 
+			=> :WithIn)
+
+	# 7. 把 `6` 并把 `WithIn` 列添加到原始数据框中。
 	insertcols!(df, :WithIn => ExtrInfo.WithIn)
-	
-	# 7. 只保留 `WithIn` 为真， 即位于两个标准差之内的数据
+
+	# 8. 只保留 `WithIn` 为真， 即位于两个标准差之内的数据
 	filter!(:WithIn => ==(true), df)
+
+	# 9. 据 `Condition` 添加 `PB` 和 `AB` 两列, 分别用于表示被试和行为主体的信念状态
+	transform!(df, :Condition 
+		=> ByRow(x -> [SubString(x, 2, 2), SubString(x, 4, 4)]) => [:PB, :AB]
+	)
+
+   # 10. 把秒改成毫秒
+	# transform!(df, :RTs => ByRow(x -> x * 1000) => :RTs)
+
 end;
 
-# ╔═╡ 3dd9c1cf-16f2-4170-97bc-d40a56a7efbc
-freqtable(df, :Condition, :key_Judge)
+# ╔═╡ 28ad6bf4-0c0b-4a0d-a665-388d0ecb08e7
+freqtable(df, :PB, :AB)
 
 # ╔═╡ 49521b31-7cdd-49be-9db3-10b891af893e
 md"""
@@ -109,15 +123,15 @@ md"""
 """
 
 # ╔═╡ fe3f2faa-67f6-44bc-86d5-9485a4a4e53c
-df_statistic = @pipe df |>
-	groupby(_, [:participant, :Condition]) |>
+df_statistic = @pipe df                              |>
+	groupby(_, [:participant, :Condition, :AB, :PB]) |>
 	combine(_, :RTs => mean => :RTs);
 
 # ╔═╡ d3c68c5f-3664-469f-804f-dd320982f5a8
-@df df_statistic plot(:Condition, :RTs, 
-	seriestype = [:dotplot, :boxplot], fill = [1 0.5], 
-	xlim = (0, 4), ylim = (1.75, 2.25), 
-	xlabel = "Conditiion", ylabel = "Response Latency", 
+@df df_statistic plot(:Condition, :RTs, group = :PB,  
+	seriestype = [:dotplot, :boxplot], 
+	fill = [1 1 0.5 0.5], 
+	xlabel = "Conditiion", ylabel = "Response Latency (s)", 
 	legend = false, ratio = 5)
 
 # ╔═╡ ce2f7ba5-6463-4fb1-a5f4-6b358ea7ac38
@@ -125,17 +139,43 @@ md"""
 ## 推论统计
 """
 
-# ╔═╡ 28eccd03-3b2c-478e-9840-f7ccbc54b86c
-formula = @formula(RTs ~ Condition);
-
 # ╔═╡ 85807e34-a983-4b00-b914-1498d6971270
-contr = Dict(:Condition => DummyCoding(base = "P-A-_C1"));
+# contr = Dict(:Condition => DummyCoding(base = "P-A-_C1"));
 
-# ╔═╡ f5469cd5-a11b-4ae9-9557-2cde8a5db311
-fm = fit(LinearModel, formula, df_statistic; contrasts = contr);
+# ╔═╡ 788eb8fa-39e1-48a5-bb6c-a843bf8dce5d
+begin
+	fm1 = fit(LinearModel, @formula(RTs ~ AB * PB), df_statistic)
+	fm2 = fit(LinearModel, @formula(RTs ~ AB + PB), df_statistic)
+	fm3 = fit(LinearModel, @formula(RTs ~      PB), df_statistic)
+	fm4 = fit(LinearModel, @formula(RTs ~ AB     ), df_statistic)
+end;
 
-# ╔═╡ 127f92b4-49bf-4066-91e8-cf807bbe350a
-coeftable(fm)
+# ╔═╡ ccb04a92-2dd9-4ab8-a751-69cedaec5fdc
+ftest(fm1.model, fm2.model, fm3.model)
+
+# ╔═╡ e6f988da-56f2-4111-a49d-1c71b26714be
+ftest(fm1.model, fm2.model, fm4.model)
+
+# ╔═╡ 18f0fa62-a4b8-419f-bf4a-9a068c8d70ee
+coeftable(fm3)
+
+# ╔═╡ 95a8ef61-d1fa-4573-81d8-11d2e9aea850
+md"""
+- 结论： 目前看来， 被试的信念状态影响结果， 但是行为主体的信念状态并不影响被试的反应时间。
+"""
+
+# ╔═╡ b42d2f98-1625-45a2-bde4-d7a467eecb61
+begin
+df_PB = @pipe df                    |> 
+	groupby(_, [:participant, :PB]) |> 
+	combine(_, :RTs => mean => :RTs)
+
+@df df_PB plot(:PB, :RTs,  
+	seriestype = [:dotplot, :boxplot], 
+	fill = [1 0.5], 
+	xlabel = "Conditiion", ylabel = "Response Latency (s)", 
+	legend = false, ratio = 5)
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1364,14 +1404,17 @@ version = "0.9.1+5"
 # ╠═b5ba1715-e30e-4c62-8d81-663ca157013d
 # ╟─01c3787e-b7f6-4e15-a1ba-d726ae885396
 # ╠═9c2b343c-e27a-4508-9a71-12466e585792
-# ╠═3dd9c1cf-16f2-4170-97bc-d40a56a7efbc
+# ╠═28ad6bf4-0c0b-4a0d-a665-388d0ecb08e7
 # ╟─49521b31-7cdd-49be-9db3-10b891af893e
 # ╠═fe3f2faa-67f6-44bc-86d5-9485a4a4e53c
 # ╠═d3c68c5f-3664-469f-804f-dd320982f5a8
 # ╟─ce2f7ba5-6463-4fb1-a5f4-6b358ea7ac38
-# ╠═28eccd03-3b2c-478e-9840-f7ccbc54b86c
 # ╠═85807e34-a983-4b00-b914-1498d6971270
-# ╠═f5469cd5-a11b-4ae9-9557-2cde8a5db311
-# ╠═127f92b4-49bf-4066-91e8-cf807bbe350a
+# ╠═788eb8fa-39e1-48a5-bb6c-a843bf8dce5d
+# ╠═ccb04a92-2dd9-4ab8-a751-69cedaec5fdc
+# ╠═e6f988da-56f2-4111-a49d-1c71b26714be
+# ╠═18f0fa62-a4b8-419f-bf4a-9a068c8d70ee
+# ╟─95a8ef61-d1fa-4573-81d8-11d2e9aea850
+# ╠═b42d2f98-1625-45a2-bde4-d7a467eecb61
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
