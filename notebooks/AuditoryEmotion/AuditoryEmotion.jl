@@ -150,11 +150,6 @@ ftest(fm02.model, fm04.model)
 # ╔═╡ bec30688-938a-4518-8c7f-9f3e35330d9c
 fm04
 
-# ╔═╡ 5c25a4f6-98bb-416f-ace7-958d1bd4db23
-md"""
-## Happy-Sad emotion
-"""
-
 # ╔═╡ a9273cae-f387-4e17-95d4-6de042235eb5
 md"""
 ### Models to compare
@@ -167,6 +162,11 @@ begin
 	f3 = @formula(Rate ~ Group)
 	f4 = @formula(Rate ~ AgeGroup)
 end;
+
+# ╔═╡ 5c25a4f6-98bb-416f-ace7-958d1bd4db23
+md"""
+## Happy-Sad emotion
+"""
 
 # ╔═╡ c29f9dca-c4bc-4ecb-b006-30e8f4818358
 md"""
