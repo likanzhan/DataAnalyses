@@ -20,23 +20,13 @@ begin
 end
 
 # ╔═╡ a888c516-dba1-4cda-9ada-2e516fc106e9
-DataAnalyses.header(title = "项目数据和分析过程汇总", author = "")
-
-# ╔═╡ 29bad371-6dd9-4ec1-8f9e-95b034a07a21
-md"""
-
-为提高科学研究可重复性，本站汇总了项目组近期开展项目的原始数据及数据分析过程。
-
-"""
-
-# ╔═╡ 82b7a596-1b6c-11ec-1731-5b8c4d67cc2c
-DataAnalyses.list_notebooks(@__FILE__, "notebooks")
+DataAnalyses.header(title = "数据分析汇总", author = "")
 
 # ╔═╡ 891c5658-b5e3-4cb8-8a21-9a1c28e122a5
 md"""
 ## Julia 语言
 
-本站数据分析的基本工具是 [Julia语言](https://www.julialang.org)。 
+为提高科学研究可重复性，本站汇总了项目组近期开展项目的原始数据及数据分析过程。 本站数据分析的基本工具是 [Julia语言](https://www.julialang.org)。 
 下面是 Julia 语言的一些常见描述：
 
 - **Walks like Python, runs like C.**
@@ -51,9 +41,11 @@ md"""
 
 """
 
+# ╔═╡ 82b7a596-1b6c-11ec-1731-5b8c4d67cc2c
+DataAnalyses.list_notebooks(@__FILE__, "notebooks")
+
 # ╔═╡ Cell order:
 # ╟─47554e79-497d-411d-ab2f-182cc915af48
 # ╟─a888c516-dba1-4cda-9ada-2e516fc106e9
-# ╟─29bad371-6dd9-4ec1-8f9e-95b034a07a21
-# ╟─82b7a596-1b6c-11ec-1731-5b8c4d67cc2c
 # ╟─891c5658-b5e3-4cb8-8a21-9a1c28e122a5
+# ╟─82b7a596-1b6c-11ec-1731-5b8c4d67cc2c
