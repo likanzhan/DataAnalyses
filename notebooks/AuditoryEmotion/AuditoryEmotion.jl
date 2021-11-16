@@ -5,7 +5,7 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ f52f84dc-bf83-406b-b1d9-8513d936e28a
-using PlutoUI; PlutoUI.TableOfContents(title = "Auditory Emotion")
+using PlutoUI; PlutoUI.TableOfContents(title = "Auditory Emotion", aside = false)
 
 # ╔═╡ e5852057-e107-4a74-97cd-bf490d467aaa
 using XLSX, DataFrames, FreqTables
@@ -18,12 +18,12 @@ using Gadfly
 
 # ╔═╡ 0ce67939-301c-478d-b2ad-c4f03d9e1295
 md"""
-## Basic Setting
+## Basic setting
 """
 
 # ╔═╡ ee7cc4f7-2e96-466f-ab44-eeb2ce358104
 md"""
-### Load Packages
+### Load packages
 """
 
 # ╔═╡ d57bad85-f563-4423-a7fe-a46e0785f147
@@ -34,15 +34,15 @@ import Statistics: mean
 
 # ╔═╡ fca8f0ea-8e95-461c-b4dc-f32dcaed8485
 md"""
-### Set Directory
+### Set directory
 """
 
 # ╔═╡ d6417408-4542-11ec-394c-33ff544076b7
-cd(@__DIR__) # pwd()
+cd(@__DIR__) # pwd(), Set current directory to location of current file
 
 # ╔═╡ 710b2a12-b3ad-41e3-a2f5-1b6202ae4130
 md"""
-## Import Data
+## Import data
 """
 
 # ╔═╡ 9bd6be40-8108-48d7-a2a9-a20f686aaee7
@@ -50,7 +50,7 @@ XLSX.sheetnames(XLSX.readxlsx("Childdata.xlsx")) # Insepect Sheet Names
 
 # ╔═╡ 60eebcdc-6b1a-4dca-9b84-afebf04d9632
 begin
-	# 1. Read `TD` data and insert column `Group` with value `ASD`
+	# 1. Read `TD` data and insert column `Group` with value `TD`
 	TD = DataFrame(XLSX.readtable("Childdata.xlsx", "TD")...)
 	insertcols!(TD, 1, :Group => "TD")
 	
@@ -58,7 +58,7 @@ begin
 	ASD = DataFrame(XLSX.readtable("Childdata.xlsx", "ASD")...)
 	insertcols!(ASD, 1, :Group => "ASD")
 
-	# 3. combine the two dataframes into one
+	# 3. Combine the two dataframes into one
 	td_asd = vcat(TD, ASD);
 
 	# 4. Remove column `OverallRate`
@@ -80,13 +80,13 @@ begin
 
 	# 9. Change data formats
 	transform!(dt,
-	:Emotion  => ByRow(string)                  => :Emotion,
-	:Subject  => ByRow(i -> string("s", i))     => :Subject,
-	:Gender   => ByRow(i -> i == 0 ? "F" : "M") => :Gender,
-	:Age      => ByRow(Float64)                 => :Age,
-	:AgeGroup => ByRow(i -> string(i, "yrs"))   => :AgeGroup,
-	:Block    => ByRow(i -> string("B", i))     => :Block,
-	:Rate     => ByRow(Float64)                 => :Rate
+		:Emotion  => ByRow(string)                  => :Emotion,
+		:Subject  => ByRow(i -> string("s", i))     => :Subject,
+		:Gender   => ByRow(i -> i == "0" ? "F" : "M") => :Gender,
+		:Age      => ByRow(Float64)                 => :Age,
+		:AgeGroup => ByRow(i -> string(i, "yrs"))   => :AgeGroup,
+		:Block    => ByRow(i -> string("B", i))     => :Block,
+		:Rate     => ByRow(Float64)                 => :Rate
 	)
 	
 end;
@@ -148,7 +148,7 @@ end;
 ftest(fm02.model, fm04.model)
 
 # ╔═╡ bec30688-938a-4518-8c7f-9f3e35330d9c
-fm04
+coeftable(fm04)
 
 # ╔═╡ a9273cae-f387-4e17-95d4-6de042235eb5
 md"""
@@ -204,7 +204,7 @@ end;
 ftest(hsch1.model, hsch2.model, hsch3.model)
 
 # ╔═╡ 1a69a283-a293-4f89-bec7-ee7d2bdb1167
-ftest(hsch1.model, hsch2.model, hsch4.model) # Select the Simlyest Model, ch4
+ftest(hsch1.model, hsch2.model, hsch4.model) # Select the Simlyest Model, hsch4
 
 # ╔═╡ e6808d00-d343-4b73-86a6-3fa5167f779e
 hscfch = coeftable(hsch4)
@@ -234,7 +234,7 @@ begin
 end;
 
 # ╔═╡ f6c9c0ab-9d00-4ff2-b33e-c5cd3d31f830
-ftest(hsen1.model, hsen2.model, hsen3.model) # No difference in interaction, select model 2
+ftest(hsen1.model, hsen2.model, hsen3.model) # No interaction, select model 2
 
 # ╔═╡ ec8ad974-456d-4421-965f-b78e4f704215
 hscfen = coeftable(hsen2)
@@ -267,7 +267,7 @@ begin
 end;
 
 # ╔═╡ f2cd3eeb-46bd-4f02-a3b6-cc9959c32db3
-ftest(hsfr1.model, hsfr2.model, hsfr3.model) # There exists an interaction, select model 1
+ftest(hsfr1.model, hsfr2.model, hsfr3.model) # Interaction is significant, select model 1
 
 # ╔═╡ 077c2cc7-c69e-4b39-ad82-30e2cc689eb2
 hscffr = coeftable(hsfr1)
@@ -352,7 +352,7 @@ end;
 ftest(sach1.model, sach2.model, sach3.model)
 
 # ╔═╡ 03a4ec50-ac88-4584-9513-989a54f968f6
-ftest(sach1.model, sach2.model, sach4.model) # The sympliest model
+ftest(sach1.model, sach2.model, sach4.model) # Select the sympliest model
 
 # ╔═╡ 0fb89d31-3278-4ffc-8044-9bb13cedd198
 sacfch = coeftable(sach4)
@@ -407,7 +407,7 @@ begin
 end;
 
 # ╔═╡ f5751762-8afd-402b-870e-f662104ada4b
-ftest(safr1.model, safr2.model, safr3.model) # Interaction is significant
+ftest(safr1.model, safr2.model, safr3.model) # Select the simple model
 
 # ╔═╡ c14e0988-750d-4381-92d7-36bd6a561b30
 sacffr = coeftable(safr3)
@@ -1146,9 +1146,9 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 """
 
 # ╔═╡ Cell order:
+# ╟─f52f84dc-bf83-406b-b1d9-8513d936e28a
 # ╟─0ce67939-301c-478d-b2ad-c4f03d9e1295
 # ╟─ee7cc4f7-2e96-466f-ab44-eeb2ce358104
-# ╠═f52f84dc-bf83-406b-b1d9-8513d936e28a
 # ╠═e5852057-e107-4a74-97cd-bf490d467aaa
 # ╠═d57bad85-f563-4423-a7fe-a46e0785f147
 # ╠═49b1d733-c7a9-4f45-b6f3-1a08558b20ab
