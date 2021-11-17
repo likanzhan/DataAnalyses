@@ -1,6 +1,6 @@
 module DataAnalyses
 
-using Pkg, Markdown, PlutoUI
+using Pkg, Markdown
 
 include_dependency(joinpath("..", "Project.toml"))
 include("functionsgeneral.jl")   # project_relative_path()
