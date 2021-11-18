@@ -197,11 +197,6 @@ P2 = plot(dtm1,
 	Guide.ylabel("Correct Rate (mean ± 2SE) by AgeGroup")
 )
 
-# ╔═╡ 868b439b-660c-46af-a2d5-64a14c46ae8a
-md"""
-
-"""
-
 # ╔═╡ 062a825d-352e-4c30-8645-a8bad565a16a
 P3 = plot(dtm2, 
 	x = :Language, y = :Rate, ymin = :Lower, ymax = :Upper, color = :Group,
@@ -1475,7 +1470,6 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╠═9a7eb4a2-e85f-45e4-835a-db636eef6f2e
 # ╠═2729e346-1936-43c1-ac09-e058c4177962
 # ╠═b693db45-0914-434b-9c3b-58092b469a61
-# ╠═868b439b-660c-46af-a2d5-64a14c46ae8a
 # ╠═062a825d-352e-4c30-8645-a8bad565a16a
 # ╠═72014e70-7798-4952-ab6a-b3c2ff9d0ce2
 # ╟─50ed3cdf-42b3-4170-86c8-2f5824d61907
