@@ -197,6 +197,11 @@ P2 = plot(dtm1,
 	Guide.ylabel("Correct Rate (mean ± 2SE) by AgeGroup")
 )
 
+# ╔═╡ 868b439b-660c-46af-a2d5-64a14c46ae8a
+md"""
+
+"""
+
 # ╔═╡ 062a825d-352e-4c30-8645-a8bad565a16a
 P3 = plot(dtm2, 
 	x = :Language, y = :Rate, ymin = :Lower, ymax = :Upper, color = :Group,
@@ -206,14 +211,21 @@ P3 = plot(dtm2,
 # ╔═╡ 72014e70-7798-4952-ab6a-b3c2ff9d0ce2
 draw(PDF("AuditoryEmotion.pdf", 30cm, 20cm), P3)
 
-# ╔═╡ 07cb8504-f681-4a46-913f-4d4784aebe69
-md"""
-- Image [Download](https://github.com/likanzhan/DataAnalyses.jl/raw/main/notebooks/AuditoryEmotion/AuditoryEmotion.pdf).
-"""
-
 # ╔═╡ 50ed3cdf-42b3-4170-86c8-2f5824d61907
 md"""
-### Summary <<<<<<======
+ ### Summary <<<<<<======
+"""
+
+# ╔═╡ d189079a-2cd0-4624-aae2-9a46b8d59dec
+md"""
+As we can see in the two previous pictures, the general patterns between 3yrs group and 5yrs group were quite similar, even thgough there is a significant interaction between `AgeGroup` and `Group`;
+
+So it is relativey safe to remove the interaction effect and inspect the simple model, i.e., `fm04`,  as well as Figure `P3`.
+"""
+
+# ╔═╡ 07cb8504-f681-4a46-913f-4d4784aebe69
+md"""
+Click to download figure 'P3' in PDF format: [Download](https://github.com/likanzhan/DataAnalyses.jl/raw/main/notebooks/AuditoryEmotion/AuditoryEmotion.pdf).
 """
 
 # ╔═╡ 94bf2e10-2181-4bc8-ad13-3aec88fb27b5
@@ -228,7 +240,7 @@ As the model suggests, there exists a significant interaction between Group (ASD
 
 - When the test language was Chinese, there exists no significant difference between ASD and TD: _b_ = $(round(cf04.cols[1][5], digits = 2)), _t_ = $(round(cf04.cols[3][5], digits = 2)), _p_ = $(@sprintf "%.2e" cf04.cols[4][5]).
 
-- The difference between a forien language and the mother language was significantly different between TD and ASD group. For English, _b_ = $(round(cf04.cols[1][6], digits = 2)), _t_ = $(round(cf04.cols[3][6], digits = 2)), _p_ = $(@sprintf "%.2e" cf04.cols[4][6]); for French, _b_ = $(round(cf04.cols[1][7], digits = 2)), _t_ = $(round(cf04.cols[3][7], digits = 2)), _p_ = $(@sprintf "%.2e" cf04.cols[4][7]); for Spanish: _b_ = $(round(cf04.cols[1][8], digits = 2)), _t_ = $(round(cf04.cols[3][8], digits = 2)), _p_ = $(@sprintf "%.2e" cf04.cols[4][8]).
+- The difference between a foreign language and the mother language was significantly different between TD and ASD group. For English, _b_ = $(round(cf04.cols[1][6], digits = 2)), _t_ = $(round(cf04.cols[3][6], digits = 2)), _p_ = $(@sprintf "%.2e" cf04.cols[4][6]); for French, _b_ = $(round(cf04.cols[1][7], digits = 2)), _t_ = $(round(cf04.cols[3][7], digits = 2)), _p_ = $(@sprintf "%.2e" cf04.cols[4][7]); for Spanish: _b_ = $(round(cf04.cols[1][8], digits = 2)), _t_ = $(round(cf04.cols[3][8], digits = 2)), _p_ = $(@sprintf "%.2e" cf04.cols[4][8]).
 
 """
 
@@ -1463,10 +1475,12 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╠═9a7eb4a2-e85f-45e4-835a-db636eef6f2e
 # ╠═2729e346-1936-43c1-ac09-e058c4177962
 # ╠═b693db45-0914-434b-9c3b-58092b469a61
+# ╠═868b439b-660c-46af-a2d5-64a14c46ae8a
 # ╠═062a825d-352e-4c30-8645-a8bad565a16a
 # ╠═72014e70-7798-4952-ab6a-b3c2ff9d0ce2
-# ╟─07cb8504-f681-4a46-913f-4d4784aebe69
 # ╟─50ed3cdf-42b3-4170-86c8-2f5824d61907
+# ╟─d189079a-2cd0-4624-aae2-9a46b8d59dec
+# ╟─07cb8504-f681-4a46-913f-4d4784aebe69
 # ╠═94bf2e10-2181-4bc8-ad13-3aec88fb27b5
 # ╟─c62a2876-57b3-44d8-a6ff-5299eccad4c1
 # ╟─5c25a4f6-98bb-416f-ace7-958d1bd4db23
