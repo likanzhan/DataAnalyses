@@ -280,7 +280,7 @@ As the model suggests, there exists a significant interaction between Group (ASD
 
 # ╔═╡ 07cb8504-f681-4a46-913f-4d4784aebe69
 md"""
-Click to download figure P3 in [PDF]((https://github.com/likanzhan/DataAnalyses.jl/raw/main/notebooks/AuditoryEmotion/AuditoryEmotionImage.pdf)) format and model results in [TXT format]((https://github.com/likanzhan/DataAnalyses.jl/raw/main/notebooks/AuditoryEmotion/AuditoryEmotionModel.txt)) and in [CSV format](https://github.com/likanzhan/DataAnalyses.jl/raw/main/notebooks/AuditoryEmotion/AuditoryEmotionModel.csv).
+Click to download figure P3 in [PDF]((https://github.com/likanzhan/DataAnalyses.jl/raw/main/notebooks/AuditoryEmotion/AuditoryEmotionImage.pdf)) format and model results in [TXT format](https://github.com/likanzhan/DataAnalyses.jl/raw/main/notebooks/AuditoryEmotion/AuditoryEmotionModel.txt) and in [CSV format](https://github.com/likanzhan/DataAnalyses.jl/raw/main/notebooks/AuditoryEmotion/AuditoryEmotionModel.csv).
 """
 
 # ╔═╡ 5c25a4f6-98bb-416f-ace7-958d1bd4db23
