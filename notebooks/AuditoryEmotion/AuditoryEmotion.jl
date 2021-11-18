@@ -119,26 +119,97 @@ freqtable(dt, :Group, :Language)
 
 # ╔═╡ f491cfe0-9c81-4025-bede-13adb26e9066
 md"""
-### Box plot
+### Describe analyses
+"""
+
+# ╔═╡ b28e9423-ad1d-4255-a964-3999637b8583
+md"""
+- Define errorbar function
+"""
+
+# ╔═╡ 6ffb20d0-da7d-4bc8-89bc-ddda5e12101a
+LU(x) = (
+	Lower = mean(x) - 2std(x) / sqrt(length(x)),
+	Rate = mean(x),
+	Upper = mean(x) + 2std(x) / sqrt(length(x))
+)
+
+# ╔═╡ b03ae532-5cc6-4285-ab4c-5c3ace585bb0
+md"""
+- Combine data
+"""
+
+# ╔═╡ 55611af6-4a7b-43bf-b39e-9a77c1984b89
+dtm1 = @pipe dt |>
+	groupby(_, [:Language, :Group, :AgeGroup, :Emotion]) |>
+	combine(_, :Rate => LU => AsTable );
+
+# ╔═╡ b4e4efa4-d604-43cf-9401-8f590b70fd70
+dtm2 = @pipe dt |>
+	groupby(_, [:Language, :Group, :AgeGroup]) |>
+	combine(_, :Rate => LU => AsTable );
+
+# ╔═╡ 9a7eb4a2-e85f-45e4-835a-db636eef6f2e
+dtm3 = @pipe dt |>
+	groupby(_, [:Language, :Group]) |>
+	combine(_, :Rate => LU => AsTable);
+
+# ╔═╡ d490eb77-2b3f-4da1-8f99-d1de8b50fa81
+md"""
+- Define line plots
 """
 
 # ╔═╡ e2601f01-8774-416f-bd95-0ea8e61ee495
 set_default_plot_size(18cm, 12cm)
 
 # ╔═╡ 568f7944-aad7-4945-ac79-ced458795e1a
-p1 = plot(dt, 
-	x = :Language, y = :Rate, color = :Group,
-	xgroup = :Emotion, ygroup = :AgeGroup,
-	Geom.subplot_grid(Geom.boxplot),
+P1 = plot(dtm1, 
+	x = :Language, y = :Rate, ymin = :Lower, ymax = :Upper, 
+	color = :Group, xgroup = :Emotion, ygroup = :AgeGroup,
+	Geom.subplot_grid(
+		Geom.yerrorbar, Geom.line, Geom.point,
+		Coord.cartesian(ymin = 0.5, ymax = 1) ),
 	Theme(boxplot_spacing = 3px, default_color = "white")
-)
+);
 
-# ╔═╡ 9413b3b6-ec2b-4860-93e9-71b858ecae43
-draw(PDF("AuditoryEmotion.pdf", 30cm, 20cm), p1)
+# ╔═╡ b693db45-0914-434b-9c3b-58092b469a61
+P2 = plot(dtm2, 
+	x = :Language, y = :Rate, ymin = :Lower, ymax = :Upper, 
+	color = :Group, ygroup = :AgeGroup,
+	Geom.subplot_grid(
+		Geom.yerrorbar, Geom.line, 
+		Coord.cartesian(ymin = 0.5, ymax = 1) ),
+	Guide.ylabel("Correct Rate (mean ± 2SE) by AgeGroup")
+);
+
+# ╔═╡ 062a825d-352e-4c30-8645-a8bad565a16a
+P3 = plot(dtm3, 
+	x = :Language, y = :Rate, ymin = :Lower, ymax = :Upper, 
+	color = :Group, Geom.line, Geom.yerrorbar, Geom.point, 
+	Coord.cartesian(ymin = 0.5, ymax = 1),
+	Guide.ylabel("Correct Rate (mean ± 2SE)")
+);
+
+# ╔═╡ 72014e70-7798-4952-ab6a-b3c2ff9d0ce2
+draw(PDF("AuditoryEmotionImage.pdf", 30cm, 20cm), P3)
+
+# ╔═╡ 48dc3c44-2908-40e6-92b1-9dd2259af6ff
+md"""
+- The patterns between `Group` $\times$ `Language` are quite similar regardless of `Emotion` and `AgeGroup`:
+"""
+
+# ╔═╡ 95612541-5adf-49d9-9014-4735e1716a24
+P1
+
+# ╔═╡ baad199f-6df8-4f99-9a76-c5ec3e1876b1
+P2
+
+# ╔═╡ 53bdfb27-37ae-411b-ba58-2e046f7bb91e
+P3
 
 # ╔═╡ 98724837-1864-41cb-ac99-ee5413ccf961
 md"""
-### Model selection
+### Statistical analyses
 """
 
 # ╔═╡ 7d5fb4d1-eacf-4563-ae96-4b6be33549f6
@@ -166,65 +237,24 @@ end;
 # ╔═╡ 476a9e3a-91f6-4e9d-b071-95979124c70c
 ftest(fm01.model, fm02.model, fm03.model, fm04.model)
 
-# ╔═╡ 6ffb20d0-da7d-4bc8-89bc-ddda5e12101a
-LU(x) = (
-	Lower = mean(x) - 2std(x) / sqrt(length(x)),
-	Rate = mean(x),
-	Upper = mean(x) + 2std(x) / sqrt(length(x))
-)
+# ╔═╡ e0ae0b41-f71e-48d2-a688-10522d50d798
+cf04 = coeftable(fm04);
 
-# ╔═╡ b4e4efa4-d604-43cf-9401-8f590b70fd70
-dtm1 = @pipe dt |>
-	groupby(_, [:Language, :Group, :AgeGroup]) |>
-	combine(_, :Rate => LU => AsTable );
-
-# ╔═╡ 9a7eb4a2-e85f-45e4-835a-db636eef6f2e
-dtm2 = @pipe dt |>
-	groupby(_, [:Language, :Group]) |>
-	combine(_, :Rate => LU => AsTable);
-
-# ╔═╡ 2729e346-1936-43c1-ac09-e058c4177962
-set_default_plot_size(18cm, 12cm)
-
-# ╔═╡ b693db45-0914-434b-9c3b-58092b469a61
-P2 = plot(dtm1, 
-	x = :Language, y = :Rate, ymin = :Lower, ymax = :Upper, 
-	color = :Group, ygroup = :AgeGroup,
-	Geom.subplot_grid(
-		Geom.yerrorbar, Geom.line, 
-		Coord.cartesian(ymin = 0.5, ymax = 1) 
-	),
-	Guide.ylabel("Correct Rate (mean ± 2SE) by AgeGroup")
-)
-
-# ╔═╡ 062a825d-352e-4c30-8645-a8bad565a16a
-P3 = plot(dtm2, 
-	x = :Language, y = :Rate, ymin = :Lower, ymax = :Upper, color = :Group,
-	Geom.line, Geom.yerrorbar, Geom.point, Coord.cartesian(ymin = 0.5, ymax = 1),
-	Guide.ylabel("Correct Rate (mean ± 2SE)"))
-
-# ╔═╡ 72014e70-7798-4952-ab6a-b3c2ff9d0ce2
-draw(PDF("AuditoryEmotion.pdf", 30cm, 20cm), P3)
+# ╔═╡ 59887a68-ef14-42d4-be72-d816023263c0
+open(io -> show(io, cf04), "AuditoryEmotionModel.txt", "w");
 
 # ╔═╡ 50ed3cdf-42b3-4170-86c8-2f5824d61907
 md"""
- ### Summary <<<<<<======
+### Summary ====== <<<<<< ======
 """
 
 # ╔═╡ d189079a-2cd0-4624-aae2-9a46b8d59dec
 md"""
-As we can see in the two previous pictures, the general patterns between 3yrs group and 5yrs group were quite similar, even thgough there is a significant interaction between `AgeGroup` and `Group`;
-
-So it is relativey safe to remove the interaction effect and inspect the simple model, i.e., `fm04`,  as well as Figure `P3`.
-"""
-
-# ╔═╡ 07cb8504-f681-4a46-913f-4d4784aebe69
-md"""
-Click to download figure 'P3' in PDF format: [Download](https://github.com/likanzhan/DataAnalyses.jl/raw/main/notebooks/AuditoryEmotion/AuditoryEmotion.pdf).
+As we can see in pictures `P1` - `P3`, the general patterns between `Emotion` (Happy-Sad vs Surprise-Angry) and `AgeGroup` (3yrs vs 5yrs) were quite similar, even thgough statistically there is a significant interaction between `AgeGroup` and `Group` (`fm03` vs `fm04`). So it is relativey safe to remove the interaction effect and inspect the simple model, i.e., `fm04`,  as well as Figure `P3`.
 """
 
 # ╔═╡ 94bf2e10-2181-4bc8-ad13-3aec88fb27b5
-cf04 = coeftable(fm04)
+cf04
 
 # ╔═╡ c62a2876-57b3-44d8-a6ff-5299eccad4c1
 md"""
@@ -237,6 +267,11 @@ As the model suggests, there exists a significant interaction between Group (ASD
 
 - The difference between a foreign language and the mother language was significantly different between TD and ASD group. For English, _b_ = $(round(cf04.cols[1][6], digits = 2)), _t_ = $(round(cf04.cols[3][6], digits = 2)), _p_ = $(@sprintf "%.2e" cf04.cols[4][6]); for French, _b_ = $(round(cf04.cols[1][7], digits = 2)), _t_ = $(round(cf04.cols[3][7], digits = 2)), _p_ = $(@sprintf "%.2e" cf04.cols[4][7]); for Spanish: _b_ = $(round(cf04.cols[1][8], digits = 2)), _t_ = $(round(cf04.cols[3][8], digits = 2)), _p_ = $(@sprintf "%.2e" cf04.cols[4][8]).
 
+"""
+
+# ╔═╡ 07cb8504-f681-4a46-913f-4d4784aebe69
+md"""
+Click to download figure [P3](https://github.com/likanzhan/DataAnalyses.jl/raw/main/notebooks/AuditoryEmotion/AuditoryEmotionImage.pdf) in PDF format and [model results](https://github.com/likanzhan/DataAnalyses.jl/raw/main/notebooks/AuditoryEmotion/AuditoryEmotionModel.txt) in txt format.
 """
 
 # ╔═╡ 5c25a4f6-98bb-416f-ace7-958d1bd4db23
@@ -1125,9 +1160,9 @@ version = "8.44.0+0"
 
 [[PDMats]]
 deps = ["LinearAlgebra", "SparseArrays", "SuiteSparse"]
-git-tree-sha1 = "86a37fba91f9fb5bbc5207e9458a5b831dfebb6b"
+git-tree-sha1 = "ee26b350276c51697c9c2d88a072b339f9f03d73"
 uuid = "90014a1f-27ba-587c-ab20-58faa44d9150"
-version = "0.11.4"
+version = "0.11.5"
 
 [[Pango_jll]]
 deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "FriBidi_jll", "Glib_jll", "HarfBuzz_jll", "JLLWrappers", "Libdl", "Pkg"]
@@ -1458,25 +1493,33 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╠═c14ef831-413e-4556-bf38-af1893b584d1
 # ╠═72180100-3084-4214-ae7b-d36b4cd3aef5
 # ╟─f491cfe0-9c81-4025-bede-13adb26e9066
+# ╟─b28e9423-ad1d-4255-a964-3999637b8583
+# ╠═6ffb20d0-da7d-4bc8-89bc-ddda5e12101a
+# ╟─b03ae532-5cc6-4285-ab4c-5c3ace585bb0
+# ╠═55611af6-4a7b-43bf-b39e-9a77c1984b89
+# ╠═b4e4efa4-d604-43cf-9401-8f590b70fd70
+# ╠═9a7eb4a2-e85f-45e4-835a-db636eef6f2e
+# ╟─d490eb77-2b3f-4da1-8f99-d1de8b50fa81
 # ╠═e2601f01-8774-416f-bd95-0ea8e61ee495
 # ╠═568f7944-aad7-4945-ac79-ced458795e1a
-# ╠═9413b3b6-ec2b-4860-93e9-71b858ecae43
+# ╠═b693db45-0914-434b-9c3b-58092b469a61
+# ╠═062a825d-352e-4c30-8645-a8bad565a16a
+# ╠═72014e70-7798-4952-ab6a-b3c2ff9d0ce2
+# ╟─48dc3c44-2908-40e6-92b1-9dd2259af6ff
+# ╠═95612541-5adf-49d9-9014-4735e1716a24
+# ╠═baad199f-6df8-4f99-9a76-c5ec3e1876b1
+# ╠═53bdfb27-37ae-411b-ba58-2e046f7bb91e
 # ╟─98724837-1864-41cb-ac99-ee5413ccf961
 # ╠═7d5fb4d1-eacf-4563-ae96-4b6be33549f6
 # ╠═74ba751e-0cd3-4fa5-89ab-be9a2971d245
 # ╠═476a9e3a-91f6-4e9d-b071-95979124c70c
-# ╠═6ffb20d0-da7d-4bc8-89bc-ddda5e12101a
-# ╠═b4e4efa4-d604-43cf-9401-8f590b70fd70
-# ╠═9a7eb4a2-e85f-45e4-835a-db636eef6f2e
-# ╠═2729e346-1936-43c1-ac09-e058c4177962
-# ╠═b693db45-0914-434b-9c3b-58092b469a61
-# ╠═062a825d-352e-4c30-8645-a8bad565a16a
-# ╠═72014e70-7798-4952-ab6a-b3c2ff9d0ce2
+# ╠═e0ae0b41-f71e-48d2-a688-10522d50d798
+# ╠═59887a68-ef14-42d4-be72-d816023263c0
 # ╟─50ed3cdf-42b3-4170-86c8-2f5824d61907
 # ╟─d189079a-2cd0-4624-aae2-9a46b8d59dec
-# ╟─07cb8504-f681-4a46-913f-4d4784aebe69
-# ╠═94bf2e10-2181-4bc8-ad13-3aec88fb27b5
+# ╟─94bf2e10-2181-4bc8-ad13-3aec88fb27b5
 # ╟─c62a2876-57b3-44d8-a6ff-5299eccad4c1
+# ╟─07cb8504-f681-4a46-913f-4d4784aebe69
 # ╟─5c25a4f6-98bb-416f-ace7-958d1bd4db23
 # ╟─a9273cae-f387-4e17-95d4-6de042235eb5
 # ╠═85e9e4d8-52f0-44c9-ac7a-b5e2db94d9e4
