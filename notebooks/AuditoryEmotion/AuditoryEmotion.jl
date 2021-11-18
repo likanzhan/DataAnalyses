@@ -22,6 +22,9 @@ using Cairo, Fontconfig
 # ╔═╡ 18f3ad5b-f8a3-43f5-828d-42627ab99d0e
 using Printf
 
+# ╔═╡ 8afe3931-61ca-4ee2-a90a-da2d7cbf8cd1
+using CSV
+
 # ╔═╡ 0ce67939-301c-478d-b2ad-c4f03d9e1295
 md"""
 ## Basic setting
@@ -243,6 +246,12 @@ cf04 = coeftable(fm04);
 # ╔═╡ 59887a68-ef14-42d4-be72-d816023263c0
 open(io -> show(io, cf04), "AuditoryEmotionModel.txt", "w");
 
+# ╔═╡ 60213cec-926a-4bb5-be93-b620550f93ad
+# open(io -> show(io, MIME("text/markdown"), cf04), "AuditoryEmotionModel.md", "w");
+
+# ╔═╡ 23bff439-6ed7-405d-8a93-a6f50282e47b
+CSV.write("AuditoryEmotionModel.csv", DataFrame(cf04));
+
 # ╔═╡ 50ed3cdf-42b3-4170-86c8-2f5824d61907
 md"""
 ### Summary ====== <<<<<< ======
@@ -271,7 +280,7 @@ As the model suggests, there exists a significant interaction between Group (ASD
 
 # ╔═╡ 07cb8504-f681-4a46-913f-4d4784aebe69
 md"""
-Click to download figure [P3](https://github.com/likanzhan/DataAnalyses.jl/raw/main/notebooks/AuditoryEmotion/AuditoryEmotionImage.pdf) in PDF format and [model results](https://github.com/likanzhan/DataAnalyses.jl/raw/main/notebooks/AuditoryEmotion/AuditoryEmotionModel.txt) in txt format.
+Click to download figure P3 in [PDF]((https://github.com/likanzhan/DataAnalyses.jl/raw/main/notebooks/AuditoryEmotion/AuditoryEmotionImage.pdf)) format and model results in [TXT format]((https://github.com/likanzhan/DataAnalyses.jl/raw/main/notebooks/AuditoryEmotion/AuditoryEmotionModel.txt)) and in [CSV format](https://github.com/likanzhan/DataAnalyses.jl/raw/main/notebooks/AuditoryEmotion/AuditoryEmotionModel.csv).
 """
 
 # ╔═╡ 5c25a4f6-98bb-416f-ace7-958d1bd4db23
@@ -564,6 +573,7 @@ sacfsp = coeftable(sasp1)
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 Cairo = "159f3aea-2a34-519c-b102-8c37f9878175"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Fontconfig = "186bb1d3-e1f7-5a2c-a377-96d770f13627"
@@ -577,6 +587,7 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 XLSX = "fdbf4ff8-1666-58a4-91e7-1b58723a45e0"
 
 [compat]
+CSV = "~0.9.11"
 Cairo = "~1.0.5"
 DataFrames = "~1.2.2"
 Fontconfig = "~0.4.0"
@@ -631,6 +642,12 @@ git-tree-sha1 = "19a35467a82e236ff51bc17a3a44b69ef35185a2"
 uuid = "6e34b625-4abd-537c-b88f-471c36dfa7a0"
 version = "1.0.8+0"
 
+[[CSV]]
+deps = ["CodecZlib", "Dates", "FilePathsBase", "InlineStrings", "Mmap", "Parsers", "PooledArrays", "SentinelArrays", "Tables", "Unicode", "WeakRefStrings"]
+git-tree-sha1 = "49f14b6c56a2da47608fe30aed711b5882264d7a"
+uuid = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+version = "0.9.11"
+
 [[Cairo]]
 deps = ["Cairo_jll", "Colors", "Glib_jll", "Graphics", "Libdl", "Pango_jll"]
 git-tree-sha1 = "d0b3f8b4ad16cb0a2988c6788646a5e6a17b6b1b"
@@ -660,6 +677,12 @@ deps = ["LinearAlgebra", "Test"]
 git-tree-sha1 = "9a1d594397670492219635b35a3d830b04730d62"
 uuid = "9e997f8a-9a97-42d5-a9f1-ce6bfc15e2c0"
 version = "0.1.1"
+
+[[CodecZlib]]
+deps = ["TranscodingStreams", "Zlib_jll"]
+git-tree-sha1 = "ded953804d019afa9a3f98981d99b33e3db7b6da"
+uuid = "944b1d66-785c-5afd-91f1-9de20f533193"
+version = "0.7.0"
 
 [[ColorTypes]]
 deps = ["FixedPointNumbers", "Random"]
@@ -797,6 +820,12 @@ git-tree-sha1 = "c6033cc3892d0ef5bb9cd29b7f2f0331ea5184ea"
 uuid = "f5851436-0d7a-5f13-b9de-f02708fd171a"
 version = "3.3.10+0"
 
+[[FilePathsBase]]
+deps = ["Dates", "Mmap", "Printf", "Test", "UUIDs"]
+git-tree-sha1 = "79a9cbc545abe411a5ea34c195dd6d5722fe3e7d"
+uuid = "48062228-2e41-5def-b9a4-89aafe57970f"
+version = "0.9.15"
+
 [[FillArrays]]
 deps = ["LinearAlgebra", "Random", "SparseArrays", "Statistics"]
 git-tree-sha1 = "8756f9935b7ccc9064c6eef0bff0ad643df733a3"
@@ -923,6 +952,12 @@ version = "0.2.2"
 git-tree-sha1 = "012e604e1c7458645cb8b436f8fba789a51b257f"
 uuid = "9b13fd28-a010-5f03-acff-a1bbcff69959"
 version = "1.0.0"
+
+[[InlineStrings]]
+deps = ["Parsers"]
+git-tree-sha1 = "19cb49649f8c41de7fea32d089d37de917b553da"
+uuid = "842dd82b-1e85-43dc-bf29-5d0ee9dffc48"
+version = "1.0.1"
 
 [[IntelOpenMP_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1269,6 +1304,12 @@ version = "0.3.0+0"
 [[SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 
+[[SentinelArrays]]
+deps = ["Dates", "Random"]
+git-tree-sha1 = "f45b34656397a1f6e729901dc9ef679610bd12b5"
+uuid = "91c51154-3ec4-41a3-a24f-3f23e20d615c"
+version = "1.3.8"
+
 [[Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 
@@ -1367,12 +1408,24 @@ uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
+[[TranscodingStreams]]
+deps = ["Random", "Test"]
+git-tree-sha1 = "216b95ea110b5972db65aa90f88d8d89dcb8851c"
+uuid = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
+version = "0.9.6"
+
 [[UUIDs]]
 deps = ["Random", "SHA"]
 uuid = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 
 [[Unicode]]
 uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
+
+[[WeakRefStrings]]
+deps = ["DataAPI", "InlineStrings", "Parsers"]
+git-tree-sha1 = "c69f9da3ff2f4f02e811c3323c22e5dfcb584cfa"
+uuid = "ea10d353-3f73-51f8-a26c-33c1cb351aa5"
+version = "1.4.1"
 
 [[WoodburyMatrices]]
 deps = ["LinearAlgebra", "SparseArrays"]
@@ -1482,6 +1535,7 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╠═324d2b72-6e80-4114-b64a-efafc6130d4d
 # ╠═bc5a5019-119f-4685-a21b-5a9c5d865095
 # ╠═18f3ad5b-f8a3-43f5-828d-42627ab99d0e
+# ╠═8afe3931-61ca-4ee2-a90a-da2d7cbf8cd1
 # ╟─fca8f0ea-8e95-461c-b4dc-f32dcaed8485
 # ╠═d6417408-4542-11ec-394c-33ff544076b7
 # ╟─710b2a12-b3ad-41e3-a2f5-1b6202ae4130
@@ -1515,6 +1569,8 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╠═476a9e3a-91f6-4e9d-b071-95979124c70c
 # ╠═e0ae0b41-f71e-48d2-a688-10522d50d798
 # ╠═59887a68-ef14-42d4-be72-d816023263c0
+# ╠═60213cec-926a-4bb5-be93-b620550f93ad
+# ╠═23bff439-6ed7-405d-8a93-a6f50282e47b
 # ╟─50ed3cdf-42b3-4170-86c8-2f5824d61907
 # ╟─d189079a-2cd0-4624-aae2-9a46b8d59dec
 # ╟─94bf2e10-2181-4bc8-ad13-3aec88fb27b5
