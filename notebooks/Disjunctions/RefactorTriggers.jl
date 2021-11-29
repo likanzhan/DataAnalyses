@@ -77,7 +77,7 @@ return ls
 end
 
 # ╔═╡ a45539e9-03c5-4ace-a9a8-eea7236180ca
-# refactor_trigger!("01/S01_elist.txt")
+refactor_trigger!("01/S01_elist.txt")
 
 # ╔═╡ Cell order:
 # ╠═d473d078-50fd-11ec-2009-8f5f5a7256bc
