@@ -13,6 +13,7 @@ begin
 	using CairoMakie
 	using FreqTables
 	using Statistics # mean
+	using GLM
 end
 
 # ╔═╡ e385fbc8-8f75-11eb-08bf-232a909b8db2
@@ -75,7 +76,7 @@ transform!(df, [:letter_type, :key] => ByRow((x, y) -> check_key(x, y)) => :tf)
 
 # 07. Create the column `agent`
 replace!(df.agent_position, "_" => "X")
-replace!(df.agent_type, "_" => "X")
+replace!(df.agent_type,     "_" => "X")
 transform!(df, [:agent_position, :agent_type] => ByRow(*) => :agent)
 
 # 08. Change participant name: "1" -> "S01"
@@ -85,26 +86,32 @@ transform!(df, :participant =>
 # 09. Refector rt wtr onset of stimulus
 transform!(df, [:rt, :stimulus_duration] => ByRow(-) => :rt)
 
-# 10. Refector rt to `ta_bias`(toward/away bias) and `lr_bias`(left/right bias)
-#    `lr_bias` differs from the original coding because of the labeling difference     
-transform!(df, [:letter_rotation, :rt] => ByRow((x, y) -> -cosd(x) * y) => :ta_bias)
-transform!(df, [:letter_rotation, :rt] => ByRow((x, y) -> -sind(x) * y) => :lr_bias)
+# 10. Refector rt to `ta`(toward/away bias) and `lr`(left/right bias)
+#    `lr` differs from the original coding because of the labeling difference     
+transform!(df, [:letter_rotation, :rt] => ByRow((x, y) -> -cosd(x) * y) => :ta)
+transform!(df, [:letter_rotation, :rt] => ByRow((x, y) -> -sind(x) * y) => :lr)
 
 # 11. Convert `letter_rotation` as `string`
 transform!(df, :letter_rotation => 
 	ByRow(x -> string("D", lpad(x, 3, "0"))) => :letter_rotation)
-	
+
 # 11. Filter data based on corrects of each participant
     # a). Correct rate for each participant
 	correct_rates = combine(groupby(df, :participant), :tf => mean)
     # b). Participants with correct rates lower than 0.8
 	exclude = filter(:tf_mean => <=(0.8), correct_rates).participant
     # c). Remove the paticipants wih low correct rates 
-subset!(df, :participant => ByRow(!∈(exclude)) )
+	subset!(df, :participant => ByRow(!∈(exclude)) )
+
+# 11. 
+subset!(df, :rt => ByRow(x -> 0.15 <= x <= 2.0))
+subset!(df, :tf => ByRow(==(true)) )
+
+extrema(df.rt)
 
 # 12. Select columns
 select!(df, [:participant, :letter, :letter_type, :letter_rotation, 
-	:agent_position, :agent_type, :agent, :tf, :rt, :ta_bias, :lr_bias])
+	:agent_position, :agent_type, :agent, :tf, :rt, :ta, :lr])
 	
 end; # cell end
 
@@ -125,7 +132,9 @@ end
 # ╔═╡ 82b87345-3388-4151-b8e2-2a01f04d5e4c
 begin
 	gdf = groupby(df, [:participant, :agent])
-	cgdf = combine(gdf, [:rt, :ta_bias, :lr_bias] .=> mean .=> [:rt, :ta, :lr])
+	cgdf = combine(gdf, [:rt, :ta, :lr] .=> mean .=> [:rt, :ta, :lr])
+	coeftable(fit(LinearModel, @formula(ta ~ agent), cgdf, contrasts = Dict(:agent => DummyCoding(base="XX"))))
+	coeftable(fit(LinearModel, @formula(lr ~ agent), cgdf, contrasts = Dict(:agent => DummyCoding(base="XX"))))
 end
 
 # ╔═╡ 238c60af-74c3-468c-93f5-58b0e5461bb3
