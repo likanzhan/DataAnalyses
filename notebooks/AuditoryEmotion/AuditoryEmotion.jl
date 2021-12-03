@@ -80,8 +80,9 @@ begin
 	transform!(dt, 
 		:Language => ByRow(x -> replace(x, r"(.*?)Rate" => s"\1")) => :Language)
 
-	# 7. Replace study number with tested emotion pairs
+	# 7. Replace study number with tested emotion pairs, and `Chinese` to `Mandarin`
 	replace!(dt.STUDY, 1 => "Happy-Sad", 2 => "Surprise-Angry")
+	replace!(dt.Language, "Chinese" => "Mandarin")
 
 	# 8. Change column names
 	rename!(dt, "STUDY" => "Emotion", "agegroup" => "AgeGroup", 
@@ -172,7 +173,7 @@ P1 = plot(dtm1,
 	Geom.subplot_grid(
 		Geom.yerrorbar, Geom.line, Geom.point,
 		Coord.cartesian(ymin = 0.5, ymax = 1) ),
-	Theme(boxplot_spacing = 3px, default_color = "white")
+	Theme(boxplot_spacing = 3px, line_width = 2pt, default_color = "white" )
 );
 
 # ╔═╡ b693db45-0914-434b-9c3b-58092b469a61
@@ -182,19 +183,22 @@ P2 = plot(dtm2,
 	Geom.subplot_grid(
 		Geom.yerrorbar, Geom.line, 
 		Coord.cartesian(ymin = 0.5, ymax = 1) ),
-	Guide.ylabel("Correct Rate (mean ± 2SE) by AgeGroup")
+	Guide.ylabel("Correct Rate (mean ± 2SE) by AgeGroup"),
+	Theme(boxplot_spacing = 3px, line_width = 2pt, default_color = "white" )
 );
 
 # ╔═╡ 062a825d-352e-4c30-8645-a8bad565a16a
 P3 = plot(dtm3, 
 	x = :Language, y = :Rate, ymin = :Lower, ymax = :Upper, 
-	color = :Group, Geom.line, Geom.yerrorbar, Geom.point, 
+	color = :Group, Geom.yerrorbar, Geom.line,
 	Coord.cartesian(ymin = 0.5, ymax = 1),
-	Guide.ylabel("Correct Rate (mean ± 2SE)")
+	Guide.ylabel("Correct Rate (mean ± 2SE)"),
+	Theme(boxplot_spacing = 3px, line_width = 2pt, default_color = "white" )
+
 );
 
 # ╔═╡ 72014e70-7798-4952-ab6a-b3c2ff9d0ce2
-draw(PDF("AuditoryEmotionImage.pdf", 30cm, 20cm), P3)
+draw(PDF("AuditoryEmotionImage.pdf", 15cm, 10cm), P3)
 
 # ╔═╡ 48dc3c44-2908-40e6-92b1-9dd2259af6ff
 md"""
@@ -898,9 +902,9 @@ version = "0.21.0+0"
 
 [[Glib_jll]]
 deps = ["Artifacts", "Gettext_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Libiconv_jll", "Libmount_jll", "PCRE_jll", "Pkg", "Zlib_jll"]
-git-tree-sha1 = "7bf67e9a481712b3dbe9cb3dac852dc4b1162e02"
+git-tree-sha1 = "74ef6288d071f58033d54fd6708d4bc23a8b8972"
 uuid = "7746bdde-850d-59dc-9ae8-88ece973131d"
-version = "2.68.3+0"
+version = "2.68.3+1"
 
 [[Graphics]]
 deps = ["Colors", "LinearAlgebra", "NaNMath"]
@@ -921,9 +925,9 @@ version = "1.0.2"
 
 [[HarfBuzz_jll]]
 deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "Graphite2_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Pkg"]
-git-tree-sha1 = "8a954fed8ac097d5be04921d595f741115c1b2ad"
+git-tree-sha1 = "129acf094d168394e80ee1dc4bc06ec835e510a3"
 uuid = "2e76f6c2-a576-52d4-95c1-20adfe4de566"
-version = "2.8.1+0"
+version = "2.8.1+1"
 
 [[Hexagons]]
 deps = ["Test"]
@@ -1091,7 +1095,7 @@ uuid = "38a345b3-de98-5d2b-a5d3-14cd9215e700"
 version = "2.36.0+0"
 
 [[LinearAlgebra]]
-deps = ["Libdl"]
+deps = ["Libdl", "libblastrampoline_jll"]
 uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [[Loess]]
@@ -1171,6 +1175,10 @@ deps = ["Adapt"]
 git-tree-sha1 = "043017e0bdeff61cfbb7afeb558ab29536bbb5ed"
 uuid = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
 version = "1.10.8"
+
+[[OpenBLAS_jll]]
+deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
+uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
 
 [[OpenLibm_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -1269,7 +1277,7 @@ deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
 uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 
 [[Random]]
-deps = ["Serialization"]
+deps = ["SHA", "Serialization"]
 uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [[Ratios]]
@@ -1508,6 +1516,10 @@ version = "0.9.4"
 [[Zlib_jll]]
 deps = ["Libdl"]
 uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
+
+[[libblastrampoline_jll]]
+deps = ["Artifacts", "Libdl", "OpenBLAS_jll"]
+uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
 
 [[libpng_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "Zlib_jll"]
