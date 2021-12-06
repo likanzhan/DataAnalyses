@@ -272,11 +272,11 @@ cf04
 # ╔═╡ c62a2876-57b3-44d8-a6ff-5299eccad4c1
 md"""
 
-As the model suggests, there exists a significant interaction between Group (ASD vs TD) and Language (Chinese vs English vs French vs Spanish). To be specific:
+As the model suggests, there exists a significant interaction between Group (ASD vs TD) and Language (Mandarin vs English vs French vs Spanish). To be specific:
 
-- In ASD group, the correct rate was significantly lower when the test language was a foreign language than when the test language was the participants' mother languge, i.e., Chinese. For English, _b_ = $(round(cf04.cols[1][2], digits = 2)), _t_ = $(round(cf04.cols[3][2], digits = 2)), _p_ = $(@sprintf "%.2e" cf04.cols[4][2]); for French, _b_ = $(round(cf04.cols[1][3], digits = 2)), _t_ = $(round(cf04.cols[3][3], digits = 2)), _p_ = $(@sprintf "%.2e" cf04.cols[4][3]); for Spanish: _b_ = $(round(cf04.cols[1][4], digits = 2)), _t_ = $(round(cf04.cols[3][4], digits = 2)), _p_ = $(@sprintf "%.2e" cf04.cols[4][4]).
+- In ASD group, the correct rate was significantly lower when the test language was a foreign language than when the test language was the participants' mother languge, i.e., Mandarin. For English, _b_ = $(round(cf04.cols[1][2], digits = 2)), _t_ = $(round(cf04.cols[3][2], digits = 2)), _p_ = $(@sprintf "%.2e" cf04.cols[4][2]); for French, _b_ = $(round(cf04.cols[1][3], digits = 2)), _t_ = $(round(cf04.cols[3][3], digits = 2)), _p_ = $(@sprintf "%.2e" cf04.cols[4][3]); for Spanish: _b_ = $(round(cf04.cols[1][4], digits = 2)), _t_ = $(round(cf04.cols[3][4], digits = 2)), _p_ = $(@sprintf "%.2e" cf04.cols[4][4]).
 
-- When the test language was Chinese, there exists no significant difference between ASD and TD: _b_ = $(round(cf04.cols[1][5], digits = 2)), _t_ = $(round(cf04.cols[3][5], digits = 2)), _p_ = $(@sprintf "%.2e" cf04.cols[4][5]).
+- When the test language was Mandarin, there exists no significant difference between ASD and TD: _b_ = $(round(cf04.cols[1][5], digits = 2)), _t_ = $(round(cf04.cols[3][5], digits = 2)), _p_ = $(@sprintf "%.2e" cf04.cols[4][5]).
 
 - The difference between a foreign language and the mother language was significantly different between TD and ASD group. For English, _b_ = $(round(cf04.cols[1][6], digits = 2)), _t_ = $(round(cf04.cols[3][6], digits = 2)), _p_ = $(@sprintf "%.2e" cf04.cols[4][6]); for French, _b_ = $(round(cf04.cols[1][7], digits = 2)), _t_ = $(round(cf04.cols[3][7], digits = 2)), _p_ = $(@sprintf "%.2e" cf04.cols[4][7]); for Spanish: _b_ = $(round(cf04.cols[1][8], digits = 2)), _t_ = $(round(cf04.cols[3][8], digits = 2)), _p_ = $(@sprintf "%.2e" cf04.cols[4][8]).
 
@@ -284,7 +284,7 @@ As the model suggests, there exists a significant interaction between Group (ASD
 
 # ╔═╡ 07cb8504-f681-4a46-913f-4d4784aebe69
 md"""
-Click to download figure P3 in [PDF]((https://github.com/likanzhan/DataAnalyses.jl/raw/main/notebooks/AuditoryEmotion/AuditoryEmotionImage.pdf)) format and model results in [TXT format](https://github.com/likanzhan/DataAnalyses.jl/raw/main/notebooks/AuditoryEmotion/AuditoryEmotionModel.txt) and in [CSV format](https://github.com/likanzhan/DataAnalyses.jl/raw/main/notebooks/AuditoryEmotion/AuditoryEmotionModel.csv).
+Click to download figure P3 in [PDF](https://github.com/likanzhan/DataAnalyses.jl/raw/main/notebooks/AuditoryEmotion/AuditoryEmotionImage.pdf) format and model results in [TXT format](https://github.com/likanzhan/DataAnalyses.jl/raw/main/notebooks/AuditoryEmotion/AuditoryEmotionModel.txt) and in [CSV format](https://github.com/likanzhan/DataAnalyses.jl/raw/main/notebooks/AuditoryEmotion/AuditoryEmotionModel.csv).
 """
 
 # ╔═╡ 5c25a4f6-98bb-416f-ace7-958d1bd4db23
@@ -320,11 +320,11 @@ plot(HS, x = :Language, y = :Rate, color = :Group,
 
 # ╔═╡ 40f5cde1-cb31-420a-b2c9-58634605a3c0
 md"""
-### Chinese
+### Mandarin
 """
 
 # ╔═╡ c65d0c3d-2ef3-4d9a-a8a5-a55171c22104
-HSCH = HS[HS.Language .== "Chinese", :];
+HSCH = HS[HS.Language .== "Mandarin", :];
 
 # ╔═╡ c232525d-58bd-470b-b5ab-049e428c5186
 plot(HSCH, x = :AgeGroup, y = :Rate, color = :Group, Geom.boxplot)
@@ -468,11 +468,11 @@ plot(SA, x = :Language, y = :Rate, color = :Group,
 
 # ╔═╡ e4cb07e2-05c3-438f-bc3a-0698858d12b9
 md"""
-### Chinese
+### Mandarin
 """
 
 # ╔═╡ 85a1eafb-5d5b-4116-b80d-95d3657eaf57
-SACH = SA[SA.Language .== "Chinese", :];
+SACH = SA[SA.Language .== "Mandarin", :];
 
 # ╔═╡ 91309ccb-e602-4bad-b17e-3e41769f2edd
 plot(SACH, y = :Rate, x = :AgeGroup, color = :Group, Geom.boxplot)
