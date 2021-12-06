@@ -5,7 +5,7 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ aa13f80d-87d5-4c88-af19-6ffe76d737bd
-using PlutoUI; PlutoUI.TableOfContents(title = "Negation Processing")
+using PlutoUI; PlutoUI.TableOfContents(title = "否定加工")
 
 # ╔═╡ 6348357e-37c8-11ec-3496-412eef0a1045
 using CSV, DataFrames
@@ -21,7 +21,7 @@ using GLM        # 推论统计
 
 # ╔═╡ 214b6943-7672-47ce-99f8-f7c253d6490d
 md"""
-## Load packages
+### 加载额外包
 """
 
 # ╔═╡ 0cc9ff19-a55f-44c2-af17-e4e6d5ad083e
@@ -30,105 +30,161 @@ import Pipe: @pipe
 # ╔═╡ 16a949c1-8dc0-4a4b-970c-252277a3a579
 import FreqTables: freqtable
 
-# ╔═╡ b18f8835-dfb2-491b-b4f6-1cf885abdddd
-cd(@__DIR__) # pwd()
-
-# ╔═╡ d3b864ee-7991-401f-b1f7-7f692f605631
-md"""
-## Experiment 1
-"""
-
 # ╔═╡ 06e1c3ef-5efa-4327-a2b4-77db1f76c47a
 md"""
-### Read data
+### 数据载入
 """
 
-# ╔═╡ f2dc2797-c0f4-4f8e-8541-c71aa1a1358c
-begin
-# 01. List CSV files
-csv_list = filter(endswith(".csv"), readdir("data/Experiment_1", join = true))
+# ╔═╡ b18f8835-dfb2-491b-b4f6-1cf885abdddd
+cd(@__DIR__) # 根据实际情况设定当前路径， 合理的路径应该指向 `data` 的上位路径， 该路径下还应该包含 "Image_Object_Correspondance.csv" 和 "Video_Object_Correspondance.csv" 两个文件。 示例如下：
 
-# 02. Read CSV files into one DataFrame file
-df = mapreduce(vcat, csv_list) do csv
-	CSV.read(csv, DataFrame, stringtype = String,
-		drop = (i, name) -> startswith(string(name), "Column") )
-end
+# ╔═╡ d3dfe0b2-0035-430b-bb7c-d39a64353d91
+md"""
+```bash
+Negation
+├── Image_Object_Correspondance.csv
+├── NegationWithoutLanguage.jl
+├── Object_Number_Correspondance.csv
+├── Video_Object_Correspondance.csv
+├── data
+│   ├── baixu_untitled_groupA_k_2021_Oct_20_1957.csv
+│   ├── .....
+│   └── ...
+├── ...
+└── ...
+```
+"""
 
-# 03. Remove rows when the value of `:Numb` is missing
-dropmissing!(df, :Numb)
+# ╔═╡ 6b66d803-491c-4d18-a981-b917fe2c9e9c
+md"""
+### 数据筛选
+"""
 
-# 04. Create columns `Box_Color`, `Trial_Number`, and `Chosed_Box` from `Video_1`
-	# a. Define the Function
-function video_decode(Video)
-	Video_Name   = first(split(last(split(Video, '\\')), '.'))
-	Box_Color    = String.(SubString.(Video_Name, 1, 2))
-	Chosed_Box   =   SubString.(Video_Name, 3, 3) == "Z" ? "Left" : "Right"
-	Trial_Number = "P" .*  SubString.(Video_Name, 4, 5)
-	return Box_Color, Trial_Number, Chosed_Box
-end
-	# b. Transform withe the function
-transform!(df, :Video_1 => ByRow(video_decode) => 
-	[:Box_Color, :Trial_Number, :Chosed_Box])
+# ╔═╡ 6f2a3697-fe1c-4324-aeb8-e6a0b78268b3
+md"""
+### 描述统计
+"""
+
+# ╔═╡ 8bc8d9a8-1c91-4365-ade9-8a9802da578d
+md"""
+### 推论统计
+"""
+
+# ╔═╡ b7ab00d1-7c65-4822-910d-cc0ae692ee9a
+formula = @formula(Object_Rate ~ Box_Transparency);
+
+# ╔═╡ 2bfd5928-7307-4dbe-8b88-15a624aa6dd9
+contr = Dict(:Box_Transparency => DummyCoding(base = "TO"));
+
+# ╔═╡ 03af8427-ec54-47f3-b184-2ce5c788e280
+md"""
+- 简单结论： `OO` 和 `TT` 条件下， 被试对行为主体没选择物体的偏好判断均**高于** `TO` 条件， 符合我们最初的预期， 也与上图中的观察结果一致。
+"""
+
+# ╔═╡ 94de6b92-89d8-435f-9ded-201027647072
+md"""
+### 附录：定义函数
+"""
+
+# ╔═╡ e0f2ec63-296e-4576-94a1-cc6239a7bad4
+md"""
+- 定义函数 `read_combine_csv_list` 以整理文件夹中的 csv 文件列表， 并汇总成一个文件
+"""
+
+# ╔═╡ dca690f7-8006-4e1c-b30e-41f9d0eaa4ff
+md"""
+- 定义函数 `CSV_Read_Tidy` 以读取和整理某个 CSV 中的数据
+"""
+
+# ╔═╡ b53a47a5-4e99-4fc8-b177-2de0f7c09e30
+function CSV_Read_Tidy(
+	csv; 
+	Image_Object = "Image_Object_Correspondance.csv",
+	Video_Object = "Video_Object_Correspondance.csv"
+	)
 	
-# 05. Rename columns
-rename!(df, "slider_left.response"  => "Object_Left",
-			"slider_mid.response"   => "Object_Middle",
-			"slider_right.response" => "Object_Right")
-
-# 06. Convert Wide to Long format
-df = stack(df, [:Object_Left, :Object_Middle, :Object_Right], 
+	df    = DataFrame(CSV.File(csv, stringtype = String))
+	df    = dropmissing(df, :Numb)
+	
+	video_name = [first(split(last(split(v, '\\')), '.')) for v in df.Video_1]
+	
+	insertcols!(df,
+		:Box_Color    => String.(SubString.(video_name, 1, 2)),
+		:Trial_Number => "P" .* SubString.(video_name, 4, 5),
+		:Chosed_Box => 
+			[i == "Z" ? "Left" : "Right" for i in SubString.(video_name, 3, 3)]
+	)
+	
+	rename!(df,  Dict(
+		"slider_left.response"  => "Object_Left",
+		"slider_mid.response"   => "Object_Middle",
+		"slider_right.response" => "Object_Right")
+	)
+	
+	df = stack(df, [:Object_Left, :Object_Middle, :Object_Right], 
 		variable_name = "Object_Position", value_name = "Object_Rate")
 
-# 07. Append Image-Object correspondence
-Image_Object_Cor = CSV.read("Image_Object_Correspondance.csv", 
-	DataFrame, stringtype = String);
-df = innerjoin(df, Image_Object_Cor, on = [:Trial_Number, :Object_Position])
+	Image_Object_Cor = DataFrame(CSV.File(Image_Object, stringtype = String));
+	df = innerjoin(df, Image_Object_Cor, on = [:Trial_Number, :Object_Position])
 
-# 08. Append Video-Object correspondence
-Video_Object_Cor = CSV.read("Video_Object_Correspondance.csv", 
-	DataFrame, stringtype = String);
-df = innerjoin(df, Video_Object_Cor, on = [:Box_Color, :Chosed_Box, :Trial_Number])
+	Video_Object_Cor = DataFrame(CSV.File(Video_Object, stringtype = String));
+	df = innerjoin(df, Video_Object_Cor, 
+		on = [:Box_Color, :Chosed_Box, :Trial_Number])
 
-# 09. Convert `Object_Rate` from String to Float64
-subset!(df, :Object_Rate => ByRow(!=("None")))
-transform!(df, :Object_Rate => 
-	ByRow(i -> isa(i, String) ? parse(Float64, i) : i) => :Object_Rate)
+	filter!(:Object_Rate => !=("None"), df)
+	
+	transform!(df, :Object_Rate => 
+		ByRow(i -> isa(i, String) ? parse(Float64, i) : i) => :Object_Rate
+	)
+	
+	insertcols!(df,
+		:Agent_Choice => [df[i, "Chosed_Box"] == "Left" ? 
+			df[i, "Left_Box"] : df[i, "Right_Box"] for i in 1:nrow(df)]
+	)
 
-# 11. Create column `Agent_Choice` from the `Chosed Box`
-transform!(df, [:Chosed_Box, :Left_Box, :Right_Box] => 
-	ByRow((c, l, r) -> c == "Left" ? l : r) => :Agent_Choice)
-
-# 12. Rename columns
-rename!(df, "participant" => "Participant", "group" => "Group", 
+	replace!(df.Box_Color, "GG" => "OO", "GR" => "OT", "RG" => "TO", "RR" => "TT")
+	rename!(df, "participant" => "Participant", "group" => "Group", 
 		"Box_Color" => "Box_Transparency")
-
-# 13. Replace values of `Box_Transparency`
-replace!(df.Box_Transparency, 
-	"GG" => "OO", "GR" => "OT", "RG" => "TO", "RR" => "TT")
-
-# 14. Replace `OT` with `TO`, i.e. combine conditions `TO` and `OT`
-replace!(df.Box_Transparency, "OT" => "TO")
-
-# 14. Select columns
-select!(df, ["Participant", "Trial_Number", "Box_Transparency", 
+	
+	select!(df, [
+		"Participant", "Trial_Number", "Box_Transparency", 
 		"Left_Box", "Right_Box", "Basket", "Agent_Choice", 
 		"Object_Number", "Object_Rate", "Group"]
 	)
 
-end; # End Cell
+	return df
+end
 
-# ╔═╡ 8838254f-fcd1-4e8f-95d8-b1cbaad4fae8
+# ╔═╡ fe100d11-7021-4d3a-bd3d-885e8efe5d5e
+function read_combine_csv_list(; directory = "data")
+	csv_list = filter(endswith(".csv"), readdir(directory, join = true))
+	df_list = [CSV_Read_Tidy(csv) for csv in csv_list]
+	df = reduce(vcat, df_list)
+	return df
+end
+
+# ╔═╡ 6a357e17-282a-4219-afcb-377c95fc6b39
+df = read_combine_csv_list(); # 函数的定义在附录部分
+
+# ╔═╡ c545040a-1b7b-4b62-afbe-e65385d99227
+df
+
+# ╔═╡ 9c770fa1-616b-493e-9027-84adbface247
 describe(df)
 
-# ╔═╡ 6b66d803-491c-4d18-a981-b917fe2c9e9c
-md"""
-### Object in unchosen box
-"""
+# ╔═╡ 7ea67cfb-847c-48e9-8ee1-053199ddabe6
+replace!(df.Box_Transparency, "OT" => "TO"); # 把`OT` 变成 `TO`, 即合并 TO 和 OT
 
-# ╔═╡ 4f97f2b2-d819-44f8-847f-9914de9de9f0
-# Object that is not choisen and is not in the box.
-Other_Box = subset(df, [:Object_Number, :Agent_Choice, :Basket] => 
-	ByRow((x, y, z) -> (x != y) & (x != z)) );
+# ╔═╡ 8d55961b-c9e5-4d03-be13-69209b7123ea
+Other_Box = df[(df.Object_Number .!= df.Basket) .& (df.Object_Number .!= df.Agent_Choice), :]; # 筛选主体没选择， 且不在篮子里的物体的评分。
+
+# ╔═╡ 793852a9-73bb-4e48-a3d5-65ce76b44800
+freqtable(Other_Box, :Trial_Number, :Box_Transparency)
+
+# ╔═╡ dfea6f9e-4732-4cf2-bb45-467b869e4289
+@pipe Other_Box |>
+	groupby(_, :Box_Transparency) |>
+	combine(_, :Object_Rate => mean)
 
 # ╔═╡ 1748ab04-910b-4a98-9d30-1cd88ad7f220
 Other_Sum = @pipe Other_Box |> 
@@ -142,122 +198,11 @@ Other_Sum = @pipe Other_Box |>
 	legend = false, ratio = 0.5
 )
 
-# ╔═╡ b7ab00d1-7c65-4822-910d-cc0ae692ee9a
-formula = @formula(Object_Rate ~ Box_Transparency);
-
-# ╔═╡ 2bfd5928-7307-4dbe-8b88-15a624aa6dd9
-contr = Dict(:Box_Transparency => DummyCoding(base = "TO"));
-
 # ╔═╡ 8289b5e1-e749-4723-bace-cce48f6b36fa
-fm1 = fit(LinearModel, formula, Other_Sum, contrasts = contr);
+fm = fit(LinearModel, formula, Other_Sum, contrasts = contr);
 
 # ╔═╡ 9f18b6ba-6eec-4167-9c9e-008d2de23fdb
-coeftable(fm1)
-
-# ╔═╡ 03af8427-ec54-47f3-b184-2ce5c788e280
-md"""
-- 简单结论： `OO` 和 `TT` 条件下， 被试对行为主体没选择物体的偏好判断均**高于** `TO` 条件， 符合我们最初的预期， 也与上图中的观察结果一致。
-"""
-
-# ╔═╡ be69ea7a-9bb7-4606-98c8-1b2ea9081f0f
-md"""
-### Object in basket
-"""
-
-# ╔═╡ bdbc2649-dc11-43a8-a090-3ebd57b2b283
-# Object in the Basket
-Basket = subset(df, [:Object_Number, :Basket] => ByRow((x, y) -> (x == y)));
-
-# ╔═╡ 7d0272d2-43f9-4a1d-9366-1dcc173e5143
-Basket_Sum = @pipe Basket |> 
-	groupby(_, [:Participant, :Box_Transparency]) |> 
-	combine(_, :Object_Rate => mean => :Object_Rate);
-
-# ╔═╡ fab6aaec-b788-4e18-93cd-f4ddf58fb75f
-@df Basket_Sum plot(:Box_Transparency, :Object_Rate, 
-	seriestype = [:dotplot, :boxplot], fill = [1 0.5], 
-	xlim = (0, 3), xlabel = "Condition", ylabel = "Preference Rate", 
-	legend = false, ratio = 0.5
-)
-
-# ╔═╡ a36adf7b-abac-4879-94ca-a20ec4d8c495
-fm2 = fit(LinearModel, formula, Basket_Sum, contrasts = contr);
-
-# ╔═╡ 93f2ebbc-9b6a-4784-9399-83220f40ed6f
-coeftable(fm2)
-
-# ╔═╡ b60e0d18-40cb-4dbf-8bf6-c8cfd816933e
-md"""
-- 简单结论： `OO` 和 `TT` 条件下， 被试对箱子中物体的偏好判断均**低于** `TO` 条件， 符合我们最初的预期， 也与上图中的观察结果一致。
-"""
-
-# ╔═╡ 8f11b4fa-440b-4ec3-8bf7-d63b376ea1d0
-md"""
-## Experiment 3
-"""
-
-# ╔═╡ 85fa0c8e-5ae8-44ec-9c9a-9da987fd64fc
-begin
-# 01. List CSV files
-csv_list3 = filter(endswith(".csv"), readdir("data/Experiment_3", join = true))
-
-# 02. Read CSV files into a single DataFrame file
-df3 = mapreduce(vcat, csv_list3) do csv
-	CSV.read(csv, DataFrame, stringtype = String,
-		drop = (i, name) -> startswith(string(name), "Column") )
-end
-
-# 03. Remove rows when the value of `:Numb` is missing
-dropmissing!(df3, :Numb)
-
-# 04. Create columns `Box_Color`, `Trial_Number`, and `Chosed_Box` from `Video_1`
-transform!(df3, :Video_1 => ByRow(video_decode) => 
-	[:Box_Color, :Trial_Number, :Chosed_Box])
-	
-# 05. Rename columns
-rename!(df3, "slider_left.response"  => "Object_Left",
-			"slider_mid.response"   => "Object_Middle",
-			"slider_right.response" => "Object_Right")
-
-# 06. Convert Wide to Long format
-df3 = stack(df3, [:Object_Left, :Object_Middle, :Object_Right], 
-		variable_name = "Object_Position", value_name = "Object_Rate")
-
-# 07. Append Image-Object correspondence
-df3 = innerjoin(df3, Image_Object_Cor, on = [:Trial_Number, :Object_Position])
-
-# 08. Append Video-Object correspondence
-df3 = innerjoin(df3, Video_Object_Cor, on = [:Box_Color, :Chosed_Box, :Trial_Number])
-
-# 09. Convert `Object_Rate` from String to Float64
-subset!(df3, :Object_Rate => ByRow(!=("None")))
-transform!(df3, :Object_Rate => 
-	ByRow(i -> isa(i, String) ? parse(Float64, i) : i) => :Object_Rate)
-
-# 11. Create column `Agent_Choice` from the `Chosed Box`
-transform!(df3, [:Chosed_Box, :Left_Box, :Right_Box] => 
-	ByRow((c, l, r) -> c == "Left" ? l : r) => :Agent_Choice)
-
-# 12. Rename columns
-rename!(df3, "participant" => "Participant", "group" => "Group", 
-		"Box_Color" => "Box_Transparency")
-
-# 13. Replace values of `Box_Transparency`
-replace!(df3.Box_Transparency, 
-	"GG" => "OO", "GR" => "OT", "RG" => "TO", "RR" => "TT")
-
-# 14. Replace `OT` with `TO`, i.e. combine conditions `TO` and `OT`
-replace!(df3.Box_Transparency, "OT" => "TO")
-
-# 14. Select columns
-select!(df3, ["Participant", "Trial_Number", "Box_Transparency", 
-		"Left_Box", "Right_Box", "Basket", "Agent_Choice", 
-		"Object_Number", "Object_Rate", "Group"]
-	)
-end
-
-# ╔═╡ 53b1642f-f16c-4de5-b109-150a62ebba0b
-names(df3)
+coeftable(fm)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1474,29 +1419,30 @@ version = "0.9.1+5"
 # ╠═4103469b-a5b5-4edf-b9dc-5200d5bc0503
 # ╠═1372caca-9bd5-47a7-b702-dfd3cf2d4234
 # ╠═0d458587-9858-45f8-b548-a8e249697404
-# ╠═b18f8835-dfb2-491b-b4f6-1cf885abdddd
-# ╟─d3b864ee-7991-401f-b1f7-7f692f605631
 # ╟─06e1c3ef-5efa-4327-a2b4-77db1f76c47a
-# ╠═f2dc2797-c0f4-4f8e-8541-c71aa1a1358c
-# ╠═8838254f-fcd1-4e8f-95d8-b1cbaad4fae8
+# ╠═b18f8835-dfb2-491b-b4f6-1cf885abdddd
+# ╟─d3dfe0b2-0035-430b-bb7c-d39a64353d91
+# ╠═6a357e17-282a-4219-afcb-377c95fc6b39
+# ╠═c545040a-1b7b-4b62-afbe-e65385d99227
+# ╠═9c770fa1-616b-493e-9027-84adbface247
 # ╟─6b66d803-491c-4d18-a981-b917fe2c9e9c
-# ╠═4f97f2b2-d819-44f8-847f-9914de9de9f0
+# ╠═7ea67cfb-847c-48e9-8ee1-053199ddabe6
+# ╠═8d55961b-c9e5-4d03-be13-69209b7123ea
+# ╟─6f2a3697-fe1c-4324-aeb8-e6a0b78268b3
+# ╠═793852a9-73bb-4e48-a3d5-65ce76b44800
+# ╠═dfea6f9e-4732-4cf2-bb45-467b869e4289
 # ╠═1748ab04-910b-4a98-9d30-1cd88ad7f220
-# ╟─f362c4e2-25f6-4e66-a6dc-f7f68c8033e2
+# ╠═f362c4e2-25f6-4e66-a6dc-f7f68c8033e2
+# ╟─8bc8d9a8-1c91-4365-ade9-8a9802da578d
 # ╠═b7ab00d1-7c65-4822-910d-cc0ae692ee9a
 # ╠═2bfd5928-7307-4dbe-8b88-15a624aa6dd9
 # ╠═8289b5e1-e749-4723-bace-cce48f6b36fa
 # ╠═9f18b6ba-6eec-4167-9c9e-008d2de23fdb
 # ╟─03af8427-ec54-47f3-b184-2ce5c788e280
-# ╟─be69ea7a-9bb7-4606-98c8-1b2ea9081f0f
-# ╠═bdbc2649-dc11-43a8-a090-3ebd57b2b283
-# ╠═7d0272d2-43f9-4a1d-9366-1dcc173e5143
-# ╟─fab6aaec-b788-4e18-93cd-f4ddf58fb75f
-# ╠═a36adf7b-abac-4879-94ca-a20ec4d8c495
-# ╠═93f2ebbc-9b6a-4784-9399-83220f40ed6f
-# ╟─b60e0d18-40cb-4dbf-8bf6-c8cfd816933e
-# ╟─8f11b4fa-440b-4ec3-8bf7-d63b376ea1d0
-# ╠═85fa0c8e-5ae8-44ec-9c9a-9da987fd64fc
-# ╠═53b1642f-f16c-4de5-b109-150a62ebba0b
+# ╟─94de6b92-89d8-435f-9ded-201027647072
+# ╟─e0f2ec63-296e-4576-94a1-cc6239a7bad4
+# ╠═fe100d11-7021-4d3a-bd3d-885e8efe5d5e
+# ╟─dca690f7-8006-4e1c-b30e-41f9d0eaa4ff
+# ╠═b53a47a5-4e99-4fc8-b177-2de0f7c09e30
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
