@@ -35,15 +35,18 @@ md"""
 # ╔═╡ 91923052-5ee4-11ec-09cf-33cdea5e9d3b
 cd(@__DIR__) # pwd()
 
+# ╔═╡ d2e6e365-d026-4f23-a194-1c6a02bd8eb0
+txt_list = filter(endswith(".txt"), readdir("EpochData", join = true));
+
 # ╔═╡ bb0f7c02-9f48-431d-88d3-7e9bbaa96c34
-df = mapreduce(vcat, filter(endswith(".txt"), readdir("EpochData", join = true))) do txt
-	df = CSV.read(txt, DataFrame, transpose = true)
-	dropmissing!(df)
-	File = replace(txt, r"data\/(\w*?)(\s*?).txt" => s"\1")
-	# insertcols!(df, 1, :File => File)
-	insertcols!(df, 1, :pause       => occursin.("Nopause", File) ? "0.0s" : "0.2s")
-	insertcols!(df, 1, :connective  => occursin.("And", File) ? "And" : "Or")
-	insertcols!(df, 1, :participant => string(SubString.(File, 1, 3)))
+df = mapreduce(vcat, txt_list) do txt
+	File = replace(txt, r"EpochData\/(\w*?)(\s*?).txt" => s"\1")
+	df1 = CSV.read(txt, DataFrame, transpose = true)
+	dropmissing!(df1)
+	insertcols!(df1, 1, :File => File)
+	insertcols!(df1, 1, :pause       => occursin.("Nopause", File) ? "0.0s" : "0.2s")
+	insertcols!(df1, 1, :connective  => occursin.("And", File) ? "And" : "Or")
+	insertcols!(df1, 1, :participant => string(SubString.(File, 1, 3)))
 	end;
 
 # ╔═╡ 0f61d9fe-0add-4b7c-811e-d5ca2bf297a2
@@ -877,6 +880,7 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╠═051d9767-42c6-47a3-b832-f58ad0a15c4f
 # ╟─48c903d8-413b-4e62-ae03-84aca4552a57
 # ╠═91923052-5ee4-11ec-09cf-33cdea5e9d3b
+# ╠═d2e6e365-d026-4f23-a194-1c6a02bd8eb0
 # ╠═bb0f7c02-9f48-431d-88d3-7e9bbaa96c34
 # ╠═0f61d9fe-0add-4b7c-811e-d5ca2bf297a2
 # ╠═82876544-590d-44ed-aa7c-eeb6ccbf1179
