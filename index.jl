@@ -47,7 +47,7 @@ md"""
 
 - [The Technical Programming Language of the Future](http://pages.stat.wisc.edu/~bates/JuliaForRProgrammers.pdf) - Douglas Bates
 
-要了解更多 Julia 语言本身的一般知识， 请参看 Julia 语言 的[官方文档](https://docs.julialang.org)。
+要了解更多 Julia 语言本身的一般知识， 请参看 Julia 语言 [官方文档](https://docs.julialang.org)。
 """
 
 # ╔═╡ Cell order:
