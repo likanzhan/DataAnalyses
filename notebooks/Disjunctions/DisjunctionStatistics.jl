@@ -17,7 +17,7 @@ using Statistics # mean
 using FreqTables
 
 # ╔═╡ d4863f7d-ddde-4c8d-b960-ac0b1ed27aed
-using AlgebraOfGraphics, CairoMakie # Plot: Cario is the future
+using AlgebraOfGraphics, CairoMakie # Cario is the future for `Plot`
 
 # ╔═╡ 051d9767-42c6-47a3-b832-f58ad0a15c4f
 using GLM
@@ -110,15 +110,15 @@ sigdt1 = combine(groupby(subset(dfcj1, :pvals => ByRow(<=(.05))),
 
 # ╔═╡ 4220f15b-fd6b-40e3-aef3-d35d5ea24e9d
 draw(
-	data(dfcj1)                        * 
-	visual(Lines, linewidth = 3)       * 
-	mapping(:time, :AFavg, row = :pause, color = :connective => "Connective:") 
-	
-	+
-	
 	data(sigdt1)                       * 
 	visual(Rangebars, color = :gray70, linewidth = 3) * 
-	mapping(:time, :min, :max, row = :pause);
+	mapping(:time, :min, :max, row = :pause)
+
+	+
+
+	data(dfcj1)                        * 
+	visual(Lines, linewidth = 3)       * 
+	mapping(:time, :AFavg, row = :pause, color = :connective => "Connective:") ;
 	
 	axis = (width = 1000, height = 500, xticks = -200:100:1000,
 		xlabel = "Time (ms) from the onset of Noun 3", 
@@ -154,15 +154,15 @@ sigdt2 = combine(groupby(subset(dfcj2, :pvals => ByRow(<=(.05))), :time),
 
 # ╔═╡ c86cf7ce-4780-495e-bfd8-3a4529181dac
 draw(
-	data(dfcj2)                        * 
-	visual(Lines, linewidth = 3)       * 
-	mapping(:time, :AFavg, color = :connective  => "Connective:") 
-	
-	+
-	
 	data(sigdt2)                       * 
 	visual(Rangebars, color = :gray70, linewidth = 3) * 
-	mapping(:time, :min, :max);
+	mapping(:time, :min, :max)
+
+	+
+	
+	data(dfcj2)                        * 
+	visual(Lines, linewidth = 3)       * 
+	mapping(:time, :AFavg, color = :connective  => "Connective:");	
 
 	axis = (width = 1000, height = 500, xticks = -200:100:1000,
 		xlabel = "Time (ms) from the onset of Noun 3", 
