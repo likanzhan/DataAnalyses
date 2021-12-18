@@ -17,7 +17,7 @@ using Statistics # mean
 using FreqTables
 
 # ╔═╡ d4863f7d-ddde-4c8d-b960-ac0b1ed27aed
-using AlgebraOfGraphics, CairoMakie # Plot
+using AlgebraOfGraphics, CairoMakie # Plot: Cario is the future
 
 # ╔═╡ 051d9767-42c6-47a3-b832-f58ad0a15c4f
 using GLM
@@ -27,9 +27,23 @@ md"""
 ### Load packages
 """
 
+# ╔═╡ 0d093f1d-918b-48f4-965e-0e711a7a4eae
+md"""
+### Preprocessing process
+"""
+
+# ╔═╡ 17c8b2cc-77de-4998-8dce-9ec2e3927cb0
+md"""
+- Downsampling: 250 Hz
+- Bandpass filtering: 0.1 Hz - 50 Hz
+- Epoch (N3 Onset): -200ms - 1000ms
+- Baseline correction
+- Rereferenced to averaged sum of channels
+"""
+
 # ╔═╡ 48c903d8-413b-4e62-ae03-84aca4552a57
 md"""
-### Read data
+### Read preprocessed data
 """
 
 # ╔═╡ 91923052-5ee4-11ec-09cf-33cdea5e9d3b
@@ -43,8 +57,8 @@ df = mapreduce(vcat, txt_list) do txt
 	File = replace(txt, r"EpochData\/(\w*?)(\s*?).txt" => s"\1")
 	df1 = CSV.read(txt, DataFrame, transpose = true)
 	dropmissing!(df1)
-	insertcols!(df1, 1, :File => File)
-	insertcols!(df1, 1, :pause       => occursin.("Nopause", File) ? "0.0s" : "0.2s")
+	# insertcols!(df1, 1, :File  => File)
+	insertcols!(df1, 1, :pause => occursin.("Nopause", File) ? "0.0 S" : "0.2 S")
 	insertcols!(df1, 1, :connective  => occursin.("And", File) ? "And" : "Or")
 	insertcols!(df1, 1, :participant => string(SubString.(File, 1, 3)))
 	end;
@@ -54,23 +68,28 @@ draw(
 	data(df)                     * 
 	visual(Lines, linewidth = 2) * 
 	mapping(:time, :AFavg, 
-		row = :participant, col  = :pause, color = :connective);
-axis = (width = 200, height = 80)
+		row = :participant, col  = :pause, color = :connective => "Connective:");
+	
+	axis   = (width = 700, height = 300),
+	legend = (position = :top, titleposition = :left)
 )
 
 # ╔═╡ e0c43f8a-9eb7-4869-94c9-e2aeab49bbb7
 md"""
-### Statistical Model
+### Statistical model
+"""
+
+# ╔═╡ 40ae436e-615c-43bd-a330-ac2730455dff
+md"""
+Define a function to obtain the p value regarding the difference between the two connectives at a specific time:
 """
 
 # ╔═╡ 6c686b26-aa9c-4feb-aab4-426dda517ae3
-# Define a function to obtain the p value regarding the difference between the 
-#  two connectives at a specific time
 pv(x) = (coeftable(fit(LinearModel, @formula(AFavg ~ connective), x)).cols)[4][2];
 
 # ╔═╡ 534d6937-072c-475d-a8da-c913a56fef4b
 md"""
-### Noun3: Time by Pause
+### Noun 3: Time by Pause
 """
 
 # ╔═╡ 3d176a50-65ac-4493-aa43-972482771981
@@ -91,18 +110,26 @@ sigdt1 = combine(groupby(subset(dfcj1, :pvals => ByRow(<=(.05))),
 
 # ╔═╡ 4220f15b-fd6b-40e3-aef3-d35d5ea24e9d
 draw(
-	data(dfcj1)                       * 
+	data(dfcj1)                        * 
 	visual(Lines, linewidth = 3)       * 
-	mapping(:time, :AFavg, row = :pause, color = :connective) 
+	mapping(:time, :AFavg, row = :pause, color = :connective => "Connective:") 
+	
 	+
+	
 	data(sigdt1)                       * 
-	visual(Rangebars, color = :gray70) * 
-	mapping(:time, :min, :max, row = :pause) 
+	visual(Rangebars, color = :gray70, linewidth = 3) * 
+	mapping(:time, :min, :max, row = :pause);
+	
+	axis = (width = 1000, height = 500, xticks = -200:100:1000,
+		xlabel = "Time (ms) from the onset of Noun 3", 
+		ylabel = L"Ampltute ($\mu V$)"),
+	
+	legend = (position = :bottom, titleposition = :left)
 )
 
 # ╔═╡ fa0a13cf-6d32-4f40-8c28-9ddbd5965ad3
 md"""
-### Noun3: Time (Average out pause)
+### Noun 3: Time (Average out pause)
 """
 
 # ╔═╡ 18604378-c433-4cd4-b54a-e842a406989d
@@ -127,22 +154,32 @@ sigdt2 = combine(groupby(subset(dfcj2, :pvals => ByRow(<=(.05))), :time),
 
 # ╔═╡ c86cf7ce-4780-495e-bfd8-3a4529181dac
 draw(
-	data(dfcj2)                       * 
+	data(dfcj2)                        * 
 	visual(Lines, linewidth = 3)       * 
-	mapping(:time, :AFavg, color = :connective) 
+	mapping(:time, :AFavg, color = :connective  => "Connective:") 
+	
 	+
+	
 	data(sigdt2)                       * 
-	visual(Rangebars, color = :gray70) * 
-	mapping(:time, :min, :max)
+	visual(Rangebars, color = :gray70, linewidth = 3) * 
+	mapping(:time, :min, :max);
+
+	axis = (width = 1000, height = 500, xticks = -200:100:1000,
+		xlabel = "Time (ms) from the onset of Noun 3", 
+		ylabel = L"Ampltute ($\mu V$)"),
+
+	legend = (position = :bottom, titleposition = :left)
 )
 
 # ╔═╡ 2bf7bc42-610a-4f44-88e0-b4d6a359e15b
 md"""
 ### Conclusion
 
-- It seems that there is a difference between the conjunction connective `and` and the disjuncitve connective `or`, roughly at the period of N400, baselined on the onset of the third noun, regardless of the pause prior to the third noun.
+- There exists a difference between the conjunction connective `and` and the disjuncitve connective `or`, roughly at the period of N400, baseline corrected on the onset of the third noun.
 
-- This effect is weak, however, because the difference disappear if the familywise errors are corrected.
+- It seems that the pause delayed the difference.
+
+- The observed effect is weak, however, because the difference disappear if the familywise errors are corrected.
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -1422,12 +1459,15 @@ version = "3.5.0+0"
 # ╠═fc96a1a8-0b70-4437-8df3-d8bbc355a5ab
 # ╠═d4863f7d-ddde-4c8d-b960-ac0b1ed27aed
 # ╠═051d9767-42c6-47a3-b832-f58ad0a15c4f
+# ╟─0d093f1d-918b-48f4-965e-0e711a7a4eae
+# ╟─17c8b2cc-77de-4998-8dce-9ec2e3927cb0
 # ╟─48c903d8-413b-4e62-ae03-84aca4552a57
 # ╠═91923052-5ee4-11ec-09cf-33cdea5e9d3b
 # ╠═d2e6e365-d026-4f23-a194-1c6a02bd8eb0
 # ╠═bb0f7c02-9f48-431d-88d3-7e9bbaa96c34
 # ╠═c6e9c5ed-3aea-4059-83cd-019e152d9f46
 # ╟─e0c43f8a-9eb7-4869-94c9-e2aeab49bbb7
+# ╟─40ae436e-615c-43bd-a330-ac2730455dff
 # ╠═6c686b26-aa9c-4feb-aab4-426dda517ae3
 # ╟─534d6937-072c-475d-a8da-c913a56fef4b
 # ╠═3d176a50-65ac-4493-aa43-972482771981
@@ -1443,7 +1483,7 @@ version = "3.5.0+0"
 # ╠═0381bec0-486f-42e2-bc56-8bba9d55a84e
 # ╠═2ee645ee-bf95-41b5-ae81-17bf79c4729a
 # ╠═fe110b47-9a9a-4f63-8457-ad7cfff69c2c
-# ╟─c86cf7ce-4780-495e-bfd8-3a4529181dac
+# ╠═c86cf7ce-4780-495e-bfd8-3a4529181dac
 # ╟─2bf7bc42-610a-4f44-88e0-b4d6a359e15b
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
