@@ -75,7 +75,7 @@ df = mapreduce(vcat, txt_list) do txt
 	df1 = stack(df1, Not([:participant, :connective, :pause, :time]), 
 		variable_name = "channel", value_name = "amplitute")
 	
-	end;
+end;
 
 # ╔═╡ 6e1a3492-1b81-47ae-9880-a3b8d3f8c675
 describe(df)
@@ -148,31 +148,34 @@ extrema(dfcj1sgc.time)
 
 # ╔═╡ 4220f15b-fd6b-40e3-aef3-d35d5ea24e9d
 # Define a function to do the poltting
-TimeByPause(ch) = draw(
-	data(dfcj1sgc[dfcj1sgc.channel .== ch, :])        * 
+TimeByPause(chs...) = begin
+
+	sigdata = subset(dfcj1sgc, :channel => ByRow( x -> x .∈ Ref([chs...])) )
+	rawdata = subset(dfp1,     :channel => ByRow( x -> x .∈ Ref([chs...])) )
+	
+	draw(
+	data(sigdata) * 
 	visual(Rangebars, color = :gray70, linewidth = 3) * 
-	mapping(:time, :min, :max, row = :pause)
+	mapping(:time, :min, :max, col = :pause, row = :channel)
 
 	+
 
-	data(dfp1[dfp1.channel .== ch, :])  * 
-	visual(Lines, linewidth = 3)        * 
+	data(rawdata)  * 
+	visual(Lines, linewidth = 3)  * 
 	mapping(:time, :amplitute, 
-		row = :pause, col = :channel,
+		col = :pause, row = :channel,
 		color = :connective => "Connective:") ;
 	
-	axis = (width = 1000, height = 500, xticks = -200:100:1000,
+	axis = (width = 600, height = 300, xticks = -200:100:1000,
 		xlabel = "Time (ms) from the onset of Noun 3", 
 		ylabel = L"Amplitute ($\mu V$)"),
 	
 	legend = (position = :bottom, titleposition = :left)
-)
+	)
+	end
 
 # ╔═╡ c6a96b1b-10d8-4d15-a9df-d38ab30f65ac
-TimeByPause("AFavg")
-
-# ╔═╡ d5460cbf-5507-41de-8987-ce9f5c770521
-# TimeByPause("F1")
+TimeByPause("F1", "AFavg")
 
 # ╔═╡ 2b5018b1-7723-4ba1-9698-644828e7ac12
 # Channel names
@@ -230,30 +233,39 @@ extrema(dfcj1sgc.time)
 
 # ╔═╡ c86cf7ce-4780-495e-bfd8-3a4529181dac
 # Define a function to do the poltting
-TimeOnly(ch) = draw(
-	data(dfcj2sgc[dfcj2sgc.channel .== ch, :])        * 
-	visual(Rangebars, color = :gray70, linewidth = 3) * 
-	mapping(:time, :min, :max)
+TimeOnly(chs...) = begin
 
-	+
+	sigdata = subset(dfcj2sgc, :channel => ByRow( x -> x .∈ Ref([chs...])) )
+	rawdata = subset(dfp2,     :channel => ByRow( x -> x .∈ Ref([chs...])) )
 	
-	data(dfp2[dfp2.channel .== ch, :])                * 
-	visual(Lines, linewidth = 3)                      * 
-	mapping(:time, :amplitute, col = :channel,
-		color = :connective  => "Connective:");	
+	draw(
+		data(sigdata)        * 
+		visual(Rangebars, color = :gray70, linewidth = 3) * 
+		mapping(:time, :min, :max, row = :channel)
+	
+		+
+		
+		data(rawdata)         * 
+		visual(Lines, linewidth = 3)                      * 
+		mapping(:time, :amplitute, row = :channel,
+			color = :connective  => "Connective:");	
+	
+		axis = (width = 600, height = 300, xticks = -200:100:1000,
+			xlabel = "Time (ms) from the onset of Noun 3", 
+			ylabel = L"Ampltute ($\mu V$)"),
+	
+		legend = (position = :bottom, titleposition = :left)
+	)
+end
 
-	axis = (width = 1000, height = 500, xticks = -200:100:1000,
-		xlabel = "Time (ms) from the onset of Noun 3", 
-		ylabel = L"Ampltute ($\mu V$)"),
-
-	legend = (position = :bottom, titleposition = :left)
-)
-
-# ╔═╡ 9d81457a-94e9-4ed1-b864-260f314c55c4
+# ╔═╡ c20cf0de-2085-4163-838e-be76ccb1a7b6
 TimeOnly("AFavg")
 
-# ╔═╡ 95f276c3-cf97-426e-a3cf-a8acfdb21b34
-# TimeOnly("F1")
+# ╔═╡ 9d81457a-94e9-4ed1-b864-260f314c55c4
+TimeOnly(unique(df.channel)[1:60]...)
+
+# ╔═╡ dc3680a0-7214-46dc-a1f9-ded09a715acf
+unique(df.channel)
 
 # ╔═╡ 2bf7bc42-610a-4f44-88e0-b4d6a359e15b
 md"""
@@ -282,10 +294,10 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 AlgebraOfGraphics = "~0.6.0"
 CSV = "~0.9.11"
 CairoMakie = "~0.6.6"
-DataFrames = "~1.3.0"
+DataFrames = "~1.3.1"
 FreqTables = "~0.4.5"
 GLM = "~1.5.1"
-PlutoUI = "~0.7.23"
+PlutoUI = "~0.7.25"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -479,9 +491,9 @@ version = "1.9.0"
 
 [[deps.DataFrames]]
 deps = ["Compat", "DataAPI", "Future", "InvertedIndices", "IteratorInterfaceExtensions", "LinearAlgebra", "Markdown", "Missings", "PooledArrays", "PrettyTables", "Printf", "REPL", "Reexport", "SortingAlgorithms", "Statistics", "TableTraits", "Tables", "Unicode"]
-git-tree-sha1 = "2e993336a3f68216be91eb8ee4625ebbaba19147"
+git-tree-sha1 = "cfdfef912b7f93e4b848e80b9befdf9e331bc05a"
 uuid = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
-version = "1.3.0"
+version = "1.3.1"
 
 [[deps.DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
@@ -1106,9 +1118,9 @@ version = "1.47.0+0"
 
 [[deps.Parsers]]
 deps = ["Dates"]
-git-tree-sha1 = "ae4bbcadb2906ccc085cf52ac286dc1377dceccc"
+git-tree-sha1 = "d7fa6237da8004be601e19bd6666083056649918"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
-version = "2.1.2"
+version = "2.1.3"
 
 [[deps.Pixman_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1133,10 +1145,10 @@ uuid = "995b91a9-d308-5afd-9ec6-746e21dbc043"
 version = "1.1.1"
 
 [[deps.PlutoUI]]
-deps = ["AbstractPlutoDingetjes", "Base64", "Dates", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "Markdown", "Random", "Reexport", "UUIDs"]
-git-tree-sha1 = "5152abbdab6488d5eec6a01029ca6697dff4ec8f"
+deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "Markdown", "Random", "Reexport", "UUIDs"]
+git-tree-sha1 = "93cf0910f09a9607add290a3a2585aa376b4feb6"
 uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
-version = "0.7.23"
+version = "0.7.25"
 
 [[deps.PolygonOps]]
 git-tree-sha1 = "77b3d3605fc1cd0b42d95eba87dfcd2bf67d5ff6"
@@ -1157,9 +1169,9 @@ version = "1.2.2"
 
 [[deps.PrettyTables]]
 deps = ["Crayons", "Formatting", "Markdown", "Reexport", "Tables"]
-git-tree-sha1 = "d940010be611ee9d67064fe559edbb305f8cc0eb"
+git-tree-sha1 = "b7ff9f9ce50eab241e978cd975ad4ae113f5a41f"
 uuid = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
-version = "1.2.3"
+version = "1.3.0"
 
 [[deps.Printf]]
 deps = ["Unicode"]
@@ -1561,7 +1573,6 @@ version = "3.5.0+0"
 # ╠═f81f0b9e-7755-40b6-8e09-b246c139d79b
 # ╠═4220f15b-fd6b-40e3-aef3-d35d5ea24e9d
 # ╠═c6a96b1b-10d8-4d15-a9df-d38ab30f65ac
-# ╠═d5460cbf-5507-41de-8987-ce9f5c770521
 # ╠═2b5018b1-7723-4ba1-9698-644828e7ac12
 # ╟─fa0a13cf-6d32-4f40-8c28-9ddbd5965ad3
 # ╠═e2914465-b825-4046-932b-3dc13223c408
@@ -1569,8 +1580,9 @@ version = "3.5.0+0"
 # ╠═66b2c29b-920b-4ca6-b790-fbea021b7636
 # ╠═4e008fc3-f554-4b46-b234-d49543630b37
 # ╠═c86cf7ce-4780-495e-bfd8-3a4529181dac
+# ╠═c20cf0de-2085-4163-838e-be76ccb1a7b6
 # ╠═9d81457a-94e9-4ed1-b864-260f314c55c4
-# ╠═95f276c3-cf97-426e-a3cf-a8acfdb21b34
+# ╠═dc3680a0-7214-46dc-a1f9-ded09a715acf
 # ╟─2bf7bc42-610a-4f44-88e0-b4d6a359e15b
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
