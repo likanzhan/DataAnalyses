@@ -17,7 +17,7 @@ using Statistics # mean
 using FreqTables
 
 # ╔═╡ d4863f7d-ddde-4c8d-b960-ac0b1ed27aed
-using AlgebraOfGraphics, CairoMakie # Cario is the future for `Plot`
+using AlgebraOfGraphics, CairoMakie # Plot, Cario is the future.
 
 # ╔═╡ 051d9767-42c6-47a3-b832-f58ad0a15c4f
 using GLM
@@ -29,7 +29,7 @@ md"""
 
 # ╔═╡ 0d093f1d-918b-48f4-965e-0e711a7a4eae
 md"""
-### Preprocessing process
+### Preprocess data
 """
 
 # ╔═╡ 17c8b2cc-77de-4998-8dce-9ec2e3927cb0
@@ -38,12 +38,12 @@ md"""
 - Bandpass filtering: 0.1 Hz - 50 Hz
 - Epoch (N3 Onset): -200ms - 1000ms
 - Baseline correction
-- Rereferenced to averaged sum of channels
+- Rereferenced to sum of channels
 """
 
 # ╔═╡ 48c903d8-413b-4e62-ae03-84aca4552a57
 md"""
-### Read preprocessed data
+### Read data
 """
 
 # ╔═╡ 91923052-5ee4-11ec-09cf-33cdea5e9d3b
@@ -53,26 +53,32 @@ cd(@__DIR__) # pwd()
 txt_list = filter(endswith(".txt"), readdir("EpochData", join = true));
 
 # ╔═╡ bb0f7c02-9f48-431d-88d3-7e9bbaa96c34
+# Read each `txt` file and `vcat` them, `?mapreduce` for more information
 df = mapreduce(vcat, txt_list) do txt
-	File = replace(txt, r"EpochData\/(\w*?)(\s*?).txt" => s"\1")
+
+	# 1. Transpose and read the txt file into DataFrame
 	df1 = CSV.read(txt, DataFrame, transpose = true)
+
+	# 2. Delete rows containing missing values
 	dropmissing!(df1)
-	# insertcols!(df1, 1, :File  => File)
+
+	# 3. Retrieve File information from txt file name
+	File = replace(txt, r"(\w*?)\/(\w*?)(\s*?).txt" => s"\2")
+
+	# 4. Insert columns, `File`, `pause`, `connective` and `participant`
+	# insertcols!(df1, 2, :file  => File)
 	insertcols!(df1, 1, :pause => occursin.("Nopause", File) ? "0.0 S" : "0.2 S")
 	insertcols!(df1, 1, :connective  => occursin.("And", File) ? "And" : "Or")
 	insertcols!(df1, 1, :participant => string(SubString.(File, 1, 3)))
+
+	# 5. Stack wide format to Long, with two columns: `channel` and `amplitute`
+	df1 = stack(df1, Not([:participant, :connective, :pause, :time]), 
+		variable_name = "channel", value_name = "amplitute")
+	
 	end;
 
-# ╔═╡ c6e9c5ed-3aea-4059-83cd-019e152d9f46
-draw(
-	data(df)                     * 
-	visual(Lines, linewidth = 2) * 
-	mapping(:time, :AFavg, 
-		row = :participant, col  = :pause, color = :connective => "Connective:");
-	
-	axis   = (width = 700, height = 300),
-	legend = (position = :top, titleposition = :left)
-)
+# ╔═╡ 6e1a3492-1b81-47ae-9880-a3b8d3f8c675
+describe(df)
 
 # ╔═╡ e0c43f8a-9eb7-4869-94c9-e2aeab49bbb7
 md"""
@@ -84,85 +90,157 @@ md"""
 Define a function to obtain the p value regarding the difference between the two connectives at a specific time:
 """
 
+# ╔═╡ ac4a35ec-3033-4760-8d3f-49942db117b7
+formula =  @formula(amplitute ~ connective);
+
 # ╔═╡ 6c686b26-aa9c-4feb-aab4-426dda517ae3
-pv(x) = (coeftable(fit(LinearModel, @formula(AFavg ~ connective), x)).cols)[4][2];
+pv(x) = (coeftable(fit(LinearModel, formula, x)).cols)[4][2];
 
 # ╔═╡ 534d6937-072c-475d-a8da-c913a56fef4b
 md"""
 ### Noun 3: Time by Pause
 """
 
-# ╔═╡ 3d176a50-65ac-4493-aa43-972482771981
-gdf1 = groupby(df, [:pause, :time]);
+# ╔═╡ 2d6fd02d-3231-4437-9cc3-4addd3257c89
+begin
+	# Group by `pause * time * channel * connective` for plotting
+	gbp1 = groupby(df, [:pause, :time, :channel, :connective]);
 
-# ╔═╡ f40efe59-e82a-4d05-a48e-bffdceb9b304
-res1 = insertcols!(DataFrame(keys(gdf1)), :pvals => [pv(x) for x in gdf1]);
+	# Combine the groups
+	dfp1 = combine(gbp1, :amplitute => mean => :amplitute);
+end;
 
-# ╔═╡ 46ab15ef-7f57-4a86-8f68-ca09896b7827
-dfc1 = combine(groupby(df, [:connective, :pause, :time]), :AFavg => mean => :AFavg);
+# ╔═╡ d510f764-bf43-4683-b20c-d32fd282469a
+begin
+	# 1. Group by `pause * time * channel` for statistics
+	gbs1 = groupby(df, [:pause, :time, :channel]);
 
-# ╔═╡ 4a135fbb-dd1f-417b-aa57-f19e4fb26841
-dfcj1 = innerjoin(dfc1, res1, on = [:pause, :time]);
+	# 2. Collect difference between two connectives (p-values) into a vector
+	pval = mapreduce(pv, vcat, gbs1)
+	
+	# 3. Create a DataFrame based on groups
+	gbs1r = DataFrame(keys(gbs1))
 
-# ╔═╡ 5ba07adf-46f7-4e58-bf8f-754996b119e2
-sigdt1 = combine(groupby(subset(dfcj1, :pvals => ByRow(<=(.05))), 
-		[:pause, :time]), :AFavg => (x -> [extrema(x)]) => [:min, :max]);
+	# 4. Insert the pvalues into the created DataFrame
+	insertcols!(gbs1r, :pvals => pval)
+	
+end;
+
+# ╔═╡ e7b40a4e-9114-4857-87e3-82b949269430
+begin
+	# 1. Add the obtained p-values into `dfp1` 
+	dfcj1 = innerjoin(dfp1, gbs1r, on = [:pause, :time, :channel])
+
+	# 2. Subset the significant results
+	dfcj1s = subset(dfcj1, :pvals => ByRow(<(.05)))
+
+	# 3. Group by `pause * time * channel`
+	dfcj1sg = groupby(dfcj1s, [:pause, :time, :channel, :pvals])
+
+	# 4. Retrieve min and max value for plotting
+	dfcj1sgc = combine(dfcj1sg, 
+		:amplitute => (x -> [extrema(x)]) => [:min, :max]);
+end;
+
+# ╔═╡ f81f0b9e-7755-40b6-8e09-b246c139d79b
+# Time range where differences were observed
+extrema(dfcj1sgc.time)
 
 # ╔═╡ 4220f15b-fd6b-40e3-aef3-d35d5ea24e9d
-draw(
-	data(sigdt1)                       * 
+# Define a function to do the poltting
+TimeByPause(ch) = draw(
+	data(dfcj1sgc[dfcj1sgc.channel .== ch, :])        * 
 	visual(Rangebars, color = :gray70, linewidth = 3) * 
 	mapping(:time, :min, :max, row = :pause)
 
 	+
 
-	data(dfcj1)                        * 
-	visual(Lines, linewidth = 3)       * 
-	mapping(:time, :AFavg, row = :pause, color = :connective => "Connective:") ;
+	data(dfp1[dfp1.channel .== ch, :])  * 
+	visual(Lines, linewidth = 3)        * 
+	mapping(:time, :amplitute, 
+		row = :pause, col = :channel,
+		color = :connective => "Connective:") ;
 	
 	axis = (width = 1000, height = 500, xticks = -200:100:1000,
 		xlabel = "Time (ms) from the onset of Noun 3", 
-		ylabel = L"Ampltute ($\mu V$)"),
+		ylabel = L"Amplitute ($\mu V$)"),
 	
 	legend = (position = :bottom, titleposition = :left)
 )
+
+# ╔═╡ c6a96b1b-10d8-4d15-a9df-d38ab30f65ac
+TimeByPause("AFavg")
+
+# ╔═╡ d5460cbf-5507-41de-8987-ce9f5c770521
+# TimeByPause("F1")
+
+# ╔═╡ 2b5018b1-7723-4ba1-9698-644828e7ac12
+# Channel names
+unique(dfp1.channel)
 
 # ╔═╡ fa0a13cf-6d32-4f40-8c28-9ddbd5965ad3
 md"""
 ### Noun 3: Time (Average out pause)
 """
 
-# ╔═╡ 18604378-c433-4cd4-b54a-e842a406989d
-df2 = combine(groupby(df, [:participant, :connective, :time]), 
-	:AFavg => mean => :AFavg);
+# ╔═╡ e2914465-b825-4046-932b-3dc13223c408
+begin
+	# Group by `pause * time * channel * connective` for plotting
+	gbp2 = groupby(df, [:time, :channel, :connective]);
 
-# ╔═╡ c84cc5a6-dde8-4dba-bd2b-ea41b42b9ca0
-gdf2 = groupby(df2, :time);
+	# Combine the groups
+	dfp2 = combine(gbp2, :amplitute => mean => :amplitute);
+end;
 
-# ╔═╡ af270507-fd47-46e8-9b53-f2be6c71d1a6
-res2 = insertcols!(DataFrame(keys(gdf2)), :pvals => [pv(x) for x in gdf2]);
+# ╔═╡ c49c808b-bde4-4112-8a0f-d37143a16db1
+begin
+	# 1. Group by `pause * time * channel` for statistics
+	gbs2 = groupby(df, [:time, :channel]);
 
-# ╔═╡ 0381bec0-486f-42e2-bc56-8bba9d55a84e
-dfc2 = combine(groupby(df2, [:connective, :time]), :AFavg => mean => :AFavg);
+	# 2. Collect difference between two connectives (p-values) into a vector
+	pval2 = mapreduce(pv, vcat, gbs2)
+	
+	# 3. Create a DataFrame based on groups
+	gbs2r = DataFrame(keys(gbs2))
 
-# ╔═╡ 2ee645ee-bf95-41b5-ae81-17bf79c4729a
-dfcj2 = innerjoin(dfc2, res2, on = :time);
+	# 4. Insert the pvalues into the created DataFrame
+	insertcols!(gbs2r, :pvals => pval2)
+	
+end;
 
-# ╔═╡ fe110b47-9a9a-4f63-8457-ad7cfff69c2c
-sigdt2 = combine(groupby(subset(dfcj2, :pvals => ByRow(<=(.05))), :time), 
-	:AFavg => (x -> [extrema(x)]) => [:min, :max]);
+# ╔═╡ 66b2c29b-920b-4ca6-b790-fbea021b7636
+begin
+	# 1. Add the obtained p-values into `dfp1` 
+	dfcj2 = innerjoin(dfp2, gbs2r, on = [:time, :channel])
+
+	# 2. Subset the significant results
+	dfcj2s = subset(dfcj2, :pvals => ByRow(<(.05)))
+
+	# 3. Group by `pause * time * channel`
+	dfcj2sg = groupby(dfcj2s, [:time, :channel, :pvals])
+
+	# 4. Retrieve min and max value for plotting
+	dfcj2sgc = combine(dfcj2sg, 
+		:amplitute => (x -> [extrema(x)]) => [:min, :max]);
+end;
+
+# ╔═╡ 4e008fc3-f554-4b46-b234-d49543630b37
+# Time range where differences were observed
+extrema(dfcj1sgc.time)
 
 # ╔═╡ c86cf7ce-4780-495e-bfd8-3a4529181dac
-draw(
-	data(sigdt2)                       * 
+# Define a function to do the poltting
+TimeOnly(ch) = draw(
+	data(dfcj2sgc[dfcj2sgc.channel .== ch, :])        * 
 	visual(Rangebars, color = :gray70, linewidth = 3) * 
 	mapping(:time, :min, :max)
 
 	+
 	
-	data(dfcj2)                        * 
-	visual(Lines, linewidth = 3)       * 
-	mapping(:time, :AFavg, color = :connective  => "Connective:");	
+	data(dfp2[dfp2.channel .== ch, :])                * 
+	visual(Lines, linewidth = 3)                      * 
+	mapping(:time, :amplitute, col = :channel,
+		color = :connective  => "Connective:");	
 
 	axis = (width = 1000, height = 500, xticks = -200:100:1000,
 		xlabel = "Time (ms) from the onset of Noun 3", 
@@ -170,6 +248,12 @@ draw(
 
 	legend = (position = :bottom, titleposition = :left)
 )
+
+# ╔═╡ 9d81457a-94e9-4ed1-b864-260f314c55c4
+TimeOnly("AFavg")
+
+# ╔═╡ 95f276c3-cf97-426e-a3cf-a8acfdb21b34
+# TimeOnly("F1")
 
 # ╔═╡ 2bf7bc42-610a-4f44-88e0-b4d6a359e15b
 md"""
@@ -304,9 +388,9 @@ version = "0.6.6"
 
 [[deps.Cairo_jll]]
 deps = ["Artifacts", "Bzip2_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "JLLWrappers", "LZO_jll", "Libdl", "Pixman_jll", "Pkg", "Xorg_libXext_jll", "Xorg_libXrender_jll", "Zlib_jll", "libpng_jll"]
-git-tree-sha1 = "f2202b55d816427cd385a9a4f3ffb226bee80f99"
+git-tree-sha1 = "4b859a208b2397a7a623a03449e4636bdb17bcf2"
 uuid = "83423d85-b0ee-5818-9007-b63ccbeb887a"
-version = "1.16.1+0"
+version = "1.16.1+1"
 
 [[deps.CategoricalArrays]]
 deps = ["DataAPI", "Future", "Missings", "Printf", "Requires", "Statistics", "Unicode"]
@@ -588,9 +672,9 @@ version = "0.21.0+0"
 
 [[deps.Glib_jll]]
 deps = ["Artifacts", "Gettext_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Libiconv_jll", "Libmount_jll", "PCRE_jll", "Pkg", "Zlib_jll"]
-git-tree-sha1 = "74ef6288d071f58033d54fd6708d4bc23a8b8972"
+git-tree-sha1 = "a32d672ac2c967f3deb8a81d828afc739c838a06"
 uuid = "7746bdde-850d-59dc-9ae8-88ece973131d"
-version = "2.68.3+1"
+version = "2.68.3+2"
 
 [[deps.Graphics]]
 deps = ["Colors", "LinearAlgebra", "NaNMath"]
@@ -1465,25 +1549,28 @@ version = "3.5.0+0"
 # ╠═91923052-5ee4-11ec-09cf-33cdea5e9d3b
 # ╠═d2e6e365-d026-4f23-a194-1c6a02bd8eb0
 # ╠═bb0f7c02-9f48-431d-88d3-7e9bbaa96c34
-# ╠═c6e9c5ed-3aea-4059-83cd-019e152d9f46
+# ╠═6e1a3492-1b81-47ae-9880-a3b8d3f8c675
 # ╟─e0c43f8a-9eb7-4869-94c9-e2aeab49bbb7
 # ╟─40ae436e-615c-43bd-a330-ac2730455dff
+# ╠═ac4a35ec-3033-4760-8d3f-49942db117b7
 # ╠═6c686b26-aa9c-4feb-aab4-426dda517ae3
 # ╟─534d6937-072c-475d-a8da-c913a56fef4b
-# ╠═3d176a50-65ac-4493-aa43-972482771981
-# ╠═f40efe59-e82a-4d05-a48e-bffdceb9b304
-# ╠═46ab15ef-7f57-4a86-8f68-ca09896b7827
-# ╠═4a135fbb-dd1f-417b-aa57-f19e4fb26841
-# ╠═5ba07adf-46f7-4e58-bf8f-754996b119e2
+# ╠═2d6fd02d-3231-4437-9cc3-4addd3257c89
+# ╠═d510f764-bf43-4683-b20c-d32fd282469a
+# ╠═e7b40a4e-9114-4857-87e3-82b949269430
+# ╠═f81f0b9e-7755-40b6-8e09-b246c139d79b
 # ╠═4220f15b-fd6b-40e3-aef3-d35d5ea24e9d
+# ╠═c6a96b1b-10d8-4d15-a9df-d38ab30f65ac
+# ╠═d5460cbf-5507-41de-8987-ce9f5c770521
+# ╠═2b5018b1-7723-4ba1-9698-644828e7ac12
 # ╟─fa0a13cf-6d32-4f40-8c28-9ddbd5965ad3
-# ╠═18604378-c433-4cd4-b54a-e842a406989d
-# ╠═c84cc5a6-dde8-4dba-bd2b-ea41b42b9ca0
-# ╠═af270507-fd47-46e8-9b53-f2be6c71d1a6
-# ╠═0381bec0-486f-42e2-bc56-8bba9d55a84e
-# ╠═2ee645ee-bf95-41b5-ae81-17bf79c4729a
-# ╠═fe110b47-9a9a-4f63-8457-ad7cfff69c2c
+# ╠═e2914465-b825-4046-932b-3dc13223c408
+# ╠═c49c808b-bde4-4112-8a0f-d37143a16db1
+# ╠═66b2c29b-920b-4ca6-b790-fbea021b7636
+# ╠═4e008fc3-f554-4b46-b234-d49543630b37
 # ╠═c86cf7ce-4780-495e-bfd8-3a4529181dac
+# ╠═9d81457a-94e9-4ed1-b864-260f314c55c4
+# ╠═95f276c3-cf97-426e-a3cf-a8acfdb21b34
 # ╟─2bf7bc42-610a-4f44-88e0-b4d6a359e15b
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
