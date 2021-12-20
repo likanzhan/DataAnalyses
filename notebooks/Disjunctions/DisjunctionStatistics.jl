@@ -17,7 +17,7 @@ using Statistics # mean
 using FreqTables
 
 # ╔═╡ d4863f7d-ddde-4c8d-b960-ac0b1ed27aed
-using AlgebraOfGraphics, CairoMakie # Plot, Cario is the future.
+using AlgebraOfGraphics, CairoMakie # Plot, Cairo is the future.
 
 # ╔═╡ 051d9767-42c6-47a3-b832-f58ad0a15c4f
 using GLM
@@ -65,13 +65,14 @@ df = mapreduce(vcat, txt_list) do txt
 	# 3. Retrieve File information from txt file name
 	File = replace(txt, r"(\w*?)\/(\w*?)(\s*?).txt" => s"\2")
 
-	# 4. Insert columns, `File`, `pause`, `connective` and `participant`
+	# 4. Insert columns, `file`, `pause`, `connective` and `participant`
 	# insertcols!(df1, 2, :file  => File)
 	insertcols!(df1, 1, :pause => occursin.("Nopause", File) ? "0.0 S" : "0.2 S")
 	insertcols!(df1, 1, :connective  => occursin.("And", File) ? "And" : "Or")
 	insertcols!(df1, 1, :participant => string(SubString.(File, 1, 3)))
 
-	# 5. Stack wide format to Long, with two columns: `channel` and `amplitute`
+	# 5. Stack wide format to Long format,
+	#     with two new columns: `channel` and `amplitute`
 	df1 = stack(df1, Not([:participant, :connective, :pause, :time]), 
 		variable_name = "channel", value_name = "amplitute")
 	
@@ -79,6 +80,13 @@ end;
 
 # ╔═╡ 6e1a3492-1b81-47ae-9880-a3b8d3f8c675
 describe(df)
+
+# ╔═╡ a0f52445-1a24-4a84-b4bc-a52c3d9e81f6
+nrow(df)
+
+# ╔═╡ 2b5018b1-7723-4ba1-9698-644828e7ac12
+# Channel names
+unique(df.channel)
 
 # ╔═╡ e0c43f8a-9eb7-4869-94c9-e2aeab49bbb7
 md"""
@@ -154,32 +162,31 @@ TimeByPause(chs...) = begin
 	rawdata = subset(dfp1,     :channel => ByRow( x -> x .∈ Ref([chs...])) )
 	
 	draw(
-	data(sigdata) * 
-	visual(Rangebars, color = :gray70, linewidth = 3) * 
-	mapping(:time, :min, :max, col = :pause, row = :channel)
-
-	+
-
-	data(rawdata)  * 
-	visual(Lines, linewidth = 3)  * 
-	mapping(:time, :amplitute, 
-		col = :pause, row = :channel,
-		color = :connective => "Connective:") ;
+		data(sigdata)                                     * 
+		visual(Rangebars, color = :gray70, linewidth = 3) * 
+		mapping(:time, :min, :max, col = :pause, row = :channel)
 	
-	axis = (width = 600, height = 300, xticks = -200:100:1000,
-		xlabel = "Time (ms) from the onset of Noun 3", 
-		ylabel = L"Amplitute ($\mu V$)"),
+		+
 	
-	legend = (position = :bottom, titleposition = :left)
+		data(rawdata)                 * 
+		visual(Lines, linewidth = 3)  * 
+		mapping(:time, :amplitute, 
+			col = :pause, row = :channel,
+			color = :connective => "Connective:") ;
+		
+		axis = (width = 600, height = 300, xticks = -200:100:1000,
+			xlabel = "Time (ms) from the onset of Noun 3", 
+			ylabel = L"Amplitute ($\mu V$)"),
+		
+		legend = (position = :bottom, titleposition = :left)
 	)
-	end
+end
 
 # ╔═╡ c6a96b1b-10d8-4d15-a9df-d38ab30f65ac
-TimeByPause("F1", "AFavg")
+AFavgTP = TimeByPause("AFavg")
 
-# ╔═╡ 2b5018b1-7723-4ba1-9698-644828e7ac12
-# Channel names
-unique(dfp1.channel)
+# ╔═╡ 61c09312-d0b2-48b1-8f3c-04f7a77d1a89
+save("AFavgTP.pdf", AFavgTP);
 
 # ╔═╡ fa0a13cf-6d32-4f40-8c28-9ddbd5965ad3
 md"""
@@ -233,39 +240,42 @@ extrema(dfcj1sgc.time)
 
 # ╔═╡ c86cf7ce-4780-495e-bfd8-3a4529181dac
 # Define a function to do the poltting
-TimeOnly(chs...) = begin
+TimeOnly(chs...; height = 300, linewidth = 3) = begin
 
 	sigdata = subset(dfcj2sgc, :channel => ByRow( x -> x .∈ Ref([chs...])) )
 	rawdata = subset(dfp2,     :channel => ByRow( x -> x .∈ Ref([chs...])) )
 	
 	draw(
-		data(sigdata)        * 
-		visual(Rangebars, color = :gray70, linewidth = 3) * 
+		data(sigdata)                                       * 
+		visual(Rangebars, color = :gray70, linewidth = 3)   * 
 		mapping(:time, :min, :max, row = :channel)
 	
 		+
 		
-		data(rawdata)         * 
-		visual(Lines, linewidth = 3)                      * 
+		data(rawdata)                                       * 
+		visual(Lines, linewidth = linewidth)                * 
 		mapping(:time, :amplitute, row = :channel,
 			color = :connective  => "Connective:");	
 	
-		axis = (width = 600, height = 300, xticks = -200:100:1000,
+		axis = (width = 600, height = height, xticks = -200:100:1000,
 			xlabel = "Time (ms) from the onset of Noun 3", 
-			ylabel = L"Ampltute ($\mu V$)"),
+			ylabel = L"Amplitute ($\mu V$)"),
 	
 		legend = (position = :bottom, titleposition = :left)
 	)
 end
 
 # ╔═╡ c20cf0de-2085-4163-838e-be76ccb1a7b6
-TimeOnly("AFavg")
+AFavgT = TimeOnly("AFavg")
+
+# ╔═╡ eebcc255-c6e0-4275-82ec-686f7fe1df12
+save("AFavgT.pdf", AFavgT);
 
 # ╔═╡ 9d81457a-94e9-4ed1-b864-260f314c55c4
-TimeOnly(unique(df.channel)[1:60]...)
+TmAll = TimeOnly(unique(df.channel)[1:60]...; height = 100, linewidth = 1)
 
-# ╔═╡ dc3680a0-7214-46dc-a1f9-ded09a715acf
-unique(df.channel)
+# ╔═╡ 2619c021-43ec-4813-9ad8-9255decdb6fd
+save("TmAll.pdf", TmAll);
 
 # ╔═╡ 2bf7bc42-610a-4f44-88e0-b4d6a359e15b
 md"""
@@ -1562,6 +1572,8 @@ version = "3.5.0+0"
 # ╠═d2e6e365-d026-4f23-a194-1c6a02bd8eb0
 # ╠═bb0f7c02-9f48-431d-88d3-7e9bbaa96c34
 # ╠═6e1a3492-1b81-47ae-9880-a3b8d3f8c675
+# ╠═a0f52445-1a24-4a84-b4bc-a52c3d9e81f6
+# ╠═2b5018b1-7723-4ba1-9698-644828e7ac12
 # ╟─e0c43f8a-9eb7-4869-94c9-e2aeab49bbb7
 # ╟─40ae436e-615c-43bd-a330-ac2730455dff
 # ╠═ac4a35ec-3033-4760-8d3f-49942db117b7
@@ -1573,7 +1585,7 @@ version = "3.5.0+0"
 # ╠═f81f0b9e-7755-40b6-8e09-b246c139d79b
 # ╠═4220f15b-fd6b-40e3-aef3-d35d5ea24e9d
 # ╠═c6a96b1b-10d8-4d15-a9df-d38ab30f65ac
-# ╠═2b5018b1-7723-4ba1-9698-644828e7ac12
+# ╠═61c09312-d0b2-48b1-8f3c-04f7a77d1a89
 # ╟─fa0a13cf-6d32-4f40-8c28-9ddbd5965ad3
 # ╠═e2914465-b825-4046-932b-3dc13223c408
 # ╠═c49c808b-bde4-4112-8a0f-d37143a16db1
@@ -1581,8 +1593,9 @@ version = "3.5.0+0"
 # ╠═4e008fc3-f554-4b46-b234-d49543630b37
 # ╠═c86cf7ce-4780-495e-bfd8-3a4529181dac
 # ╠═c20cf0de-2085-4163-838e-be76ccb1a7b6
+# ╠═eebcc255-c6e0-4275-82ec-686f7fe1df12
 # ╠═9d81457a-94e9-4ed1-b864-260f314c55c4
-# ╠═dc3680a0-7214-46dc-a1f9-ded09a715acf
+# ╠═2619c021-43ec-4813-9ad8-9255decdb6fd
 # ╟─2bf7bc42-610a-4f44-88e0-b4d6a359e15b
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
