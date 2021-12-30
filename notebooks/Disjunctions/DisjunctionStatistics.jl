@@ -67,9 +67,9 @@ df = mapreduce(vcat, txt_list) do txt
 
 	# 4. Insert columns, `file`, `pause`, `connective` and `participant`
 	# insertcols!(df1, 2, :file  => File)
-	insertcols!(df1, 1, :pause => occursin.("Nopause", File) ? "0.0 S" : "0.2 S")
-	insertcols!(df1, 1, :connective  => occursin.("And", File) ? "And" : "Or")
-	insertcols!(df1, 1, :participant => string(SubString.(File, 1, 3)))
+	insertcols!(df1, 1, :pause => occursin("Nopause", File) ? "0.0 S" : "0.2 S")
+	insertcols!(df1, 1, :connective  => occursin("And", File) ? "And" : "Or")
+	insertcols!(df1, 1, :participant => string(SubString(File, 1, 3)))
 
 	# 5. Stack wide format to Long format,
 	#     with two new columns: `channel` and `amplitute`
@@ -78,14 +78,19 @@ df = mapreduce(vcat, txt_list) do txt
 	
 end;
 
+# ╔═╡ e6ead18b-04c0-444e-8744-1cfa57451af0
+# subset!(df, :participant => ByRow(!=("S10")));
+
 # ╔═╡ 6e1a3492-1b81-47ae-9880-a3b8d3f8c675
 describe(df)
+
+# ╔═╡ eba0cd43-a11f-4549-93d5-0d2743b39c62
+unique(df.participant)
 
 # ╔═╡ a0f52445-1a24-4a84-b4bc-a52c3d9e81f6
 nrow(df)
 
 # ╔═╡ 2b5018b1-7723-4ba1-9698-644828e7ac12
-# Channel names
 unique(df.channel)
 
 # ╔═╡ e0c43f8a-9eb7-4869-94c9-e2aeab49bbb7
@@ -162,14 +167,14 @@ TimeByPause(chs...) = begin
 	rawdata = subset(dfp1,     :channel => ByRow( x -> x .∈ Ref([chs...])) )
 	
 	draw(
-		data(sigdata)                                     * 
-		visual(Rangebars, color = :gray70, linewidth = 3) * 
+		data(sigdata)                                             * 
+		visual(Rangebars, color = :gray70, linewidth = 3)         * 
 		mapping(:time, :min, :max, col = :pause, row = :channel)
 	
 		+
 	
-		data(rawdata)                 * 
-		visual(Lines, linewidth = 3)  * 
+		data(rawdata)                                             * 
+		visual(Lines, linewidth = 3)                              * 
 		mapping(:time, :amplitute, 
 			col = :pause, row = :channel,
 			color = :connective => "Connective:") ;
@@ -272,6 +277,9 @@ AFavgT = TimeOnly("AFavg")
 save("AFavgT.pdf", AFavgT);
 
 # ╔═╡ 9d81457a-94e9-4ed1-b864-260f314c55c4
+# TimeOnly("Fp2", "Fpz")
+
+# ╔═╡ 98074da2-12ca-4c6b-81a1-e01234095fad
 TmAll = TimeOnly(unique(df.channel)[1:60]...; height = 100, linewidth = 1)
 
 # ╔═╡ 2619c021-43ec-4813-9ad8-9255decdb6fd
@@ -1571,7 +1579,9 @@ version = "3.5.0+0"
 # ╠═91923052-5ee4-11ec-09cf-33cdea5e9d3b
 # ╠═d2e6e365-d026-4f23-a194-1c6a02bd8eb0
 # ╠═bb0f7c02-9f48-431d-88d3-7e9bbaa96c34
+# ╠═e6ead18b-04c0-444e-8744-1cfa57451af0
 # ╠═6e1a3492-1b81-47ae-9880-a3b8d3f8c675
+# ╠═eba0cd43-a11f-4549-93d5-0d2743b39c62
 # ╠═a0f52445-1a24-4a84-b4bc-a52c3d9e81f6
 # ╠═2b5018b1-7723-4ba1-9698-644828e7ac12
 # ╟─e0c43f8a-9eb7-4869-94c9-e2aeab49bbb7
@@ -1595,6 +1605,7 @@ version = "3.5.0+0"
 # ╠═c20cf0de-2085-4163-838e-be76ccb1a7b6
 # ╠═eebcc255-c6e0-4275-82ec-686f7fe1df12
 # ╠═9d81457a-94e9-4ed1-b864-260f314c55c4
+# ╠═98074da2-12ca-4c6b-81a1-e01234095fad
 # ╠═2619c021-43ec-4813-9ad8-9255decdb6fd
 # ╟─2bf7bc42-610a-4f44-88e0-b4d6a359e15b
 # ╟─00000000-0000-0000-0000-000000000001
