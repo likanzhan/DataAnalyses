@@ -50,7 +50,7 @@ md"""
 formula = @formula(Object_Rate ~ Box_Transparency);
 
 # ╔═╡ 2bfd5928-7307-4dbe-8b88-15a624aa6dd9
-Ex1_contr = Dict(:Box_Transparency => DummyCoding(base = "TT-OO"));
+Ex1_contr = Dict(:Box_Transparency => SeqDiffCoding(base = "OO-OO"));
 
 # ╔═╡ 03af8427-ec54-47f3-b184-2ce5c788e280
 md"""
@@ -86,7 +86,7 @@ md"""
 """
 
 # ╔═╡ 3a14c67e-b558-4032-9259-f214441d9b55
-Ex2_contr = Dict(:Box_Transparency => DummyCoding(base = "TT-TT"));
+Ex2_contr = Dict(:Box_Transparency => SeqDiffCoding(base = "TO-TO"));
 
 # ╔═╡ 8f11b4fa-440b-4ec3-8bf7-d63b376ea1d0
 md"""
@@ -107,7 +107,7 @@ md"""
 """
 
 # ╔═╡ 36ab5019-a6c9-4817-b279-816e20f7f9c8
-Ex3_contr = Dict(:Box_Transparency => DummyCoding(base = "TT-OT"));
+Ex3_contr = Dict(:Box_Transparency => SeqDiffCoding(base = "TO-OO"));
 
 # ╔═╡ 5e47de4c-374a-4870-9fde-890e4237ebd9
 md"""
