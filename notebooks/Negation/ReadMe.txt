@@ -1,4 +1,4 @@
-Trenspancy
+Transpancy
 
 T: Transparency
 O: Opaque
