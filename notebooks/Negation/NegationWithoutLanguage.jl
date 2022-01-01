@@ -38,9 +38,6 @@ md"""
 # ╔═╡ 8838254f-fcd1-4e8f-95d8-b1cbaad4fae8
 # describe(Ex1)
 
-# ╔═╡ 16ab925a-3c0b-42ee-97cf-2913cdc5e9ed
-# freqtable(Ex1, :Box_Transparency, :Box_Color)
-
 # ╔═╡ 6b66d803-491c-4d18-a981-b917fe2c9e9c
 md"""
 ### Object in unchosen box
@@ -50,7 +47,10 @@ md"""
 formula = @formula(Object_Rate ~ Box_Transparency);
 
 # ╔═╡ 2bfd5928-7307-4dbe-8b88-15a624aa6dd9
-Ex1_contr = Dict(:Box_Transparency => SeqDiffCoding(base = "OO-OO"));
+# Ex1_contr = Dict(:Box_Transparency => SeqDiffCoding(base = "OO-OO"));
+
+# ╔═╡ 7c323f1d-eca7-4bd4-9c47-a03c02cb057b
+Ex1_contr = Dict(:Box_Transparency => EffectsCoding());
 
 # ╔═╡ 03af8427-ec54-47f3-b184-2ce5c788e280
 md"""
@@ -61,6 +61,13 @@ md"""
 md"""
 ### Object in basket
 """
+
+# ╔═╡ fab6aaec-b788-4e18-93cd-f4ddf58fb75f
+# @df Ex1_Basket_Sum plot(:Box_Transparency, :Object_Rate, 
+# 	seriestype = [:dotplot, :boxplot], fill = [1 0.5], 
+# 	xlim = (0, 3), xlabel = "Condition", ylabel = "Preference Rate", 
+# 	legend = false, ratio = 0.5
+# )
 
 # ╔═╡ b60e0d18-40cb-4dbf-8bf6-c8cfd816933e
 md"""
@@ -86,7 +93,10 @@ md"""
 """
 
 # ╔═╡ 3a14c67e-b558-4032-9259-f214441d9b55
-Ex2_contr = Dict(:Box_Transparency => SeqDiffCoding(base = "TO-TO"));
+# Ex2_contr = Dict(:Box_Transparency => SeqDiffCoding(base = "TO-TO"));
+
+# ╔═╡ 2ac154f0-e5cd-4059-89db-b4c56c3e5767
+Ex2_contr = Dict(:Box_Transparency => EffectsCoding());
 
 # ╔═╡ 8f11b4fa-440b-4ec3-8bf7-d63b376ea1d0
 md"""
@@ -107,7 +117,24 @@ md"""
 """
 
 # ╔═╡ 36ab5019-a6c9-4817-b279-816e20f7f9c8
-Ex3_contr = Dict(:Box_Transparency => SeqDiffCoding(base = "TO-OO"));
+# Ex3_contr = Dict(:Box_Transparency => SeqDiffCoding(base = "TO-OO"));
+
+# ╔═╡ fd8cbc65-9d86-4bed-ad19-d560263651d2
+Ex3_contr = Dict(:Box_Transparency => EffectsCoding());
+
+# ╔═╡ b4536b20-2ed4-41f5-b0f8-667c97cf065c
+md"""
+## Combine three experiment
+"""
+
+# ╔═╡ a9577246-a9d7-4dd4-bdbf-b0d5758cbb67
+# freqtable(Exs, :Box_Transparency, :Participant_Perspective, :Agent_Perspective)
+
+# ╔═╡ 4c3cc92d-110d-4494-8b2c-54f327a671fd
+# Exs_contr = Dict(:Box_Transparency => SeqDiffCoding(base = "TO-OO"));
+
+# ╔═╡ 576db6e2-2d17-4b58-9f4e-a0c9e3852a98
+Exs_contr = Dict(:Box_Transparency => EffectsCoding());
 
 # ╔═╡ 5e47de4c-374a-4870-9fde-890e4237ebd9
 md"""
@@ -263,14 +290,24 @@ function read_combine_data(Experiment)
 		"Agent_Choice", "Box_Color",  "Box_Transparency",]
 	)
 
+	# 15. Replace Transparency values to combine groups
+	replace!(df.Box_Transparency, 
+		"OO-TT" => "TT-OO", # Experiment 1
+		"TO-TT" => "TT-TO", # Experiment 2
+		"OO-TO" => "TO-OO", # Experiment 3 ->
+		"OO-TT" => "TT-OO", 
+		"OT-TT" => "TT-OT"
+	) 
+
+	return df
+
 end
 
 # ╔═╡ 5cb6d10a-7e5f-4728-8b91-336b9f0fa549
 Ex1 = read_combine_data(1);
 
-# ╔═╡ 4aab4228-92f1-4cbd-91db-4f985e8fdb6b
-# Replace `OT` with `TO`, i.e. combine conditions `TO` and `OT`
-replace!(Ex1.Box_Transparency, "OO-TT" => "TT-OO");
+# ╔═╡ 16ab925a-3c0b-42ee-97cf-2913cdc5e9ed
+freqtable(Ex1, :Box_Transparency, :Box_Color)
 
 # ╔═╡ 4f97f2b2-d819-44f8-847f-9914de9de9f0
 # Object that is not choisen and is not in the box.
@@ -305,13 +342,6 @@ Ex1_Basket_Sum = @pipe Ex1_Basket |>
 	groupby(_, [:Participant, :Box_Transparency]) |> 
 	combine(_, :Object_Rate => mean => :Object_Rate);
 
-# ╔═╡ fab6aaec-b788-4e18-93cd-f4ddf58fb75f
-@df Ex1_Basket_Sum plot(:Box_Transparency, :Object_Rate, 
-	seriestype = [:dotplot, :boxplot], fill = [1 0.5], 
-	xlim = (0, 3), xlabel = "Condition", ylabel = "Preference Rate", 
-	legend = false, ratio = 0.5
-)
-
 # ╔═╡ a36adf7b-abac-4879-94ca-a20ec4d8c495
 Ex1_fm2 = fit(LinearModel, formula, Ex1_Basket_Sum, contrasts = Ex1_contr);
 
@@ -320,9 +350,6 @@ coeftable(Ex1_fm2)
 
 # ╔═╡ 87389fe3-0c1d-40ec-863c-43e3189f64ed
 Ex2 = read_combine_data(2);
-
-# ╔═╡ bb4daaf9-e4b8-4b60-83e6-c52fbc557d8e
-replace!(Ex2.Box_Transparency, "TO-TT" => "TT-TO");
 
 # ╔═╡ c7fa17f9-a371-4d1b-a340-21530ac102fd
 freqtable(Ex2, :Box_Transparency, :Box_Color)
@@ -354,10 +381,6 @@ coeftable(Ex2_fm1)
 # ╔═╡ ca54d080-408e-4bcb-8810-fc8ca264def4
 Ex3 = read_combine_data(3);
 
-# ╔═╡ 1664e58e-4e5e-40d7-b7f1-3b4055883100
-replace!(Ex3.Box_Transparency, 
-	"OO-TO" => "TO-OO", "OO-TT" => "TT-OO", "OT-TT" => "TT-OT");
-
 # ╔═╡ 8ea8d009-e5c7-4deb-bb18-a6f722606441
 freqtable(Ex3, :Box_Transparency, :Box_Color)
 
@@ -384,6 +407,44 @@ Ex3_fm1 = fit(LinearModel, formula, Ex3_Other_Sum, contrasts = Ex3_contr);
 
 # ╔═╡ 8aa3dc04-8de5-4ea8-a850-2700798ba5e7
 coeftable(Ex3_fm1)
+
+# ╔═╡ 3cdd9344-6576-42b1-935d-1f57639b649f
+Exs = vcat(Ex1, Ex2, Ex3);
+
+# ╔═╡ 2c6cbb98-b791-4a8c-9cc2-46a43495e2a2
+transform!(Exs,
+	:Box_Transparency => 
+		ByRow(x -> SubString(x, 1, 1) * SubString(x, 4, 4)) => 
+		:Participant_Perspective,
+	:Box_Transparency => 
+		ByRow(x -> SubString(x, 2, 2) * SubString(x, 5, 5)) => 
+		:Agent_Perspective
+);
+
+# ╔═╡ a905adf2-7ee1-4e18-8380-b49794cb079e
+Exs_Other_Box = subset(Exs, [:Object_Number, :Agent_Choice, :Basket] => 
+	ByRow((x, y, z) -> (x != y) & (x != z)) );
+
+# ╔═╡ 59515975-abf4-42a7-a3a3-d8c0ae1a4bcf
+Exs_Other_Sum = @pipe Exs_Other_Box |> 
+	groupby(_, [:Participant, :Box_Transparency, 
+		:Participant_Perspective, :Agent_Perspective]) |> 
+	combine(_, :Object_Rate => mean => :Object_Rate);
+
+# ╔═╡ 0cb79dff-fe44-412a-b11f-d914ea3726ba
+@df Exs_Other_Sum plot(:Box_Transparency, :Object_Rate, 
+	seriestype = [:dotplot, :boxplot], fill = [1 0.5], 
+	xlabel = "Box Transparency", ylabel = "Preference Rate", 
+	xlim = (0, 7),  ratio = 0.5,
+	legend = false,
+	layout = 1
+)
+
+# ╔═╡ 5f58ad5d-668a-4e20-bade-48dd555b963a
+Exs_fm1 = fit(LinearModel, formula, Exs_Other_Sum, contrasts = Exs_contr);
+
+# ╔═╡ 6f9bea0d-1a05-4edb-a027-854bff09b119
+coeftable(Exs_fm1)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1600,21 +1661,21 @@ version = "0.9.1+5"
 # ╟─c8d34784-050c-49aa-a4de-258a9cdafe6f
 # ╠═5cb6d10a-7e5f-4728-8b91-336b9f0fa549
 # ╠═8838254f-fcd1-4e8f-95d8-b1cbaad4fae8
-# ╠═4aab4228-92f1-4cbd-91db-4f985e8fdb6b
 # ╠═16ab925a-3c0b-42ee-97cf-2913cdc5e9ed
 # ╟─6b66d803-491c-4d18-a981-b917fe2c9e9c
 # ╠═4f97f2b2-d819-44f8-847f-9914de9de9f0
 # ╠═1748ab04-910b-4a98-9d30-1cd88ad7f220
-# ╠═f362c4e2-25f6-4e66-a6dc-f7f68c8033e2
+# ╟─f362c4e2-25f6-4e66-a6dc-f7f68c8033e2
 # ╠═b7ab00d1-7c65-4822-910d-cc0ae692ee9a
 # ╠═2bfd5928-7307-4dbe-8b88-15a624aa6dd9
+# ╠═7c323f1d-eca7-4bd4-9c47-a03c02cb057b
 # ╠═8289b5e1-e749-4723-bace-cce48f6b36fa
 # ╠═9f18b6ba-6eec-4167-9c9e-008d2de23fdb
 # ╟─03af8427-ec54-47f3-b184-2ce5c788e280
 # ╟─be69ea7a-9bb7-4606-98c8-1b2ea9081f0f
 # ╠═bdbc2649-dc11-43a8-a090-3ebd57b2b283
 # ╠═7d0272d2-43f9-4a1d-9366-1dcc173e5143
-# ╟─fab6aaec-b788-4e18-93cd-f4ddf58fb75f
+# ╠═fab6aaec-b788-4e18-93cd-f4ddf58fb75f
 # ╠═a36adf7b-abac-4879-94ca-a20ec4d8c495
 # ╠═93f2ebbc-9b6a-4784-9399-83220f40ed6f
 # ╟─b60e0d18-40cb-4dbf-8bf6-c8cfd816933e
@@ -1622,28 +1683,39 @@ version = "0.9.1+5"
 # ╟─4fd20981-baf3-40f7-9cc3-01dc0d422470
 # ╠═87389fe3-0c1d-40ec-863c-43e3189f64ed
 # ╠═75e612cd-5afa-4721-bf47-a67365df8b7f
-# ╠═bb4daaf9-e4b8-4b60-83e6-c52fbc557d8e
 # ╠═c7fa17f9-a371-4d1b-a340-21530ac102fd
 # ╟─333657ca-5aee-4bae-ab1f-d5b7f0ca0425
 # ╠═cc7519ff-b76a-4022-8f8e-e2512a470240
 # ╠═580b17f3-0ac5-4e8a-ae69-1c1c8b371163
 # ╟─1973be0e-60f1-4613-9310-1fe6c1984f20
 # ╠═3a14c67e-b558-4032-9259-f214441d9b55
+# ╠═2ac154f0-e5cd-4059-89db-b4c56c3e5767
 # ╠═0c2fc06c-dfef-4ac8-a7f4-7fb211dabf4c
 # ╠═cbcc2152-3cc8-46bc-9f1c-ed2775782d07
 # ╟─8f11b4fa-440b-4ec3-8bf7-d63b376ea1d0
 # ╟─881ae349-dae8-4742-8ab2-626ac06c7824
 # ╠═ca54d080-408e-4bcb-8810-fc8ca264def4
 # ╠═e3f8fc4e-0c3e-42d4-8f76-b94a442c5069
-# ╠═1664e58e-4e5e-40d7-b7f1-3b4055883100
 # ╠═8ea8d009-e5c7-4deb-bb18-a6f722606441
 # ╟─3b5e14c9-0e86-4120-b9da-b215169d75bd
 # ╠═6a5f64ad-7640-41d4-8ae0-c3e50e59092b
 # ╠═ca2d8421-cee3-41dd-a485-71a307a349a6
 # ╟─76324cc6-ce82-4577-b435-2a80192a2f8b
 # ╠═36ab5019-a6c9-4817-b279-816e20f7f9c8
+# ╠═fd8cbc65-9d86-4bed-ad19-d560263651d2
 # ╠═8e76ab60-7a8e-4a26-85c9-f0fe6b548d2b
 # ╠═8aa3dc04-8de5-4ea8-a850-2700798ba5e7
+# ╟─b4536b20-2ed4-41f5-b0f8-667c97cf065c
+# ╠═3cdd9344-6576-42b1-935d-1f57639b649f
+# ╠═2c6cbb98-b791-4a8c-9cc2-46a43495e2a2
+# ╠═a9577246-a9d7-4dd4-bdbf-b0d5758cbb67
+# ╠═a905adf2-7ee1-4e18-8380-b49794cb079e
+# ╠═59515975-abf4-42a7-a3a3-d8c0ae1a4bcf
+# ╟─0cb79dff-fe44-412a-b11f-d914ea3726ba
+# ╠═4c3cc92d-110d-4494-8b2c-54f327a671fd
+# ╠═576db6e2-2d17-4b58-9f4e-a0c9e3852a98
+# ╠═5f58ad5d-668a-4e20-bade-48dd555b963a
+# ╠═6f9bea0d-1a05-4edb-a027-854bff09b119
 # ╟─5e47de4c-374a-4870-9fde-890e4237ebd9
 # ╟─f93407b7-ee46-46c3-ba01-69e8674aa931
 # ╠═fda7ab2f-1a46-4842-94b6-ed818fe53be7
