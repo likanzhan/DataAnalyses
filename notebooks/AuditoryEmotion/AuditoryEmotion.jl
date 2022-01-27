@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.17.2
+# v0.17.7
 
 using Markdown
 using InteractiveUtils
@@ -11,7 +11,7 @@ using PlutoUI; PlutoUI.TableOfContents(title = "Table of Contents", aside = fals
 using XLSX, DataFrames, FreqTables
 
 # ╔═╡ 49b1d733-c7a9-4f45-b6f3-1a08558b20ab
-using GLM
+using GLM#, MixedModels
 
 # ╔═╡ 324d2b72-6e80-4114-b64a-efafc6130d4d
 using Gadfly
@@ -24,38 +24,6 @@ using Printf
 
 # ╔═╡ 8afe3931-61ca-4ee2-a90a-da2d7cbf8cd1
 using CSV
-
-# ╔═╡ 0ce67939-301c-478d-b2ad-c4f03d9e1295
-md"""
-## Basic setting
-"""
-
-# ╔═╡ ee7cc4f7-2e96-466f-ab44-eeb2ce358104
-md"""
-### Load packages
-"""
-
-# ╔═╡ d57bad85-f563-4423-a7fe-a46e0785f147
-import Pipe: @pipe
-
-# ╔═╡ af94d0a7-0499-44c0-b5fb-adcd31854a47
-import Statistics: mean, std
-
-# ╔═╡ fca8f0ea-8e95-461c-b4dc-f32dcaed8485
-md"""
-### Set directory
-"""
-
-# ╔═╡ d6417408-4542-11ec-394c-33ff544076b7
-cd(@__DIR__) # pwd(), Set current directory to location of current file
-
-# ╔═╡ 710b2a12-b3ad-41e3-a2f5-1b6202ae4130
-md"""
-## Import data
-"""
-
-# ╔═╡ 9bd6be40-8108-48d7-a2a9-a20f686aaee7
-XLSX.sheetnames(XLSX.readxlsx("Childdata.xlsx")) # Insepect Sheet Names
 
 # ╔═╡ 60eebcdc-6b1a-4dca-9b84-afebf04d9632
 begin
@@ -100,7 +68,43 @@ begin
 		:Rate              => ByRow(Float64)                   => :Rate
 	)
 
+	# 10. Cateorize variable `Language`
+	using CategoricalArrays
+	dt.Language = categorical(dt.Language)
+	levels!(dt.Language, ["Mandarin", "English", "French", "Spanish"])
 end;
+
+# ╔═╡ 0ce67939-301c-478d-b2ad-c4f03d9e1295
+md"""
+## Basic setting
+"""
+
+# ╔═╡ ee7cc4f7-2e96-466f-ab44-eeb2ce358104
+md"""
+### Load packages
+"""
+
+# ╔═╡ d57bad85-f563-4423-a7fe-a46e0785f147
+import Pipe: @pipe
+
+# ╔═╡ af94d0a7-0499-44c0-b5fb-adcd31854a47
+import Statistics: mean, std
+
+# ╔═╡ fca8f0ea-8e95-461c-b4dc-f32dcaed8485
+md"""
+### Set directory
+"""
+
+# ╔═╡ d6417408-4542-11ec-394c-33ff544076b7
+cd(@__DIR__) # pwd(), Set current directory to location of current file
+
+# ╔═╡ 710b2a12-b3ad-41e3-a2f5-1b6202ae4130
+md"""
+## Import data
+"""
+
+# ╔═╡ 9bd6be40-8108-48d7-a2a9-a20f686aaee7
+XLSX.sheetnames(XLSX.readxlsx("Childdata.xlsx")) # Insepect Sheet Names
 
 # ╔═╡ 1e181501-cd06-4c7f-a7c9-5f3b0e6748c9
 md"""
@@ -221,31 +225,31 @@ md"""
 
 # ╔═╡ 7d5fb4d1-eacf-4563-ae96-4b6be33549f6
 begin
-	f01 = @formula(Rate ~ Language * AgeGroup * Emotion * Group)
+	f01 = @formula(Rate ~ Language * AgeGroup * Emotion * Group )
 	f02 = @formula(Rate ~ 
           Language + AgeGroup + Emotion + Group		
 		+ Language & Emotion 
 		+ Language & Group 
 		+ AgeGroup & Emotion 
-		+ AgeGroup & Group 
+		+ AgeGroup & Group
 	)
 	f03 = @formula(Rate ~ Language * Group + AgeGroup & Group )
-	f04 = @formula(Rate ~ Language * Group)
+	f04 = @formula(Rate ~ Language * Group )
 end;
 
 # ╔═╡ 74ba751e-0cd3-4fa5-89ab-be9a2971d245
 begin
-	fm01 = fit(LinearModel, f01, dt)
-	fm02 = fit(LinearModel, f02, dt)
-	fm03 = fit(LinearModel, f03, dt)
-	fm04 = fit(LinearModel, f04, dt)
+	fm01 = fit(GeneralizedLinearModel, f01, dt, Binomial() )
+	fm02 = fit(GeneralizedLinearModel, f02, dt, Binomial() )
+	fm03 = fit(GeneralizedLinearModel, f03, dt, Binomial() )
+	fm04 = fit(GeneralizedLinearModel, f04, dt, Binomial() )
 end;
 
 # ╔═╡ 476a9e3a-91f6-4e9d-b071-95979124c70c
-ftest(fm01.model, fm02.model, fm03.model, fm04.model)
+lrtest(fm01.model, fm02.model, fm03.model, fm04.model)
 
 # ╔═╡ e0ae0b41-f71e-48d2-a688-10522d50d798
-cf04 = coeftable(fm04);
+cf04 = coeftable(fm04)
 
 # ╔═╡ 59887a68-ef14-42d4-be72-d816023263c0
 open(io -> show(io, cf04), "AuditoryEmotionModel.txt", "w");
@@ -579,6 +583,7 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 Cairo = "159f3aea-2a34-519c-b102-8c37f9878175"
+CategoricalArrays = "324d7699-5711-5eae-9e2f-1d82baa6b597"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Fontconfig = "186bb1d3-e1f7-5a2c-a377-96d770f13627"
 FreqTables = "da1fdf0e-e0ff-5433-a45f-9bb5ff651cb1"
@@ -593,10 +598,11 @@ XLSX = "fdbf4ff8-1666-58a4-91e7-1b58723a45e0"
 [compat]
 CSV = "~0.9.11"
 Cairo = "~1.0.5"
+CategoricalArrays = "~0.10.2"
 DataFrames = "~1.2.2"
 Fontconfig = "~0.4.0"
 FreqTables = "~0.4.5"
-GLM = "~1.5.1"
+GLM = "~1.6.1"
 Gadfly = "~1.3.4"
 Pipe = "~1.3.0"
 PlutoUI = "~0.7.19"
@@ -660,9 +666,9 @@ version = "1.0.5"
 
 [[Cairo_jll]]
 deps = ["Artifacts", "Bzip2_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "JLLWrappers", "LZO_jll", "Libdl", "Pixman_jll", "Pkg", "Xorg_libXext_jll", "Xorg_libXrender_jll", "Zlib_jll", "libpng_jll"]
-git-tree-sha1 = "f2202b55d816427cd385a9a4f3ffb226bee80f99"
+git-tree-sha1 = "4b859a208b2397a7a623a03449e4636bdb17bcf2"
 uuid = "83423d85-b0ee-5818-9007-b63ccbeb887a"
-version = "1.16.1+0"
+version = "1.16.1+1"
 
 [[CategoricalArrays]]
 deps = ["DataAPI", "Future", "Missings", "Printf", "Requires", "Statistics", "Unicode"]
@@ -884,9 +890,9 @@ uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
 
 [[GLM]]
 deps = ["Distributions", "LinearAlgebra", "Printf", "Reexport", "SparseArrays", "SpecialFunctions", "Statistics", "StatsBase", "StatsFuns", "StatsModels"]
-git-tree-sha1 = "f564ce4af5e79bb88ff1f4488e64363487674278"
+git-tree-sha1 = "fb764dacfa30f948d52a6a4269ae293a479bbc62"
 uuid = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
-version = "1.5.1"
+version = "1.6.1"
 
 [[Gadfly]]
 deps = ["Base64", "CategoricalArrays", "Colors", "Compose", "Contour", "CoupledFields", "DataAPI", "DataStructures", "Dates", "Distributions", "DocStringExtensions", "Hexagons", "IndirectArrays", "IterTools", "JSON", "Juno", "KernelDensity", "LinearAlgebra", "Loess", "Measures", "Printf", "REPL", "Random", "Requires", "Showoff", "Statistics"]
@@ -902,9 +908,9 @@ version = "0.21.0+0"
 
 [[Glib_jll]]
 deps = ["Artifacts", "Gettext_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Libiconv_jll", "Libmount_jll", "PCRE_jll", "Pkg", "Zlib_jll"]
-git-tree-sha1 = "74ef6288d071f58033d54fd6708d4bc23a8b8972"
+git-tree-sha1 = "a32d672ac2c967f3deb8a81d828afc739c838a06"
 uuid = "7746bdde-850d-59dc-9ae8-88ece973131d"
-version = "2.68.3+1"
+version = "2.68.3+2"
 
 [[Graphics]]
 deps = ["Colors", "LinearAlgebra", "NaNMath"]
