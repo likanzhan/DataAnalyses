@@ -1,11 +1,11 @@
 ### A Pluto.jl notebook ###
-# v0.17.4
+# v0.18.4
 
 using Markdown
 using InteractiveUtils
 
 # ╔═╡ aa13f80d-87d5-4c88-af19-6ffe76d737bd
-using PlutoUI; PlutoUI.TableOfContents(title = "Negation Processing", aside = false)
+using PlutoUI; TableOfContents(title = "Negation Processing", aside = false)
 
 # ╔═╡ b18f8835-dfb2-491b-b4f6-1cf885abdddd
 begin
@@ -19,7 +19,7 @@ end
 
 # ╔═╡ 214b6943-7672-47ce-99f8-f7c253d6490d
 md"""
-## Set directory and load packages
+## Directory and packages
 """
 
 # ╔═╡ f0b1a34d-9dc5-479b-b514-3493758e1377
@@ -40,34 +40,29 @@ md"""
 
 # ╔═╡ 6b66d803-491c-4d18-a981-b917fe2c9e9c
 md"""
-### Object in unchosen box
+### Unchosen box
 """
 
 # ╔═╡ b7ab00d1-7c65-4822-910d-cc0ae692ee9a
 formula = @formula(Object_Rate ~ Box_Transparency);
 
-# ╔═╡ 2bfd5928-7307-4dbe-8b88-15a624aa6dd9
-# Ex1_contr = Dict(:Box_Transparency => SeqDiffCoding(base = "OO-OO"));
-
 # ╔═╡ 7c323f1d-eca7-4bd4-9c47-a03c02cb057b
-Ex1_contr = Dict(:Box_Transparency => EffectsCoding());
+Contr = Dict(:Box_Transparency => EffectsCoding());
 
 # ╔═╡ 03af8427-ec54-47f3-b184-2ce5c788e280
 md"""
 - 简单结论： `OO` 和 `TT` 条件下， 被试对行为主体没选择物体的偏好判断均**高于** `TO` 条件， 符合我们最初的预期， 也与上图中的观察结果一致。
 """
 
-# ╔═╡ be69ea7a-9bb7-4606-98c8-1b2ea9081f0f
+# ╔═╡ d40f5836-ac97-4b08-b23b-f11a7d5e0f7a
 md"""
-### Object in basket
+### Chosen box
 """
 
-# ╔═╡ fab6aaec-b788-4e18-93cd-f4ddf58fb75f
-# @df Ex1_Basket_Sum plot(:Box_Transparency, :Object_Rate, 
-# 	seriestype = [:dotplot, :boxplot], fill = [1 0.5], 
-# 	xlim = (0, 3), xlabel = "Condition", ylabel = "Preference Rate", 
-# 	legend = false, ratio = 0.5
-# )
+# ╔═╡ be69ea7a-9bb7-4606-98c8-1b2ea9081f0f
+md"""
+### Basket
+"""
 
 # ╔═╡ b60e0d18-40cb-4dbf-8bf6-c8cfd816933e
 md"""
@@ -89,14 +84,18 @@ md"""
 
 # ╔═╡ 333657ca-5aee-4bae-ab1f-d5b7f0ca0425
 md"""
-### Object in unchosen box
+### Unchosen box
 """
 
-# ╔═╡ 3a14c67e-b558-4032-9259-f214441d9b55
-# Ex2_contr = Dict(:Box_Transparency => SeqDiffCoding(base = "TO-TO"));
+# ╔═╡ 32bcc18f-30cf-4786-bd94-65ee974b5884
+md"""
+### Chosen box
+"""
 
-# ╔═╡ 2ac154f0-e5cd-4059-89db-b4c56c3e5767
-Ex2_contr = Dict(:Box_Transparency => EffectsCoding());
+# ╔═╡ 119ad7d7-3d69-4938-b10e-0a3910748b42
+md"""
+### Basket
+"""
 
 # ╔═╡ 8f11b4fa-440b-4ec3-8bf7-d63b376ea1d0
 md"""
@@ -113,28 +112,46 @@ md"""
 
 # ╔═╡ 3b5e14c9-0e86-4120-b9da-b215169d75bd
 md"""
-### Object in unchosen box
+### Unchosen box
 """
 
-# ╔═╡ 36ab5019-a6c9-4817-b279-816e20f7f9c8
-# Ex3_contr = Dict(:Box_Transparency => SeqDiffCoding(base = "TO-OO"));
+# ╔═╡ 62ad0521-e320-4cb3-a8b7-aeea12594fd3
+md"""
+### Chosen box
+"""
 
-# ╔═╡ fd8cbc65-9d86-4bed-ad19-d560263651d2
-Ex3_contr = Dict(:Box_Transparency => EffectsCoding());
+# ╔═╡ cfbf79c3-34ab-4372-b1db-6306f60a3139
+md"""
+### Basket
+"""
 
 # ╔═╡ b4536b20-2ed4-41f5-b0f8-667c97cf065c
 md"""
-## Combine three experiment
+## Experiments combined
+"""
+
+# ╔═╡ 8a7c712d-009d-4922-a099-61e2f9c17f63
+md"""
+### Combine results
 """
 
 # ╔═╡ a9577246-a9d7-4dd4-bdbf-b0d5758cbb67
 # freqtable(Exs, :Box_Transparency, :Participant_Perspective, :Agent_Perspective)
 
-# ╔═╡ 4c3cc92d-110d-4494-8b2c-54f327a671fd
-# Exs_contr = Dict(:Box_Transparency => SeqDiffCoding(base = "TO-OO"));
+# ╔═╡ 173b24d1-e673-4475-9bcb-7d577526098d
+md"""
+### Unchosen box
+"""
 
-# ╔═╡ 576db6e2-2d17-4b58-9f4e-a0c9e3852a98
-Exs_contr = Dict(:Box_Transparency => EffectsCoding());
+# ╔═╡ 554b3933-f073-4348-963b-7debe2267a64
+md"""
+### Chosen box
+"""
+
+# ╔═╡ 8ac5d7ce-7e35-4fb3-b68d-508d96606eb4
+md"""
+### Basket
+"""
 
 # ╔═╡ 5e47de4c-374a-4870-9fde-890e4237ebd9
 md"""
@@ -143,7 +160,7 @@ md"""
 
 # ╔═╡ f93407b7-ee46-46c3-ba01-69e8674aa931
 md"""
-### Load object-test-image information
+### Object-test-image information
 """
 
 # ╔═╡ fda7ab2f-1a46-4842-94b6-ed818fe53be7
@@ -153,7 +170,7 @@ Image_Object_Cor = CSV.read("Image_Object_Correspondance.csv",
 
 # ╔═╡ 85782b61-69ce-410b-84ff-bfe8f7bb81ab
 md"""
-### Load video-box-transparency information
+### Video-box-transparency information
 """
 
 # ╔═╡ ce71136a-2d3d-44f4-8efc-6b69670759ac
@@ -192,7 +209,7 @@ end;
 
 # ╔═╡ ebf2cf77-73c6-4f94-a505-efc50af40425
 md"""
-### Define function to decode video name
+### Decode video name
 """
 
 # ╔═╡ 4154ae38-899a-4999-8bc5-588eb0156bdf
@@ -207,7 +224,7 @@ end
 
 # ╔═╡ fa6344d6-86ed-48bb-bfb3-da3790a9a90f
 md"""
-### Define function to load and preprocess data
+### Load and preprocess data
 """
 
 # ╔═╡ f2dc2797-c0f4-4f8e-8541-c71aa1a1358c
@@ -310,28 +327,49 @@ Ex1 = read_combine_data(1);
 freqtable(Ex1, :Box_Transparency, :Box_Color)
 
 # ╔═╡ 4f97f2b2-d819-44f8-847f-9914de9de9f0
-# Object that is not choisen and is not in the box.
-Ex1_Other_Box = subset(Ex1, [:Object_Number, :Agent_Choice, :Basket] => 
+# Object that is not chosen and is not in the box.
+Ex1_UnChosen = subset(Ex1, [:Object_Number, :Agent_Choice, :Basket] => 
 	ByRow((x, y, z) -> (x != y) & (x != z)) );
 
 # ╔═╡ 1748ab04-910b-4a98-9d30-1cd88ad7f220
-Ex1_Other_Sum = @pipe Ex1_Other_Box |> 
+Ex1_UnChosen_Sum = @pipe Ex1_UnChosen |> 
 	groupby(_, [:Participant, :Box_Transparency]) |> 
 	combine(_, :Object_Rate => mean => :Object_Rate);
 
 # ╔═╡ f362c4e2-25f6-4e66-a6dc-f7f68c8033e2
-@df Ex1_Other_Sum plot(:Box_Transparency, :Object_Rate, 
+@df Ex1_UnChosen_Sum plot(:Box_Transparency, :Object_Rate, 
 	seriestype = [:dotplot, :boxplot], fill = [1 0.5], 
 	xlabel = "Box Transparency", ylabel = "Preference Rate", 
-	xlim = (0, 3),  ratio = 0.5,
-	legend = false
+	xlims = (0, 3),  ratio = 0.5, legend = false
 )
 
 # ╔═╡ 8289b5e1-e749-4723-bace-cce48f6b36fa
-Ex1_fm1 = fit(LinearModel, formula, Ex1_Other_Sum, contrasts = Ex1_contr);
+Ex1_fm_UnChosen = fit(LinearModel, formula, Ex1_UnChosen_Sum, contrasts = Contr);
 
 # ╔═╡ 9f18b6ba-6eec-4167-9c9e-008d2de23fdb
-coeftable(Ex1_fm1)
+coeftable(Ex1_fm_UnChosen)
+
+# ╔═╡ 298d189f-8ed2-457a-bc19-b60af5774b79
+# Object that is not chosen and is not in the box.
+Ex1_Chosen = subset(Ex1, [:Object_Number, :Agent_Choice] => ByRow(==) );
+
+# ╔═╡ 07c985dc-f817-4a67-8f31-ca4884a248d1
+Ex1_Chosen_Sum = @pipe Ex1_Chosen |> 
+	groupby(_, [:Participant, :Box_Transparency]) |> 
+	combine(_, :Object_Rate => mean => :Object_Rate);
+
+# ╔═╡ dced4f03-9a40-4754-819e-c45561d1236f
+@df Ex1_Chosen_Sum plot(:Box_Transparency, :Object_Rate, 
+	seriestype = [:dotplot, :boxplot], fill = [1 0.5], 
+	xlabel = "Condition", ylabel = "Preference Rate", 
+	xlims = (0, 3), legend = false, ratio = 0.5
+)
+
+# ╔═╡ a159aae7-a0a9-4043-bf7d-f5ed677a1ead
+Ex1_fm_Chosen = fit(LinearModel, formula, Ex1_Chosen_Sum, contrasts = Contr);
+
+# ╔═╡ 1f41c085-57c5-4ef6-84bb-49565db15f2b
+coeftable(Ex1_fm_Chosen)
 
 # ╔═╡ bdbc2649-dc11-43a8-a090-3ebd57b2b283
 # Object in the Basket
@@ -342,11 +380,18 @@ Ex1_Basket_Sum = @pipe Ex1_Basket |>
 	groupby(_, [:Participant, :Box_Transparency]) |> 
 	combine(_, :Object_Rate => mean => :Object_Rate);
 
+# ╔═╡ fab6aaec-b788-4e18-93cd-f4ddf58fb75f
+@df Ex1_Basket_Sum plot(:Box_Transparency, :Object_Rate, 
+	seriestype = [:dotplot, :boxplot], fill = [1 0.5], 
+	xlabel = "Condition", ylabel = "Preference Rate", 
+	xlims = (0, 3), legend = false, ratio = 0.5
+)
+
 # ╔═╡ a36adf7b-abac-4879-94ca-a20ec4d8c495
-Ex1_fm2 = fit(LinearModel, formula, Ex1_Basket_Sum, contrasts = Ex1_contr);
+Ex1_fm_Basket = fit(LinearModel, formula, Ex1_Basket_Sum, contrasts = Contr);
 
 # ╔═╡ 93f2ebbc-9b6a-4784-9399-83220f40ed6f
-coeftable(Ex1_fm2)
+coeftable(Ex1_fm_Basket)
 
 # ╔═╡ 87389fe3-0c1d-40ec-863c-43e3189f64ed
 Ex2 = read_combine_data(2);
@@ -355,28 +400,68 @@ Ex2 = read_combine_data(2);
 freqtable(Ex2, :Box_Transparency, :Box_Color)
 
 # ╔═╡ cc7519ff-b76a-4022-8f8e-e2512a470240
-# Object that is not choisen and is not in the box.
-Ex2_Other_Box = subset(Ex2, [:Object_Number, :Agent_Choice, :Basket] => 
+Ex2_UnChosen = subset(Ex2, [:Object_Number, :Agent_Choice, :Basket] => 
 	ByRow((x, y, z) -> (x != y) & (x != z)) );
 
 # ╔═╡ 580b17f3-0ac5-4e8a-ae69-1c1c8b371163
-Ex2_Other_Sum = @pipe Ex2_Other_Box |> 
+Ex2_UnChosen_Sum = @pipe Ex2_UnChosen |> 
 	groupby(_, [:Participant, :Box_Transparency]) |> 
 	combine(_, :Object_Rate => mean => :Object_Rate);
 
 # ╔═╡ 1973be0e-60f1-4613-9310-1fe6c1984f20
-@df Ex2_Other_Sum plot(:Box_Transparency, :Object_Rate, 
+@df Ex2_UnChosen_Sum plot(:Box_Transparency, :Object_Rate, 
 	seriestype = [:dotplot, :boxplot], fill = [1 0.5], 
 	xlabel = "Box Transparency", ylabel = "Preference Rate", 
-	xlim = (0, 3),  ratio = 0.5,
-	legend = false
+	xlims = (0, 3),  ratio = 0.5, legend = false
 )
 
 # ╔═╡ 0c2fc06c-dfef-4ac8-a7f4-7fb211dabf4c
-Ex2_fm1 = fit(LinearModel, formula, Ex2_Other_Sum, contrasts = Ex2_contr);
+Ex2_fm_UnChosen = fit(LinearModel, formula, Ex2_UnChosen_Sum, contrasts = Contr);
 
 # ╔═╡ cbcc2152-3cc8-46bc-9f1c-ed2775782d07
-coeftable(Ex2_fm1)
+coeftable(Ex2_fm_UnChosen)
+
+# ╔═╡ 2d84fb14-dcd4-42a7-b1ec-9605cd52d309
+Ex2_Chosen = subset(Ex2, [:Object_Number, :Agent_Choice] => ByRow(==) );
+
+# ╔═╡ 45382cb1-813e-4b56-9e1d-b74ea954a197
+Ex2_Chosen_Sum = @pipe Ex2_Chosen |> 
+	groupby(_, [:Participant, :Box_Transparency]) |> 
+	combine(_, :Object_Rate => mean => :Object_Rate);
+
+# ╔═╡ 55126020-7321-4484-9626-b2fa321196ad
+@df Ex2_Chosen_Sum plot(:Box_Transparency, :Object_Rate, 
+	seriestype = [:dotplot, :boxplot], fill = [1 0.5], 
+	xlabel = "Box Transparency", ylabel = "Preference Rate", 
+	xlims = (0, 3),  ratio = 0.5, legend = false
+)
+
+# ╔═╡ c4cdf197-e33c-4eee-9a36-e07eba57ef47
+Ex2_fm_Chosen = fit(LinearModel, formula, Ex2_Chosen_Sum, contrasts = Contr);
+
+# ╔═╡ 454d9f0b-3cfc-4172-aa05-a5409a0bd931
+coeftable(Ex2_fm_Chosen)
+
+# ╔═╡ 56d31913-50b6-4470-b2c5-b2840a571b9a
+Ex2_Basket = subset(Ex2, [:Object_Number, :Basket] => ByRow(==) );
+
+# ╔═╡ 967aaf24-ad5d-494c-964a-cb5d5adc6919
+Ex2_Basket_Sum = @pipe Ex2_Basket |> 
+	groupby(_, [:Participant, :Box_Transparency]) |> 
+	combine(_, :Object_Rate => mean => :Object_Rate);
+
+# ╔═╡ 2d4ec0af-5045-4d9f-9f30-58a7dbb6497d
+@df Ex2_Basket_Sum plot(:Box_Transparency, :Object_Rate, 
+	seriestype = [:dotplot, :boxplot], fill = [1 0.5], 
+	xlabel = "Box Transparency", ylabel = "Preference Rate", 
+	xlims = (0, 3),  ratio = 0.5, legend = false
+)
+
+# ╔═╡ 01c197da-6bce-4b3d-8b15-1031a7e3f68b
+Ex2_fm_Basket = fit(LinearModel, formula, Ex2_Basket_Sum, contrasts = Contr);
+
+# ╔═╡ ef69ba38-96ae-41c5-ad75-b63c07c29856
+coeftable(Ex2_fm_Basket)
 
 # ╔═╡ ca54d080-408e-4bcb-8810-fc8ca264def4
 Ex3 = read_combine_data(3);
@@ -385,34 +470,74 @@ Ex3 = read_combine_data(3);
 freqtable(Ex3, :Box_Transparency, :Box_Color)
 
 # ╔═╡ 6a5f64ad-7640-41d4-8ae0-c3e50e59092b
-# Object that is not choisen and is not in the box.
-Ex3_Other_Box = subset(Ex3, [:Object_Number, :Agent_Choice, :Basket] => 
+Ex3_UnChosen = subset(Ex3, [:Object_Number, :Agent_Choice, :Basket] => 
 	ByRow((x, y, z) -> (x != y) & (x != z)) );
 
 # ╔═╡ ca2d8421-cee3-41dd-a485-71a307a349a6
-Ex3_Other_Sum = @pipe Ex3_Other_Box |> 
+Ex3_UnChosen_Sum = @pipe Ex3_UnChosen |> 
 	groupby(_, [:Participant, :Box_Transparency]) |> 
 	combine(_, :Object_Rate => mean => :Object_Rate);
 
 # ╔═╡ 76324cc6-ce82-4577-b435-2a80192a2f8b
-@df Ex3_Other_Sum plot(:Box_Transparency, :Object_Rate, 
+@df Ex3_UnChosen_Sum plot(:Box_Transparency, :Object_Rate, 
 	seriestype = [:dotplot, :boxplot], fill = [1 0.5], 
 	xlabel = "Box Transparency", ylabel = "Preference Rate", 
-	xlim = (0, 3),  ratio = 0.5,
-	legend = false
+	xlims = (0, 3),  ratio = 0.5, legend = false
 )
 
 # ╔═╡ 8e76ab60-7a8e-4a26-85c9-f0fe6b548d2b
-Ex3_fm1 = fit(LinearModel, formula, Ex3_Other_Sum, contrasts = Ex3_contr);
+Ex3_fm_UnChosen = fit(LinearModel, formula, Ex3_UnChosen_Sum, contrasts = Contr);
 
 # ╔═╡ 8aa3dc04-8de5-4ea8-a850-2700798ba5e7
-coeftable(Ex3_fm1)
+coeftable(Ex3_fm_UnChosen)
+
+# ╔═╡ b9d24406-93ef-4b0b-9f09-7075656172c8
+Ex3_Chosen = subset(Ex3, [:Object_Number, :Agent_Choice] => ByRow(==) );
+
+# ╔═╡ 46fb4e8d-4d22-48d2-a66f-21d74431fccc
+Ex3_Chosen_Sum = @pipe Ex3_Chosen |> 
+	groupby(_, [:Participant, :Box_Transparency]) |> 
+	combine(_, :Object_Rate => mean => :Object_Rate);
+
+# ╔═╡ f0017dde-314c-4066-b6f3-eff0f7b7643c
+@df Ex3_Chosen_Sum plot(:Box_Transparency, :Object_Rate, 
+	seriestype = [:dotplot, :boxplot], fill = [1 0.5], 
+	xlabel = "Box Transparency", ylabel = "Preference Rate", 
+	xlims = (0, 3),  ratio = 0.5, legend = false
+)
+
+# ╔═╡ 9fe1b8c7-953a-4629-b296-b8d4f5804576
+Ex3_fm_Chosen = fit(LinearModel, formula, Ex3_Chosen_Sum, contrasts = Contr);
+
+# ╔═╡ 35aeb993-377e-4c1a-901c-f9c13ac87ec2
+coeftable(Ex3_fm_Chosen)
+
+# ╔═╡ 2489779a-1ec1-4804-98cc-70a1d5e8ce9d
+Ex3_Basket = subset(Ex3, [:Object_Number, :Basket] => ByRow(==) );
+
+# ╔═╡ de91e84f-9479-46ab-ba45-92307ca78f67
+Ex3_Basket_Sum = @pipe Ex3_Basket |> 
+	groupby(_, [:Participant, :Box_Transparency]) |> 
+	combine(_, :Object_Rate => mean => :Object_Rate);
+
+# ╔═╡ 0ce28c1d-1d84-4ae2-80bd-b7553f0a65d7
+@df Ex3_Basket_Sum plot(:Box_Transparency, :Object_Rate, 
+	seriestype = [:dotplot, :boxplot], fill = [1 0.5], 
+	xlabel = "Box Transparency", ylabel = "Preference Rate", 
+	xlims = (0, 3),  ratio = 0.5, legend = false
+)
+
+# ╔═╡ d3b093fb-5fba-4c79-aed0-7300f7ed8aba
+Ex3_fm_Basket = fit(LinearModel, formula, Ex3_Basket_Sum, contrasts = Contr);
+
+# ╔═╡ bdd217a8-9fc1-420a-9206-f41cde16c4ec
+coeftable(Ex3_fm_Basket)
 
 # ╔═╡ 3cdd9344-6576-42b1-935d-1f57639b649f
-Exs = vcat(Ex1, Ex2, Ex3);
+ExS = vcat(Ex1, Ex2, Ex3);
 
 # ╔═╡ 2c6cbb98-b791-4a8c-9cc2-46a43495e2a2
-transform!(Exs,
+transform!(ExS,
 	:Box_Transparency => 
 		ByRow(x -> SubString(x, 1, 1) * SubString(x, 4, 4)) => 
 		:Participant_Perspective,
@@ -422,29 +547,71 @@ transform!(Exs,
 );
 
 # ╔═╡ a905adf2-7ee1-4e18-8380-b49794cb079e
-Exs_Other_Box = subset(Exs, [:Object_Number, :Agent_Choice, :Basket] => 
+ExS_UnChosen = subset(ExS, [:Object_Number, :Agent_Choice, :Basket] => 
 	ByRow((x, y, z) -> (x != y) & (x != z)) );
 
 # ╔═╡ 59515975-abf4-42a7-a3a3-d8c0ae1a4bcf
-Exs_Other_Sum = @pipe Exs_Other_Box |> 
+ExS_UnChosen_Sum = @pipe ExS_UnChosen |> 
 	groupby(_, [:Participant, :Box_Transparency, 
 		:Participant_Perspective, :Agent_Perspective]) |> 
 	combine(_, :Object_Rate => mean => :Object_Rate);
 
 # ╔═╡ 0cb79dff-fe44-412a-b11f-d914ea3726ba
-@df Exs_Other_Sum plot(:Box_Transparency, :Object_Rate, 
+@df ExS_UnChosen_Sum plot(:Box_Transparency, :Object_Rate, 
 	seriestype = [:dotplot, :boxplot], fill = [1 0.5], 
 	xlabel = "Box Transparency", ylabel = "Preference Rate", 
-	xlim = (0, 7),  ratio = 0.5,
-	legend = false,
-	layout = 1
+	xlims = (0, 7),  ratio = 0.5, legend = false, layout = 1
 )
 
 # ╔═╡ 5f58ad5d-668a-4e20-bade-48dd555b963a
-Exs_fm1 = fit(LinearModel, formula, Exs_Other_Sum, contrasts = Exs_contr);
+ExS_fm_UnChosen = fit(LinearModel, formula, ExS_UnChosen_Sum, contrasts = Contr);
 
 # ╔═╡ 6f9bea0d-1a05-4edb-a027-854bff09b119
-coeftable(Exs_fm1)
+coeftable(ExS_fm_UnChosen)
+
+# ╔═╡ f2c88de9-35bf-4f7c-9361-baa054c3baf3
+ExS_Chosen = subset(ExS, [:Object_Number, :Agent_Choice] => ByRow(==) );
+
+# ╔═╡ 2219c4fb-dfbf-4685-bf26-2275d54ef9f3
+ExS_Chosen_Sum = @pipe ExS_Chosen |> 
+	groupby(_, [:Participant, :Box_Transparency, 
+		:Participant_Perspective, :Agent_Perspective]) |> 
+	combine(_, :Object_Rate => mean => :Object_Rate);
+
+# ╔═╡ d8034d37-ca53-4b71-b46a-582315e3e082
+@df ExS_Chosen_Sum plot(:Box_Transparency, :Object_Rate, 
+	seriestype = [:dotplot, :boxplot], fill = [1 0.5], 
+	xlabel = "Box Transparency", ylabel = "Preference Rate", 
+	xlims = (0, 7),  ratio = 0.5, legend = false, layout = 1
+)
+
+# ╔═╡ 2b308183-8201-4adb-8a5a-66d6ccb56cb9
+ExS_fm_Chosen = fit(LinearModel, formula, ExS_Chosen_Sum, contrasts = Contr);
+
+# ╔═╡ c17fba5b-a0fc-43dc-80c5-1da483b2efe7
+coeftable(ExS_fm_Chosen)
+
+# ╔═╡ 50ce1b88-a87d-4f6f-8355-52c194b1f405
+ExS_Basket = subset(ExS, [:Object_Number, :Basket] => ByRow(==) );
+
+# ╔═╡ 4950a54f-08c3-48aa-afaf-2b95082c9b48
+ExS_Basket_Sum = @pipe ExS_Basket |> 
+	groupby(_, [:Participant, :Box_Transparency, 
+		:Participant_Perspective, :Agent_Perspective]) |> 
+	combine(_, :Object_Rate => mean => :Object_Rate);
+
+# ╔═╡ 5efd2c18-fc60-4e00-99ae-cf36afaa2644
+@df ExS_Basket_Sum plot(:Box_Transparency, :Object_Rate, 
+	seriestype = [:dotplot, :boxplot], fill = [1 0.5], 
+	xlabel = "Box Transparency", ylabel = "Preference Rate", 
+	xlims = (0, 7),  ratio = 0.5, legend = false, layout = 1
+)
+
+# ╔═╡ 675a4441-4d3c-4990-964e-82d2e5e2ab6f
+ExS_fm_Basket = fit(LinearModel, formula, ExS_Basket_Sum, contrasts = Contr);
+
+# ╔═╡ b03138e5-af10-49d6-ac6f-802b0f84eba6
+coeftable(ExS_fm_Basket)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -913,6 +1080,12 @@ git-tree-sha1 = "f6250b16881adf048549549fba48b1161acdac8c"
 uuid = "c1c5ebd0-6772-5130-a774-d5fcae4a789d"
 version = "3.100.1+0"
 
+[[LERC_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "bf36f528eec6634efc60d7ec062008f171071434"
+uuid = "88015f11-f218-50d7-93a8-a6af411a945d"
+version = "3.0.0+1"
+
 [[LZO_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "e5b909bcf985c5e2605737d2ce278ed791b89be6"
@@ -990,10 +1163,10 @@ uuid = "4b2f31a3-9ecc-558c-b454-b3730dcb73e9"
 version = "2.35.0+0"
 
 [[Libtiff_jll]]
-deps = ["Artifacts", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Pkg", "Zlib_jll", "Zstd_jll"]
-git-tree-sha1 = "340e257aada13f95f98ee352d316c3bed37c8ab9"
+deps = ["Artifacts", "JLLWrappers", "JpegTurbo_jll", "LERC_jll", "Libdl", "Pkg", "Zlib_jll", "Zstd_jll"]
+git-tree-sha1 = "c9551dd26e31ab17b86cbd00c2ede019c08758eb"
 uuid = "89763e89-9b03-5906-acba-b20f662cd828"
-version = "4.3.0+0"
+version = "4.3.0+1"
 
 [[Libuuid_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1096,9 +1269,9 @@ version = "1.10.7"
 
 [[Ogg_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "7937eda4681660b4d6aeeecc2f7e1c81c8ee4e2f"
+git-tree-sha1 = "887579a3eb005446d514ab7aeac5d1d027658b8f"
 uuid = "e7412a2a-1a6e-54c0-be00-318e2571c051"
-version = "1.3.5+0"
+version = "1.3.5+1"
 
 [[OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
@@ -1621,9 +1794,9 @@ version = "1.6.38+0"
 
 [[libvorbis_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Ogg_jll", "Pkg"]
-git-tree-sha1 = "c45f4e40e7aafe9d086379e5578947ec8b95a8fb"
+git-tree-sha1 = "b910cb81ef3fe6e78bf6acee440bda86fd6ae00c"
 uuid = "f27f6e37-5d2b-51aa-960f-b287f2bc3b7a"
-version = "1.3.7+0"
+version = "1.3.7+1"
 
 [[nghttp2_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -1665,13 +1838,18 @@ version = "0.9.1+5"
 # ╟─6b66d803-491c-4d18-a981-b917fe2c9e9c
 # ╠═4f97f2b2-d819-44f8-847f-9914de9de9f0
 # ╠═1748ab04-910b-4a98-9d30-1cd88ad7f220
-# ╟─f362c4e2-25f6-4e66-a6dc-f7f68c8033e2
+# ╠═f362c4e2-25f6-4e66-a6dc-f7f68c8033e2
 # ╠═b7ab00d1-7c65-4822-910d-cc0ae692ee9a
-# ╠═2bfd5928-7307-4dbe-8b88-15a624aa6dd9
 # ╠═7c323f1d-eca7-4bd4-9c47-a03c02cb057b
 # ╠═8289b5e1-e749-4723-bace-cce48f6b36fa
 # ╠═9f18b6ba-6eec-4167-9c9e-008d2de23fdb
 # ╟─03af8427-ec54-47f3-b184-2ce5c788e280
+# ╟─d40f5836-ac97-4b08-b23b-f11a7d5e0f7a
+# ╠═298d189f-8ed2-457a-bc19-b60af5774b79
+# ╠═07c985dc-f817-4a67-8f31-ca4884a248d1
+# ╠═dced4f03-9a40-4754-819e-c45561d1236f
+# ╠═a159aae7-a0a9-4043-bf7d-f5ed677a1ead
+# ╠═1f41c085-57c5-4ef6-84bb-49565db15f2b
 # ╟─be69ea7a-9bb7-4606-98c8-1b2ea9081f0f
 # ╠═bdbc2649-dc11-43a8-a090-3ebd57b2b283
 # ╠═7d0272d2-43f9-4a1d-9366-1dcc173e5143
@@ -1687,11 +1865,21 @@ version = "0.9.1+5"
 # ╟─333657ca-5aee-4bae-ab1f-d5b7f0ca0425
 # ╠═cc7519ff-b76a-4022-8f8e-e2512a470240
 # ╠═580b17f3-0ac5-4e8a-ae69-1c1c8b371163
-# ╟─1973be0e-60f1-4613-9310-1fe6c1984f20
-# ╠═3a14c67e-b558-4032-9259-f214441d9b55
-# ╠═2ac154f0-e5cd-4059-89db-b4c56c3e5767
+# ╠═1973be0e-60f1-4613-9310-1fe6c1984f20
 # ╠═0c2fc06c-dfef-4ac8-a7f4-7fb211dabf4c
 # ╠═cbcc2152-3cc8-46bc-9f1c-ed2775782d07
+# ╟─32bcc18f-30cf-4786-bd94-65ee974b5884
+# ╠═2d84fb14-dcd4-42a7-b1ec-9605cd52d309
+# ╠═45382cb1-813e-4b56-9e1d-b74ea954a197
+# ╠═55126020-7321-4484-9626-b2fa321196ad
+# ╠═c4cdf197-e33c-4eee-9a36-e07eba57ef47
+# ╠═454d9f0b-3cfc-4172-aa05-a5409a0bd931
+# ╟─119ad7d7-3d69-4938-b10e-0a3910748b42
+# ╠═56d31913-50b6-4470-b2c5-b2840a571b9a
+# ╠═967aaf24-ad5d-494c-964a-cb5d5adc6919
+# ╠═2d4ec0af-5045-4d9f-9f30-58a7dbb6497d
+# ╠═01c197da-6bce-4b3d-8b15-1031a7e3f68b
+# ╠═ef69ba38-96ae-41c5-ad75-b63c07c29856
 # ╟─8f11b4fa-440b-4ec3-8bf7-d63b376ea1d0
 # ╟─881ae349-dae8-4742-8ab2-626ac06c7824
 # ╠═ca54d080-408e-4bcb-8810-fc8ca264def4
@@ -1700,22 +1888,44 @@ version = "0.9.1+5"
 # ╟─3b5e14c9-0e86-4120-b9da-b215169d75bd
 # ╠═6a5f64ad-7640-41d4-8ae0-c3e50e59092b
 # ╠═ca2d8421-cee3-41dd-a485-71a307a349a6
-# ╟─76324cc6-ce82-4577-b435-2a80192a2f8b
-# ╠═36ab5019-a6c9-4817-b279-816e20f7f9c8
-# ╠═fd8cbc65-9d86-4bed-ad19-d560263651d2
+# ╠═76324cc6-ce82-4577-b435-2a80192a2f8b
 # ╠═8e76ab60-7a8e-4a26-85c9-f0fe6b548d2b
 # ╠═8aa3dc04-8de5-4ea8-a850-2700798ba5e7
+# ╟─62ad0521-e320-4cb3-a8b7-aeea12594fd3
+# ╠═b9d24406-93ef-4b0b-9f09-7075656172c8
+# ╠═46fb4e8d-4d22-48d2-a66f-21d74431fccc
+# ╠═f0017dde-314c-4066-b6f3-eff0f7b7643c
+# ╠═9fe1b8c7-953a-4629-b296-b8d4f5804576
+# ╠═35aeb993-377e-4c1a-901c-f9c13ac87ec2
+# ╟─cfbf79c3-34ab-4372-b1db-6306f60a3139
+# ╠═2489779a-1ec1-4804-98cc-70a1d5e8ce9d
+# ╠═de91e84f-9479-46ab-ba45-92307ca78f67
+# ╠═0ce28c1d-1d84-4ae2-80bd-b7553f0a65d7
+# ╠═d3b093fb-5fba-4c79-aed0-7300f7ed8aba
+# ╠═bdd217a8-9fc1-420a-9206-f41cde16c4ec
 # ╟─b4536b20-2ed4-41f5-b0f8-667c97cf065c
+# ╟─8a7c712d-009d-4922-a099-61e2f9c17f63
 # ╠═3cdd9344-6576-42b1-935d-1f57639b649f
 # ╠═2c6cbb98-b791-4a8c-9cc2-46a43495e2a2
 # ╠═a9577246-a9d7-4dd4-bdbf-b0d5758cbb67
+# ╟─173b24d1-e673-4475-9bcb-7d577526098d
 # ╠═a905adf2-7ee1-4e18-8380-b49794cb079e
 # ╠═59515975-abf4-42a7-a3a3-d8c0ae1a4bcf
-# ╟─0cb79dff-fe44-412a-b11f-d914ea3726ba
-# ╠═4c3cc92d-110d-4494-8b2c-54f327a671fd
-# ╠═576db6e2-2d17-4b58-9f4e-a0c9e3852a98
+# ╠═0cb79dff-fe44-412a-b11f-d914ea3726ba
 # ╠═5f58ad5d-668a-4e20-bade-48dd555b963a
 # ╠═6f9bea0d-1a05-4edb-a027-854bff09b119
+# ╟─554b3933-f073-4348-963b-7debe2267a64
+# ╠═f2c88de9-35bf-4f7c-9361-baa054c3baf3
+# ╠═2219c4fb-dfbf-4685-bf26-2275d54ef9f3
+# ╠═d8034d37-ca53-4b71-b46a-582315e3e082
+# ╠═2b308183-8201-4adb-8a5a-66d6ccb56cb9
+# ╠═c17fba5b-a0fc-43dc-80c5-1da483b2efe7
+# ╟─8ac5d7ce-7e35-4fb3-b68d-508d96606eb4
+# ╠═50ce1b88-a87d-4f6f-8355-52c194b1f405
+# ╠═4950a54f-08c3-48aa-afaf-2b95082c9b48
+# ╠═5efd2c18-fc60-4e00-99ae-cf36afaa2644
+# ╠═675a4441-4d3c-4990-964e-82d2e5e2ab6f
+# ╠═b03138e5-af10-49d6-ac6f-802b0f84eba6
 # ╟─5e47de4c-374a-4870-9fde-890e4237ebd9
 # ╟─f93407b7-ee46-46c3-ba01-69e8674aa931
 # ╠═fda7ab2f-1a46-4842-94b6-ed818fe53be7
