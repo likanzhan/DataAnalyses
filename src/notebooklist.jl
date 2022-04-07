@@ -1,4 +1,5 @@
 const NOTEBOOKS = [
+    ("后悔情绪理解",  "Regret/Regret.jl"),
     ("脑电简单统计",  "Disjunctions/DisjunctionStatistics.jl"),
     ("脑电事件提取",  "Disjunctions/DisjunctionEvents.jl"),
     ("脑电事件转化",  "Disjunctions/RefactorTriggers.jl"),
