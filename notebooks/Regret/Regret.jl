@@ -37,6 +37,34 @@ md"""
 ### 载入包
 """
 
+# ╔═╡ b7a11e97-fba8-4656-b529-ff6f21a75a0f
+md"""
+## 实验一
+"""
+
+# ╔═╡ 2a9d311c-a766-4f32-ac8b-64a9b63cedcc
+	# 1. List csv files
+	csv_list0 = filter(endswith(".csv"), readdir("data/Experiment_1", join = true));
+
+# ╔═╡ 7235b483-8484-4ca2-a700-2dbea497ac26
+	# 2. Read data to dataframe
+	df0 = mapreduce(vcat, csv_list0[1:41]) do csv
+		CSV.read(csv, DataFrame, stringtype = String,
+				 drop = (i, name) -> startswith(string(name), "Column")
+		)
+	end;
+
+# ╔═╡ c48aa9a8-3671-440d-9664-217ea792919e
+df0
+
+# ╔═╡ f65251a0-1ce5-4dac-a16b-ba4f2f5be6da
+describe(df0)
+
+# ╔═╡ 396cbce1-4ab7-44f6-ae14-5ae041bf487a
+md"""
+## 实验二
+"""
+
 # ╔═╡ 29c07409-5d62-42aa-a002-b14dfd7c1685
 md"""
 ### 读入数据
@@ -1601,6 +1629,12 @@ version = "3.5.0+0"
 # ╠═c8996dee-2c94-4491-84ea-34a8ef3f59e0
 # ╠═a4641aff-b431-4bb3-83a9-75f0dcef297d
 # ╠═b36a8b22-992c-4b50-a8ef-23852f73e26c
+# ╟─b7a11e97-fba8-4656-b529-ff6f21a75a0f
+# ╠═2a9d311c-a766-4f32-ac8b-64a9b63cedcc
+# ╠═7235b483-8484-4ca2-a700-2dbea497ac26
+# ╠═c48aa9a8-3671-440d-9664-217ea792919e
+# ╠═f65251a0-1ce5-4dac-a16b-ba4f2f5be6da
+# ╟─396cbce1-4ab7-44f6-ae14-5ae041bf487a
 # ╟─29c07409-5d62-42aa-a002-b14dfd7c1685
 # ╟─3223d964-3424-4a91-87cd-690876844b4d
 # ╠═af32e1d2-b575-11ec-34f6-25b42c355184
