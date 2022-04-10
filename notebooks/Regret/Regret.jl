@@ -42,23 +42,116 @@ md"""
 ## 实验一
 """
 
+# ╔═╡ 3e149cf5-4387-4a05-a13c-4b00167965b5
+md"""
+- trialType: complete表示完全反馈条件； partial表示部分反馈条件
+- x1，y1：左边转盘的两个分数
+- p，p2：x1的概率为p1；y1的概率为p2
+- x2，y2：右边转盘的两个分数
+- q，q2：x2的概率为q1；y2的概率为q2
+- left points：选择左边转盘得到的分数
+- right points：选择右边转盘得到的分数
+- LeftYourUn：选择左边转盘没有得到的分数
+- RightYouUn：选择右边转盘没有得到的分数
+- `key_resp_4.keys`：被试选择了左边转盘（left）还是右边转盘（right）。因此从key_resp_4.keys和left  points、right points就能看出被试这轮得到的分数。
+- rating：被试的情绪评分
+- total score：被试在转盘上累计的总分，也可以通过下一轮的总分减去上一轮的总分得出被试上一轮得到的分数。
+"""
+
 # ╔═╡ 2a9d311c-a766-4f32-ac8b-64a9b63cedcc
-	# 1. List csv files
-	csv_list0 = filter(endswith(".csv"), readdir("data/Experiment_1", join = true));
+csv_list1 = filter(endswith(".csv"), readdir("data/Experiment_1", join = true));
 
 # ╔═╡ 7235b483-8484-4ca2-a700-2dbea497ac26
-	# 2. Read data to dataframe
-	df0 = mapreduce(vcat, csv_list0[1:41]) do csv
-		CSV.read(csv, DataFrame, stringtype = String,
-				 drop = (i, name) -> startswith(string(name), "Column")
-		)
-	end;
+df1 = mapreduce(vcat, csv_list1[1:41]) do csv
+	CSV.read(csv, DataFrame, stringtype = String,
+			 drop = (i, name) -> startswith(string(name), "Column")
+	)
+end;
 
-# ╔═╡ c48aa9a8-3671-440d-9664-217ea792919e
-df0
+# ╔═╡ 91006353-4ea7-4fd0-98c2-f23e6a38a351
+dropmissing!(df1, [Symbol("key_resp_4.keys"), :leftPoints, :rightPoints]);
 
-# ╔═╡ f65251a0-1ce5-4dac-a16b-ba4f2f5be6da
-describe(df0)
+# ╔═╡ 06e153e3-f076-4e16-8ab6-141cc2b0d7bb
+function neg2pos2(key, left, right)
+	if key == "left"
+		if left + right < 0
+			return (OwnScore = left + 200, OtherScore = right + 200, Gain = "Lose")
+		elseif left + right >= 0
+			return (OwnScore = left,       OtherScore = right,       Gain = "Gain")
+		end
+	elseif key == "right"
+		if left + right < 0
+			return (OwnScore = right + 200, OtherScore = left + 200, Gain = "Lose")
+		elseif left + right >= 0
+			return (OwnScore = right,       OtherScore = left,       Gain = "Gain")
+		end
+	end
+end;
+
+# ╔═╡ 30ad6818-714b-4362-b8b4-af193dcd70cf
+transform!(df1, [Symbol("key_resp_4.keys"), :leftPoints, :rightPoints] => 
+		ByRow(neg2pos2) => AsTable
+);
+
+# ╔═╡ 401c49d8-4096-480f-8271-5e37e9a307f5
+select!(df1, 
+	["participant", "trialType", "OwnScore", "OtherScore", "Gain", "rating"]
+);
+
+# ╔═╡ 80ad622e-0783-4b7c-942d-73adb7eff2e8
+rename!(df1, "participant" => "Participant",  
+	"trialType" => "Feedback", "rating" => "Emotion");
+
+# ╔═╡ 9c8b0137-d0af-4a6e-b2ef-28d30bd80c28
+df1c = combine(
+	groupby(df1, [:Participant, :Feedback, :Gain]), 
+	:Emotion => mean => :Emotion
+);
+
+# ╔═╡ 436f5420-3ef0-4a9c-8fc7-b20ea714a889
+e1fm1 = lm(@formula(Emotion ~ Feedback * Gain), df1c);
+
+# ╔═╡ e5d58b40-7c37-43c8-a83a-5127b9b0ea38
+e1fm2 = lm(@formula(Emotion ~ Feedback + Gain), df1c);
+
+# ╔═╡ a1e0d71c-01a4-42bd-af08-993369cd74b9
+e1fm3 = lm(@formula(Emotion ~ Feedback), df1c);
+
+# ╔═╡ 83dfce03-65c2-4d0e-989d-5da22471a024
+e1fm4 = lm(@formula(Emotion ~ Gain), df1c);
+
+# ╔═╡ b14a6b03-768d-4bac-8dab-96db011a2acd
+ftest(e1fm1.model, e1fm2.model)
+
+# ╔═╡ a61067b2-83b9-4dbb-aa5f-94aaa399ac43
+coeftable(e1fm2)
+
+# ╔═╡ 12d7c32f-4a62-4cae-a9b2-39ef597bd084
+let
+	sort!(df1c, [:Feedback, :Gain], rev = [false, true])
+	df1c.Feedback = categorical(df1c.Feedback, ordered = true)
+	replace!(df1c.Gain,     "Gain"     => "获得框架", "Lose"    => "损失框架")
+	replace!(df1c.Feedback, "complete" => "完全反馈", "partial" => "不完全反馈")
+	Gain = unique(df1c.Gain)
+	Feedback = unique(df1c.Feedback)
+	
+	fig = Figure()
+	for (id1, gg) in enumerate(Gain)
+		ax = Axis(fig[1, id1], 
+			title = gg, xlabel = "反馈类型", ylabel = "被试情绪自评")
+		ylims!(-20, 40)
+		dt = df1c[df1c.Gain .== gg, :]
+		for (id2, fd) in enumerate(Feedback)
+			dtt = dt[dt.Feedback .== fd, :]
+			xx = Int.(dtt.Feedback.refs)
+			yy = dtt.Emotion
+			boxplot!(ax, xx, yy, width = 1, label = fd, whiskerwidth = 0.5)
+		end
+		ax.xticks = (1:length(levels(Feedback)), levels(Feedback))
+		id1 > 1 && hideydecorations!(ax)
+	end
+	fig
+end
 
 # ╔═╡ 396cbce1-4ab7-44f6-ae14-5ae041bf487a
 md"""
@@ -105,29 +198,23 @@ begin
 	## a. Define a function to convert negative values to postive ones
 		function neg2pos(x, y, z)
 			if (x + y + z) < 0
-				mn = -200 # minimum([x, y, z])
-				return x - mn, y - mn, z - mn, "Lose"
+				mn = -200
+				return (Human = x-mn, Computer = y-mn, Remain = z-mn, Gain = "Lose")
 			else
-				return x, y, z, "Gain"
+				return (Human = x,    Computer = y,    Remain = z,    Gain = "Gain")
 			end
 		end
 	
 	## b. Do the converting
 	transform!(df,
-		[:mychoice, :otherchoice, :stay] => ByRow(neg2pos) => AsTable,
-		:choicepos => ByRow(x -> ismissing(x) ? "HC" : "CH")       => :Order,
-		[:mychoice, :stay] => ByRow( (x, y) -> x - y)          => :HumanRemainDiff,
-		[:mychoice, :otherchoice] => ByRow( (x, y) -> x - y)   => :HumanComputerDiff
+		[:mychoice, :otherchoice, :stay] => ByRow(neg2pos)    => AsTable,
+		:choicepos => ByRow(x -> ismissing(x) ? "HC" : "CH")  => :Order,
+		[:mychoice, :stay] => ByRow( (x, y) -> x - y)         => :HumanRemainDiff,
+		[:mychoice, :otherchoice] => ByRow( (x, y) -> x - y)  => :HumanComputerDiff
 	)
 
 		# 5. Rename column names
-	rename!(df, "x1"     => "Human",
-				"x2"     => "Computer",
-				"x3"     => "Remain",
-				"x4"     => "Gain",
-				"rating" => "Emotion",
-				"participant"  => "Participant"
-	)
+	rename!(df, "rating" => "Emotion", "participant"  => "Participant")
 	
 	# 6. Select usefule columns, "mychoice", "otherchoice", "stay"
 	select!(df, 
@@ -1630,10 +1717,22 @@ version = "3.5.0+0"
 # ╠═a4641aff-b431-4bb3-83a9-75f0dcef297d
 # ╠═b36a8b22-992c-4b50-a8ef-23852f73e26c
 # ╟─b7a11e97-fba8-4656-b529-ff6f21a75a0f
+# ╟─3e149cf5-4387-4a05-a13c-4b00167965b5
 # ╠═2a9d311c-a766-4f32-ac8b-64a9b63cedcc
 # ╠═7235b483-8484-4ca2-a700-2dbea497ac26
-# ╠═c48aa9a8-3671-440d-9664-217ea792919e
-# ╠═f65251a0-1ce5-4dac-a16b-ba4f2f5be6da
+# ╠═91006353-4ea7-4fd0-98c2-f23e6a38a351
+# ╠═06e153e3-f076-4e16-8ab6-141cc2b0d7bb
+# ╠═30ad6818-714b-4362-b8b4-af193dcd70cf
+# ╠═401c49d8-4096-480f-8271-5e37e9a307f5
+# ╠═80ad622e-0783-4b7c-942d-73adb7eff2e8
+# ╠═9c8b0137-d0af-4a6e-b2ef-28d30bd80c28
+# ╠═436f5420-3ef0-4a9c-8fc7-b20ea714a889
+# ╠═e5d58b40-7c37-43c8-a83a-5127b9b0ea38
+# ╠═a1e0d71c-01a4-42bd-af08-993369cd74b9
+# ╠═83dfce03-65c2-4d0e-989d-5da22471a024
+# ╠═b14a6b03-768d-4bac-8dab-96db011a2acd
+# ╠═a61067b2-83b9-4dbb-aa5f-94aaa399ac43
+# ╠═12d7c32f-4a62-4cae-a9b2-39ef597bd084
 # ╟─396cbce1-4ab7-44f6-ae14-5ae041bf487a
 # ╟─29c07409-5d62-42aa-a002-b14dfd7c1685
 # ╟─3223d964-3424-4a91-87cd-690876844b4d
