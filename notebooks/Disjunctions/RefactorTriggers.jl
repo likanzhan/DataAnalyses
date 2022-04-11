@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.17.2
+# v0.19.0
 
 using Markdown
 using InteractiveUtils
@@ -79,8 +79,25 @@ end
 # ╔═╡ a45539e9-03c5-4ace-a9a8-eea7236180ca
 refactor_trigger!("01/S01_elist.txt")
 
+# ╔═╡ 00000000-0000-0000-0000-000000000001
+PLUTO_PROJECT_TOML_CONTENTS = """
+[deps]
+"""
+
+# ╔═╡ 00000000-0000-0000-0000-000000000002
+PLUTO_MANIFEST_TOML_CONTENTS = """
+# This file is machine-generated - editing it directly is not advised
+
+julia_version = "1.7.2"
+manifest_format = "2.0"
+
+[deps]
+"""
+
 # ╔═╡ Cell order:
 # ╠═d473d078-50fd-11ec-2009-8f5f5a7256bc
 # ╠═3dba0c21-7b4e-4b9e-b40c-4a7ac8ba006f
 # ╠═a45539e9-03c5-4ace-a9a8-eea7236180ca
 # ╠═ddbdb520-3feb-4223-8fa8-c4c771bb89e5
+# ╟─00000000-0000-0000-0000-000000000001
+# ╟─00000000-0000-0000-0000-000000000002
