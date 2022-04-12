@@ -15,6 +15,7 @@ begin
 	using Statistics # mean
 	using GLM
 	using MixedModels
+	using Arrow
 end
 
 # ╔═╡ e385fbc8-8f75-11eb-08bf-232a909b8db2
