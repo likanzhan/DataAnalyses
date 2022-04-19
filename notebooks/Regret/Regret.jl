@@ -178,10 +178,46 @@ md"""
 # ╔═╡ af32e1d2-b575-11ec-34f6-25b42c355184
 cd(@__DIR__) # pwd()
 
-# ╔═╡ e2d72e3d-b16e-4782-92fb-743fd332f202
-begin
+# ╔═╡ 0f5bd14c-638a-4eb1-85e5-729767c5fc4f
+md"""
+### 总体结果
+"""
+
+# ╔═╡ d5967d18-62d7-4870-b3b7-af7416acb2b4
+md"""
+### 被试得分
+"""
+
+# ╔═╡ 291939b4-f0ba-4d7d-b30b-d9974d9b53f8
+md"""
+### 被试得分和剩余分数
+"""
+
+# ╔═╡ 7a4d383e-e422-4fb3-bcba-08b767ee4da8
+md"""
+### 被试得分和电脑得分
+"""
+
+# ╔═╡ a726b075-a4b9-44f7-9e9d-477c01b4f424
+md"""
+### 被试最差， 电脑次差， 情况下， 选择顺序的影响
+"""
+
+# ╔═╡ ebc5cfbd-dd1d-4089-8798-e35357b38cac
+md"""
+### 实验三
+"""
+
+# ╔═╡ af57ef9e-0030-4b2d-8b1b-127f50d9754a
+md"""
+### 附录
+"""
+
+# ╔═╡ ef982930-6388-466d-b0e1-8d715316a884
+function list2df(experiment)
+	
 	# 1. List csv files
-	csv_list = filter(endswith(".csv"), readdir("data/Experiment_2", join = true))
+	csv_list = filter(endswith(".csv"), readdir(joinpath("data", experiment), join = true))
 
 	# 2. Read data to dataframe
 	df = mapreduce(vcat, csv_list) do csv
@@ -194,7 +230,6 @@ begin
 	dropmissing!(df, [:mychoice, :otherchoice, :stay, :rating])
 	
 	# 4. Create new columns
-	
 	## a. Define a function to convert negative values to postive ones
 		function neg2pos(x, y, z)
 			if (x + y + z) < 0
@@ -213,7 +248,7 @@ begin
 		[:mychoice, :otherchoice] => ByRow( (x, y) -> x - y)  => :HumanComputerDiff
 	)
 
-		# 5. Rename column names
+	# 5. Rename column names
 	rename!(df, "rating" => "Emotion", "participant"  => "Participant")
 	
 	# 6. Select usefule columns, "mychoice", "otherchoice", "stay"
@@ -222,33 +257,39 @@ begin
 		"HumanRemainDiff", "HumanComputerDiff"]
 	)
 
-end; # end begin
+	replace!(df.Gain, "Gain" => "获得框架", "Lose" => "损失框架")
+	
+	transform!(df,
+		:Gain => (x -> categorical(x, ordered = true)) => :Gain
+	)
+
+
+	return df
+end
+
+# ╔═╡ e2d72e3d-b16e-4782-92fb-743fd332f202
+ex2 = list2df("Experiment_2");
 
 # ╔═╡ 43f57dbc-3d7e-48e0-bce1-23e058938bd1
-size(df, 1) == 192 * 35 # 192 trial * 35 participant
+size(ex2, 1) == 192 * 35 # 192 trial * 35 participant
 
 # ╔═╡ 0451341f-14da-479b-8e17-36c0c45d14af
-describe(df)
+describe(ex2)
 
 # ╔═╡ 218d3696-9ee4-4841-ad53-447849a238f9
-freqtable(df, :Gain, :Order)
-
-# ╔═╡ 0f5bd14c-638a-4eb1-85e5-729767c5fc4f
-md"""
-### 总体结果
-"""
+freqtable(ex2, :Gain, :Order)
 
 # ╔═╡ ad4a9897-84fa-4e42-a653-fb36bb2e7657
-dft = groupby(df, [:Participant, :Gain, :Order]);
+ex2t = groupby(ex2, [:Participant, :Gain, :Order]);
 
 # ╔═╡ a90937a1-1961-465a-bd7f-f8f35da9badc
-dfts = combine(dft, :Emotion => mean => :Emotion);
+ex2ts = combine(ex2t, :Emotion => mean => :Emotion);
 
 # ╔═╡ 2eaf3273-0ac0-4cc8-8879-fd15903c75de
-fmt1 = lm(@formula(Emotion ~ Gain * Order), dfts);
+fmt1 = lm(@formula(Emotion ~ Gain * Order), ex2ts);
 
 # ╔═╡ 699dd367-d4a3-431d-87a1-dd6ff276c84b
-fmt2 = lm(@formula(Emotion ~ Gain), dfts);
+fmt2 = lm(@formula(Emotion ~ Gain), ex2ts);
 
 # ╔═╡ a0691d8b-d80c-4b5c-b78c-163ee13faf85
 ftest(fmt1.model, fmt2.model)
@@ -258,23 +299,20 @@ coeftable(fmt2)
 
 # ╔═╡ cc35db1a-715b-419a-b5a7-3f4a3f8faab4
 let
-	xx = categorical(dfts.Gain, ordered = true)
-	replace!(xx, "Gain" => "获得框架", "Lose" => "损失框架");
-	yy = dfts.Emotion
-	fig, ax, plt = boxplot(Int.(xx.refs), yy, whiskerwidth = 0.5)
-	ax.xticks = (1:length(levels(xx)), levels(xx))
-	ax.xlabel, ax.ylabel = "框架", "被试情绪自评"
-	fig
+	xx = ex2ts.Gain
+	yy = ex2ts.Emotion
+	colors = Makie.default_palettes.patchcolor.val
+	boxplot(Int.(xx.refs), yy, whiskerwidth = 0.5,
+		color = colors[Int.(xx.refs)],
+		axis = (xticks = (1:length(levels(xx)), levels(xx)),
+			xlabel = "框架", ylabel = "被试情绪自评"
+		)
+	)
 end
-
-# ╔═╡ d5967d18-62d7-4870-b3b7-af7416acb2b4
-md"""
-### 被试得分
-"""
 
 # ╔═╡ 1ebe900d-2301-44ea-86b3-0fd7f03769b1
 HM = combine(
-	groupby(df, [:Participant, :Gain, :Human]), 
+	groupby(ex2, [:Participant, :Gain, :Human]), 
 	:Emotion => mean => :Emotion
 );
 
@@ -292,30 +330,22 @@ coeftable(fHM2)
 
 # ╔═╡ 5d2801db-a987-48e5-b71d-6674c0f7af58
 let
-	sort!(HM, [:Human, :Gain])
-	replace!(HM.Gain, "Gain" => "获得框架", "Lose" => "损失框架")
-	
 	fig = Figure()
-	ax = Axis(fig[1, 1], xlabel = "被试得分", ylabel = "被试情绪自评")
+	ax = Axis(fig[1, 1], 
+		xlabel = "被试得分", ylabel = "被试情绪自评", xticks = -200:50:200)
 	for (id, gg) in enumerate(unique(HM.Gain))
 		dt = HM[HM.Gain .== gg, :]
-		xx = dt.Human .+ (iseven(id) ? -1 : 1) * 6.5
+		xx = dt.Human .+ (iseven(id) ? 1 : -1) * 6.5
 		yy = dt.Emotion
-		boxplot!(ax, xx, yy, width = 15, label = gg, whiskerwidth = 1)
+		boxplot!(ax, xx, yy, width = 15, label = gg, whiskerwidth = 0.5)
 	end
-	ax.xticks = -200:50:200
 	axislegend("框架", position = :rb)
 	fig
 end
 
-# ╔═╡ 291939b4-f0ba-4d7d-b30b-d9974d9b53f8
-md"""
-### 被试得分和剩余分数
-"""
-
 # ╔═╡ 283c9a3c-15d9-4c95-a53d-edd0a9d8c09d
 HRD = combine(
-	groupby(df, [:Participant, :Gain, :HumanRemainDiff]), 
+	groupby(ex2, [:Participant, :Gain, :HumanRemainDiff]), 
 	:Emotion => mean => :Emotion
 );
 
@@ -325,41 +355,33 @@ fHR1 = lm(@formula(Emotion ~ Gain * HumanRemainDiff), HRD);
 # ╔═╡ 5cd35668-12a7-4c04-9732-3104cd34adad
 fHR2 = lm(@formula(Emotion ~ Gain + HumanRemainDiff), HRD);
 
+# ╔═╡ 240e28a8-c02d-4bc6-bc18-32c1a74b6bc3
+coeftable(fHR2)
+
 # ╔═╡ 6e87745b-d832-4a41-bd4d-9dfed7b0de30
 fHR3 = lm(@formula(Emotion ~ Gain), HRD);
 
 # ╔═╡ 46b6be18-c207-4e4f-b4e4-322540061e83
 ftest(fHR1.model, fHR2.model, fHR3.model)
 
-# ╔═╡ 240e28a8-c02d-4bc6-bc18-32c1a74b6bc3
-coeftable(fHR2)
-
 # ╔═╡ 79bca6b2-0a68-434b-b6c3-a882cbadd3eb
 let
-	sort!(HRD, [:HumanRemainDiff, :Gain])
-	replace!(HRD.Gain, "Gain" => "获得框架", "Lose" => "损失框架")
-	
 	fig = Figure()
-	ax = Axis(fig[1, 1], xlabel = "被试和剩余分数之差", ylabel = "被试情绪自评")
+	ax = Axis(fig[1, 1], 
+		xlabel = "被试和剩余分数之差", ylabel = "被试情绪自评", xticks = -200:50:200)
 	for (id, gg) in enumerate(unique(HRD.Gain))
 		dt = HRD[HRD.Gain .== gg, :]
-		xx = dt.HumanRemainDiff .+ (iseven(id) ? -1 : 1) * 6.5
+		xx = dt.HumanRemainDiff .+ (iseven(id) ? 1 : -1) * 6.5
 		yy = dt.Emotion
-		boxplot!(ax, xx, yy, width = 15, label = gg, whiskerwidth = 1)
+		boxplot!(ax, xx, yy, width = 15, label = gg, whiskerwidth = 0.5)
 	end
-	ax.xticks = -200:50:200
 	axislegend("框架", position = :rb)
 	fig
 end
 
-# ╔═╡ 7a4d383e-e422-4fb3-bcba-08b767ee4da8
-md"""
-### 被试得分和电脑得分
-"""
-
 # ╔═╡ 8b0c740c-e39e-4762-a06d-1cb1541b4dc6
 HCD = combine(
-	groupby(df, [:Participant, :Gain, :HumanComputerDiff]), 
+	groupby(ex2, [:Participant, :Gain, :HumanComputerDiff]), 
 	:Emotion => mean => :Emotion
 );
 
@@ -377,29 +399,21 @@ coeftable(fHC2)
 
 # ╔═╡ 13b68109-9315-469f-a0a7-d3753a9e6ec8
 let
-	sort!(HCD, [:HumanComputerDiff, :Gain])
-	replace!(HCD.Gain, "Gain" => "获得框架", "Lose" => "损失框架")
-	
 	fig = Figure()
-	ax = Axis(fig[1, 1], xlabel = "被试和电脑得分之差", ylabel = "被试情绪自评")
+	ax = Axis(fig[1, 1], 
+		xlabel = "被试和电脑得分之差", ylabel = "被试情绪自评", xticks = -200:50:200)
 	for (id, gg) in enumerate(unique(HCD.Gain))
 		dt = HCD[HCD.Gain .== gg, :]
-		xx = dt.HumanComputerDiff .+ (iseven(id) ? -1 : 1) * 6.5
+		xx = dt.HumanComputerDiff .+ (iseven(id) ? 1 : -1) * 6.5
 		yy = dt.Emotion
-		boxplot!(ax, xx, yy, width = 15, label = gg, whiskerwidth = 1)
+		boxplot!(ax, xx, yy, width = 15, label = gg, whiskerwidth = 0.5)
 	end
-	ax.xticks = -200:50:200
 	axislegend("框架", position = :rb)
 	fig
 end
 
-# ╔═╡ a726b075-a4b9-44f7-9e9d-477c01b4f424
-md"""
-### 被试最差， 电脑次差， 情况下， 选择顺序的影响
-"""
-
 # ╔═╡ 94474e34-e64b-49ee-9b35-304e9312bd5c
-HCR = subset(df, [:Human, :Computer, :Remain] => ByRow((x, y, z) -> x <= y <= z) );
+HCR = subset(ex2, [:Human, :Computer, :Remain] => ByRow((x, y, z) -> x <= y <= z) );
 
 # ╔═╡ c94a4ce5-3b94-4237-9175-2de4e8e6f734
 HCRM = combine(groupby(HCR, [:Participant, :Gain, :Order]), 
@@ -417,6 +431,46 @@ ftest(fHCR1.model, fHCR2.model)
 
 # ╔═╡ 3d1abb92-f0cf-4bf9-b060-7b30ab01c773
 coeftable(fHCR2)
+
+# ╔═╡ af3c116c-510d-4c5c-9b64-fb56a106e5eb
+ex2n = list2df("Experiment_2_N");
+
+# ╔═╡ fe698e99-939b-44d4-aaed-1bdfdc5c58f0
+ex2nts = combine(
+	groupby(ex2n, [:Participant, :Gain, :Order]), 
+	:Emotion => mean => :Emotion);
+
+# ╔═╡ dccfe48e-4068-4f35-8446-8476033f90e6
+let
+	xx = ex2nts.Gain
+	yy = ex2nts.Emotion
+	colors = Makie.default_palettes.patchcolor.val
+	boxplot(Int.(xx.refs), yy, whiskerwidth = 0.5, color = colors[Int.(xx.refs)],
+		axis = (xticks = (1:length(levels(xx)), levels(xx)), 
+			xlabel = "框架", ylabel = "被试情绪自评")
+	)
+end
+
+# ╔═╡ c36cb78e-09ce-4521-803f-3e94d5ebd7cd
+HMn = combine(
+	groupby(ex2n, [:Participant, :Gain, :Human]), 
+	:Emotion => mean => :Emotion
+);
+
+# ╔═╡ d0099447-0c7d-4573-b9b0-ff18398f36a4
+let
+	fig = Figure()
+	ax = Axis(fig[1, 1], 
+		xlabel = "被试得分", ylabel = "被试情绪自评", xticks = -200:50:200)
+	for (id, gg) in enumerate(unique(HMn.Gain))
+		dt = HMn[HMn.Gain .== gg, :]
+		xx = dt.Human .+ (iseven(id) ? 1 : -1) * 6.5
+		yy = dt.Emotion
+		boxplot!(ax, xx, yy, width = 15, label = gg, whiskerwidth = 0.5)
+	end
+	axislegend("框架", position = :rb)
+	fig
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1778,5 +1832,13 @@ version = "3.5.0+0"
 # ╠═5801839f-0834-4421-8f2e-f0340c7b5c9e
 # ╠═6736cc24-d6fb-4285-a41b-b836ecf6af93
 # ╠═3d1abb92-f0cf-4bf9-b060-7b30ab01c773
+# ╟─ebc5cfbd-dd1d-4089-8798-e35357b38cac
+# ╠═af3c116c-510d-4c5c-9b64-fb56a106e5eb
+# ╠═fe698e99-939b-44d4-aaed-1bdfdc5c58f0
+# ╠═dccfe48e-4068-4f35-8446-8476033f90e6
+# ╠═c36cb78e-09ce-4521-803f-3e94d5ebd7cd
+# ╠═d0099447-0c7d-4573-b9b0-ff18398f36a4
+# ╟─af57ef9e-0030-4b2d-8b1b-127f50d9754a
+# ╠═ef982930-6388-466d-b0e1-8d715316a884
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
