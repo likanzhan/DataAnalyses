@@ -1,26 +1,20 @@
 ### A Pluto.jl notebook ###
-# v0.19.0
+# v0.19.3
 
 using Markdown
 using InteractiveUtils
 
 # ╔═╡ 7ac0c689-419a-428b-9006-69d3e6c1ea7e
-using PlutoUI; TableOfContents(title = "目录", aside = false)
+using PlutoUI; TableOfContents(title = "目录", aside = false, depth = 4)
 
 # ╔═╡ d0dfdb8d-2b7a-4956-802d-73922db32330
-using DataFrames, CSV
-
-# ╔═╡ 6fd485e2-72c3-4f3b-911b-45c631bc6ab8
-using FreqTables
-
-# ╔═╡ 7d69e990-4827-472d-96b0-d1380026aa92
-using Statistics: mean, std
-
-# ╔═╡ c8996dee-2c94-4491-84ea-34a8ef3f59e0
-using GLM
-
-# ╔═╡ a4641aff-b431-4bb3-83a9-75f0dcef297d
-using CategoricalArrays
+begin
+	using DataFrames, CSV
+	using FreqTables
+	using Statistics: mean, std
+	using GLM
+	using CategoricalArrays
+end
 
 # ╔═╡ b36a8b22-992c-4b50-a8ef-23852f73e26c
 let
@@ -39,7 +33,12 @@ md"""
 
 # ╔═╡ b7a11e97-fba8-4656-b529-ff6f21a75a0f
 md"""
-## 实验一
+### 实验一
+"""
+
+# ╔═╡ ab814eb8-b384-40d0-95b2-139031baaa35
+md"""
+#### 读入数据
 """
 
 # ╔═╡ 3e149cf5-4387-4a05-a13c-4b00167965b5
@@ -86,7 +85,7 @@ function neg2pos2(key, left, right)
 			return (OwnScore = right,       OtherScore = left,       Gain = "Gain")
 		end
 	end
-end;
+end
 
 # ╔═╡ 30ad6818-714b-4362-b8b4-af193dcd70cf
 transform!(df1, [Symbol("key_resp_4.keys"), :leftPoints, :rightPoints] => 
@@ -101,6 +100,11 @@ select!(df1,
 # ╔═╡ 80ad622e-0783-4b7c-942d-73adb7eff2e8
 rename!(df1, "participant" => "Participant",  
 	"trialType" => "Feedback", "rating" => "Emotion");
+
+# ╔═╡ 1ba1c644-a1d9-4233-9085-3ac871d95a9e
+md"""
+#### 总体结果
+"""
 
 # ╔═╡ 9c8b0137-d0af-4a6e-b2ef-28d30bd80c28
 df1c = combine(
@@ -128,10 +132,14 @@ coeftable(e1fm2)
 
 # ╔═╡ 12d7c32f-4a62-4cae-a9b2-39ef597bd084
 let
-	sort!(df1c, [:Feedback, :Gain], rev = [false, true])
-	df1c.Feedback = categorical(df1c.Feedback, ordered = true)
-	replace!(df1c.Gain,     "Gain"     => "获得框架", "Lose"    => "损失框架")
-	replace!(df1c.Feedback, "complete" => "完全反馈", "partial" => "不完全反馈")
+	replace!(df1c.Gain,     "Gain"     => "获益框架", "Lose"    => "损失框架");
+	replace!(df1c.Feedback, "complete" => "完全反馈", "partial" => "不完全反馈");
+	transform!(df1c,
+		:Feedback => (x -> categorical(x, ordered = true)) => :Feedback
+	)
+	transform!(df1c,
+		:Gain => (x -> categorical(x, ordered = true)) => :Gain
+	)
 	Gain = unique(df1c.Gain)
 	Feedback = unique(df1c.Feedback)
 	
@@ -153,14 +161,59 @@ let
 	fig
 end
 
+# ╔═╡ 76d4e45d-225e-4c4c-9f5e-3f30db7c53d9
+md"""
+#### 被试得分
+"""
+
+# ╔═╡ 1abbbc4d-5213-4632-9f3f-f45ad638b015
+df1d = combine(
+	groupby(df1, [:Participant, :Feedback, :Gain, :OwnScore]), 
+	:Emotion => mean => :Emotion
+);
+
+# ╔═╡ 5bd3d6c1-2187-4d24-b354-244ffcb9d41b
+e1fm51 = lm(@formula(Emotion ~ Feedback * Gain * OwnScore), df1d);
+
+# ╔═╡ 6b4a960b-205c-4e92-bc7e-ac4d36728316
+e1fm52 = lm(@formula(Emotion ~ Feedback + Gain + OwnScore), df1d);
+
+# ╔═╡ bda05cb8-6e31-4c5d-a0df-7b0eadefb1ce
+ftest(e1fm51.model, e1fm52.model)
+
+# ╔═╡ d0178ff1-4562-4be2-84d1-5f73ff561c91
+coeftable(e1fm52)
+
+# ╔═╡ 4b7d5041-7657-410b-abd6-2cbcb3ae7eb8
+let
+	replace!(df1d.Gain,     "Gain"     => "获益框架", "Lose"    => "损失框架");
+	replace!(df1d.Feedback, "complete" => "完全反馈", "partial" => "不完全反馈");
+	fig = Figure()
+	for (id1, ff) in enumerate(unique(df1d.Feedback))
+		dtt = df1d[df1d.Feedback .== ff, :]
+		ax = Axis(fig[1, id1], title = ff,
+			xlabel = "被试得分", ylabel = "被试情绪自评", 
+			xticks = -200:50:200, yticks = -40:20:40)
+		for (id2, gg) in enumerate(unique(df1d.Gain))
+			dt = dtt[dtt.Gain .== gg, :]
+			xx = dt.OwnScore .+ (iseven(id2) ? 1 : -1) * 6.5
+			yy = dt.Emotion
+			boxplot!(ax, xx, yy, width = 15, label = gg, whiskerwidth = 0.5)
+		end
+		id1 > 1 && hideydecorations!(ax)
+	end
+	axislegend("框架", position = :rb)
+	fig
+end
+
 # ╔═╡ 396cbce1-4ab7-44f6-ae14-5ae041bf487a
 md"""
-## 实验二
+### 实验二
 """
 
 # ╔═╡ 29c07409-5d62-42aa-a002-b14dfd7c1685
 md"""
-### 读入数据
+#### 读入数据
 """
 
 # ╔═╡ 3223d964-3424-4a91-87cd-690876844b4d
@@ -180,32 +233,32 @@ cd(@__DIR__) # pwd()
 
 # ╔═╡ 0f5bd14c-638a-4eb1-85e5-729767c5fc4f
 md"""
-### 总体结果
+#### 总体结果
 """
 
 # ╔═╡ d5967d18-62d7-4870-b3b7-af7416acb2b4
 md"""
-### 被试得分
-"""
-
-# ╔═╡ 291939b4-f0ba-4d7d-b30b-d9974d9b53f8
-md"""
-### 被试得分和剩余分数
-"""
-
-# ╔═╡ 7a4d383e-e422-4fb3-bcba-08b767ee4da8
-md"""
-### 被试得分和电脑得分
-"""
-
-# ╔═╡ a726b075-a4b9-44f7-9e9d-477c01b4f424
-md"""
-### 被试最差， 电脑次差， 情况下， 选择顺序的影响
+#### 被试得分
 """
 
 # ╔═╡ ebc5cfbd-dd1d-4089-8798-e35357b38cac
 md"""
 ### 实验三
+"""
+
+# ╔═╡ 4e5c0d80-2871-4f57-a0a0-acbffb4ec199
+md"""
+#### 读入数据
+"""
+
+# ╔═╡ f5d03c3a-3854-4c08-9cf7-074dd628393b
+md"""
+#### 总体结果
+"""
+
+# ╔═╡ dec0718e-799d-48ce-b444-cf07daf803c6
+md"""
+#### 被试得分
 """
 
 # ╔═╡ af57ef9e-0030-4b2d-8b1b-127f50d9754a
@@ -256,14 +309,7 @@ function list2df(experiment)
 		["Participant", "Gain", "Order", "Emotion", "Human", "Computer", "Remain",
 		"HumanRemainDiff", "HumanComputerDiff"]
 	)
-
-	replace!(df.Gain, "Gain" => "获得框架", "Lose" => "损失框架")
 	
-	transform!(df,
-		:Gain => (x -> categorical(x, ordered = true)) => :Gain
-	)
-
-
 	return df
 end
 
@@ -272,9 +318,6 @@ ex2 = list2df("Experiment_2");
 
 # ╔═╡ 43f57dbc-3d7e-48e0-bce1-23e058938bd1
 size(ex2, 1) == 192 * 35 # 192 trial * 35 participant
-
-# ╔═╡ 0451341f-14da-479b-8e17-36c0c45d14af
-describe(ex2)
 
 # ╔═╡ 218d3696-9ee4-4841-ad53-447849a238f9
 freqtable(ex2, :Gain, :Order)
@@ -299,6 +342,10 @@ coeftable(fmt2)
 
 # ╔═╡ cc35db1a-715b-419a-b5a7-3f4a3f8faab4
 let
+	replace!(ex2ts.Gain, "Gain" => "获益框架", "Lose" => "损失框架")
+	transform!(ex2ts,
+		:Gain => (x -> categorical(x, ordered = true)) => :Gain
+	)
 	xx = ex2ts.Gain
 	yy = ex2ts.Emotion
 	colors = Makie.default_palettes.patchcolor.val
@@ -330,6 +377,10 @@ coeftable(fHM2)
 
 # ╔═╡ 5d2801db-a987-48e5-b71d-6674c0f7af58
 let
+	replace!(HM.Gain, "Gain" => "获益框架", "Lose" => "损失框架")
+	transform!(HM,
+		:Gain => (x -> categorical(x, ordered = true)) => :Gain
+	)
 	fig = Figure()
 	ax = Axis(fig[1, 1], 
 		xlabel = "被试得分", ylabel = "被试情绪自评", xticks = -200:50:200)
@@ -343,95 +394,6 @@ let
 	fig
 end
 
-# ╔═╡ 283c9a3c-15d9-4c95-a53d-edd0a9d8c09d
-HRD = combine(
-	groupby(ex2, [:Participant, :Gain, :HumanRemainDiff]), 
-	:Emotion => mean => :Emotion
-);
-
-# ╔═╡ c6bcfa9b-c7ca-4bbd-ab24-3f8a24eefd19
-fHR1 = lm(@formula(Emotion ~ Gain * HumanRemainDiff), HRD);
-
-# ╔═╡ 5cd35668-12a7-4c04-9732-3104cd34adad
-fHR2 = lm(@formula(Emotion ~ Gain + HumanRemainDiff), HRD);
-
-# ╔═╡ 240e28a8-c02d-4bc6-bc18-32c1a74b6bc3
-coeftable(fHR2)
-
-# ╔═╡ 6e87745b-d832-4a41-bd4d-9dfed7b0de30
-fHR3 = lm(@formula(Emotion ~ Gain), HRD);
-
-# ╔═╡ 46b6be18-c207-4e4f-b4e4-322540061e83
-ftest(fHR1.model, fHR2.model, fHR3.model)
-
-# ╔═╡ 79bca6b2-0a68-434b-b6c3-a882cbadd3eb
-let
-	fig = Figure()
-	ax = Axis(fig[1, 1], 
-		xlabel = "被试和剩余分数之差", ylabel = "被试情绪自评", xticks = -200:50:200)
-	for (id, gg) in enumerate(unique(HRD.Gain))
-		dt = HRD[HRD.Gain .== gg, :]
-		xx = dt.HumanRemainDiff .+ (iseven(id) ? 1 : -1) * 6.5
-		yy = dt.Emotion
-		boxplot!(ax, xx, yy, width = 15, label = gg, whiskerwidth = 0.5)
-	end
-	axislegend("框架", position = :rb)
-	fig
-end
-
-# ╔═╡ 8b0c740c-e39e-4762-a06d-1cb1541b4dc6
-HCD = combine(
-	groupby(ex2, [:Participant, :Gain, :HumanComputerDiff]), 
-	:Emotion => mean => :Emotion
-);
-
-# ╔═╡ 7360a725-9358-4024-9102-290c8916d3fb
-fHC1 = lm(@formula(Emotion ~ Gain * HumanComputerDiff), HCD);
-
-# ╔═╡ 5d8f14a1-56bb-4bd6-986e-50cc795d8b25
-fHC2 = lm(@formula(Emotion ~ Gain + HumanComputerDiff), HCD);
-
-# ╔═╡ 8a1ea08e-3964-47e3-89bb-d5f7c882f71d
-ftest(fHC1.model, fHC2.model)
-
-# ╔═╡ 1073b592-2fd8-4cfc-9aec-4a4532fbee89
-coeftable(fHC2)
-
-# ╔═╡ 13b68109-9315-469f-a0a7-d3753a9e6ec8
-let
-	fig = Figure()
-	ax = Axis(fig[1, 1], 
-		xlabel = "被试和电脑得分之差", ylabel = "被试情绪自评", xticks = -200:50:200)
-	for (id, gg) in enumerate(unique(HCD.Gain))
-		dt = HCD[HCD.Gain .== gg, :]
-		xx = dt.HumanComputerDiff .+ (iseven(id) ? 1 : -1) * 6.5
-		yy = dt.Emotion
-		boxplot!(ax, xx, yy, width = 15, label = gg, whiskerwidth = 0.5)
-	end
-	axislegend("框架", position = :rb)
-	fig
-end
-
-# ╔═╡ 94474e34-e64b-49ee-9b35-304e9312bd5c
-HCR = subset(ex2, [:Human, :Computer, :Remain] => ByRow((x, y, z) -> x <= y <= z) );
-
-# ╔═╡ c94a4ce5-3b94-4237-9175-2de4e8e6f734
-HCRM = combine(groupby(HCR, [:Participant, :Gain, :Order]), 
-	:Emotion => mean => :Emotion
-);
-
-# ╔═╡ bf96b41a-e8df-48e4-8f3f-6ec7e129ed28
-fHCR1 = lm(@formula(Emotion ~ Gain * Order), HCRM);
-
-# ╔═╡ 5801839f-0834-4421-8f2e-f0340c7b5c9e
-fHCR2 = lm(@formula(Emotion ~ Gain + Order), HCRM);
-
-# ╔═╡ 6736cc24-d6fb-4285-a41b-b836ecf6af93
-ftest(fHCR1.model, fHCR2.model)
-
-# ╔═╡ 3d1abb92-f0cf-4bf9-b060-7b30ab01c773
-coeftable(fHCR2)
-
 # ╔═╡ af3c116c-510d-4c5c-9b64-fb56a106e5eb
 ex2n = list2df("Experiment_2_N");
 
@@ -440,8 +402,24 @@ ex2nts = combine(
 	groupby(ex2n, [:Participant, :Gain, :Order]), 
 	:Emotion => mean => :Emotion);
 
+# ╔═╡ b4f7a35f-0f74-465b-82a0-31c404b49a10
+ex2n1 = lm(@formula(Emotion ~ Gain * Order), ex2nts);
+
+# ╔═╡ 7516d09f-7356-41ac-a565-2c4e2c21408d
+ex2n2 = lm(@formula(Emotion ~ Gain + Order), ex2nts);
+
+# ╔═╡ 3e754434-5934-42df-861f-614bfa19643f
+ftest(ex2n1.model, ex2n2.model)
+
+# ╔═╡ 00762ff1-c860-4d2c-b5ef-4a27b28b5d7f
+coeftable(ex2n2)
+
 # ╔═╡ dccfe48e-4068-4f35-8446-8476033f90e6
 let
+	replace!(ex2nts.Gain, "Gain" => "获益框架", "Lose" => "损失框架")
+	transform!(ex2nts,
+		:Gain => (x -> categorical(x, ordered = true)) => :Gain
+	)
 	xx = ex2nts.Gain
 	yy = ex2nts.Emotion
 	colors = Makie.default_palettes.patchcolor.val
@@ -457,8 +435,24 @@ HMn = combine(
 	:Emotion => mean => :Emotion
 );
 
+# ╔═╡ fa2bd5ca-1fc5-4706-86b1-c7baf5bd2a47
+fHMn1 = lm(@formula(Emotion ~ Gain * Human), HMn);
+
+# ╔═╡ 4a90cefa-9793-481d-ae1b-863a379369ec
+fHMn2 = lm(@formula(Emotion ~ Gain + Human), HMn);
+
+# ╔═╡ dc676a84-430c-4316-9e42-e935d3dc9e74
+ftest(fHMn1.model, fHMn2.model)
+
+# ╔═╡ 366feb2b-b08e-4176-9623-149b6cbaf989
+coeftable(fHMn2)
+
 # ╔═╡ d0099447-0c7d-4573-b9b0-ff18398f36a4
 let
+	replace!(HMn.Gain, "Gain" => "获益框架", "Lose" => "损失框架")
+	transform!(HMn,
+		:Gain => (x -> categorical(x, ordered = true)) => :Gain
+	)
 	fig = Figure()
 	ax = Axis(fig[1, 1], 
 		xlabel = "被试得分", ylabel = "被试情绪自评", xticks = -200:50:200)
@@ -1765,20 +1759,18 @@ version = "3.5.0+0"
 # ╟─7ac0c689-419a-428b-9006-69d3e6c1ea7e
 # ╟─e8a9ae4d-438a-4496-b75c-ee9a5e91d740
 # ╠═d0dfdb8d-2b7a-4956-802d-73922db32330
-# ╠═6fd485e2-72c3-4f3b-911b-45c631bc6ab8
-# ╠═7d69e990-4827-472d-96b0-d1380026aa92
-# ╠═c8996dee-2c94-4491-84ea-34a8ef3f59e0
-# ╠═a4641aff-b431-4bb3-83a9-75f0dcef297d
 # ╠═b36a8b22-992c-4b50-a8ef-23852f73e26c
 # ╟─b7a11e97-fba8-4656-b529-ff6f21a75a0f
+# ╟─ab814eb8-b384-40d0-95b2-139031baaa35
 # ╟─3e149cf5-4387-4a05-a13c-4b00167965b5
 # ╠═2a9d311c-a766-4f32-ac8b-64a9b63cedcc
 # ╠═7235b483-8484-4ca2-a700-2dbea497ac26
 # ╠═91006353-4ea7-4fd0-98c2-f23e6a38a351
-# ╠═06e153e3-f076-4e16-8ab6-141cc2b0d7bb
+# ╟─06e153e3-f076-4e16-8ab6-141cc2b0d7bb
 # ╠═30ad6818-714b-4362-b8b4-af193dcd70cf
 # ╠═401c49d8-4096-480f-8271-5e37e9a307f5
 # ╠═80ad622e-0783-4b7c-942d-73adb7eff2e8
+# ╟─1ba1c644-a1d9-4233-9085-3ac871d95a9e
 # ╠═9c8b0137-d0af-4a6e-b2ef-28d30bd80c28
 # ╠═436f5420-3ef0-4a9c-8fc7-b20ea714a889
 # ╠═e5d58b40-7c37-43c8-a83a-5127b9b0ea38
@@ -1786,14 +1778,20 @@ version = "3.5.0+0"
 # ╠═83dfce03-65c2-4d0e-989d-5da22471a024
 # ╠═b14a6b03-768d-4bac-8dab-96db011a2acd
 # ╠═a61067b2-83b9-4dbb-aa5f-94aaa399ac43
-# ╠═12d7c32f-4a62-4cae-a9b2-39ef597bd084
+# ╟─12d7c32f-4a62-4cae-a9b2-39ef597bd084
+# ╟─76d4e45d-225e-4c4c-9f5e-3f30db7c53d9
+# ╠═1abbbc4d-5213-4632-9f3f-f45ad638b015
+# ╠═5bd3d6c1-2187-4d24-b354-244ffcb9d41b
+# ╠═6b4a960b-205c-4e92-bc7e-ac4d36728316
+# ╠═bda05cb8-6e31-4c5d-a0df-7b0eadefb1ce
+# ╠═d0178ff1-4562-4be2-84d1-5f73ff561c91
+# ╟─4b7d5041-7657-410b-abd6-2cbcb3ae7eb8
 # ╟─396cbce1-4ab7-44f6-ae14-5ae041bf487a
 # ╟─29c07409-5d62-42aa-a002-b14dfd7c1685
 # ╟─3223d964-3424-4a91-87cd-690876844b4d
 # ╠═af32e1d2-b575-11ec-34f6-25b42c355184
 # ╠═e2d72e3d-b16e-4782-92fb-743fd332f202
 # ╠═43f57dbc-3d7e-48e0-bce1-23e058938bd1
-# ╠═0451341f-14da-479b-8e17-36c0c45d14af
 # ╠═218d3696-9ee4-4841-ad53-447849a238f9
 # ╟─0f5bd14c-638a-4eb1-85e5-729767c5fc4f
 # ╠═ad4a9897-84fa-4e42-a653-fb36bb2e7657
@@ -1802,43 +1800,32 @@ version = "3.5.0+0"
 # ╠═699dd367-d4a3-431d-87a1-dd6ff276c84b
 # ╠═a0691d8b-d80c-4b5c-b78c-163ee13faf85
 # ╠═71e9a4b4-5dbb-4a67-b898-0cfffd90998d
-# ╠═cc35db1a-715b-419a-b5a7-3f4a3f8faab4
+# ╟─cc35db1a-715b-419a-b5a7-3f4a3f8faab4
 # ╟─d5967d18-62d7-4870-b3b7-af7416acb2b4
 # ╠═1ebe900d-2301-44ea-86b3-0fd7f03769b1
 # ╠═a6d31357-bb6d-4fb2-a642-112f39d32832
 # ╠═ac88d890-6514-4e82-b776-ff98467d8708
 # ╠═241d663c-dc41-4039-b9a2-0f48d792b8a1
 # ╠═2a111cc4-a80c-43d0-83b3-7c827761a4fa
-# ╠═5d2801db-a987-48e5-b71d-6674c0f7af58
-# ╟─291939b4-f0ba-4d7d-b30b-d9974d9b53f8
-# ╠═283c9a3c-15d9-4c95-a53d-edd0a9d8c09d
-# ╠═c6bcfa9b-c7ca-4bbd-ab24-3f8a24eefd19
-# ╠═5cd35668-12a7-4c04-9732-3104cd34adad
-# ╠═6e87745b-d832-4a41-bd4d-9dfed7b0de30
-# ╠═46b6be18-c207-4e4f-b4e4-322540061e83
-# ╠═240e28a8-c02d-4bc6-bc18-32c1a74b6bc3
-# ╠═79bca6b2-0a68-434b-b6c3-a882cbadd3eb
-# ╟─7a4d383e-e422-4fb3-bcba-08b767ee4da8
-# ╠═8b0c740c-e39e-4762-a06d-1cb1541b4dc6
-# ╠═7360a725-9358-4024-9102-290c8916d3fb
-# ╠═5d8f14a1-56bb-4bd6-986e-50cc795d8b25
-# ╠═8a1ea08e-3964-47e3-89bb-d5f7c882f71d
-# ╠═1073b592-2fd8-4cfc-9aec-4a4532fbee89
-# ╠═13b68109-9315-469f-a0a7-d3753a9e6ec8
-# ╟─a726b075-a4b9-44f7-9e9d-477c01b4f424
-# ╠═94474e34-e64b-49ee-9b35-304e9312bd5c
-# ╠═c94a4ce5-3b94-4237-9175-2de4e8e6f734
-# ╠═bf96b41a-e8df-48e4-8f3f-6ec7e129ed28
-# ╠═5801839f-0834-4421-8f2e-f0340c7b5c9e
-# ╠═6736cc24-d6fb-4285-a41b-b836ecf6af93
-# ╠═3d1abb92-f0cf-4bf9-b060-7b30ab01c773
+# ╟─5d2801db-a987-48e5-b71d-6674c0f7af58
 # ╟─ebc5cfbd-dd1d-4089-8798-e35357b38cac
+# ╟─4e5c0d80-2871-4f57-a0a0-acbffb4ec199
 # ╠═af3c116c-510d-4c5c-9b64-fb56a106e5eb
+# ╟─f5d03c3a-3854-4c08-9cf7-074dd628393b
 # ╠═fe698e99-939b-44d4-aaed-1bdfdc5c58f0
-# ╠═dccfe48e-4068-4f35-8446-8476033f90e6
+# ╠═b4f7a35f-0f74-465b-82a0-31c404b49a10
+# ╠═7516d09f-7356-41ac-a565-2c4e2c21408d
+# ╠═3e754434-5934-42df-861f-614bfa19643f
+# ╠═00762ff1-c860-4d2c-b5ef-4a27b28b5d7f
+# ╟─dccfe48e-4068-4f35-8446-8476033f90e6
+# ╟─dec0718e-799d-48ce-b444-cf07daf803c6
 # ╠═c36cb78e-09ce-4521-803f-3e94d5ebd7cd
-# ╠═d0099447-0c7d-4573-b9b0-ff18398f36a4
+# ╠═fa2bd5ca-1fc5-4706-86b1-c7baf5bd2a47
+# ╠═4a90cefa-9793-481d-ae1b-863a379369ec
+# ╠═dc676a84-430c-4316-9e42-e935d3dc9e74
+# ╠═366feb2b-b08e-4176-9623-149b6cbaf989
+# ╟─d0099447-0c7d-4573-b9b0-ff18398f36a4
 # ╟─af57ef9e-0030-4b2d-8b1b-127f50d9754a
-# ╠═ef982930-6388-466d-b0e1-8d715316a884
+# ╟─ef982930-6388-466d-b0e1-8d715316a884
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
