@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.11
+# v0.19.12
 
 using Markdown
 using InteractiveUtils
@@ -35,129 +35,15 @@ md"""
 ## Experiment 1
 """
 
-# ╔═╡ 946462c0-0c7f-4c28-968b-a2c43f97a287
-# PlotBoxTransparency(Ex1)
-
-# ╔═╡ 1aedbde2-4ed0-4879-88cd-84fef564e9e5
-# FitBoxTransparency(Ex1, "Chosen")
-
-# ╔═╡ bbb052f7-9d0c-4d23-9226-17f6b9da6a39
-# FitBoxTransparency(Ex1, "Basket")
-
-# ╔═╡ 6d862bbc-b2a4-4cdd-b871-16d2d453faae
-# PlotAgentBehavior(Ex1)
-
-# ╔═╡ 1f1d13f4-3422-49ae-98ff-1889bd673c8b
-# FitAgentBehavior(Ex1, "OO-OO")
-
-# ╔═╡ 8ab0b603-888c-4de0-b1bb-2cddd2340346
-# FitAgentBehavior(Ex1, "TT-OO")
-
-# ╔═╡ 29b7ba0c-380d-4102-9765-a8aa1ab5466f
-# FitAgentBehavior(Ex1, "TT-TT")
-
 # ╔═╡ b42f39c7-8e83-4604-9291-30115b8240e2
 md"""
 ## Experiment 2
 """
 
-# ╔═╡ e664a623-af69-444f-9eac-845e7b2cc0e2
-# PlotBoxTransparency(Ex2)
-
-# ╔═╡ 66a9f995-e8fd-4adb-a89c-ffb52334f1a0
-# FitBoxTransparency(Ex2, "Chosen")
-
-# ╔═╡ d29de449-f44c-4481-9033-1a8c8cf9e92c
-# FitBoxTransparency(Ex2, "Basket")
-
-# ╔═╡ 409d8ef4-2aec-47cd-a62f-fc78687391b7
-# PlotAgentBehavior(Ex2)
-
-# ╔═╡ 9f28f81f-1441-424b-8a6a-a3993a874c58
-# FitAgentBehavior(Ex2, "TO-TO")
-
-# ╔═╡ dc4060e7-b4bf-4ac5-9146-5e39012df40d
-# FitAgentBehavior(Ex2, "TT-TO")
-
-# ╔═╡ 1ecd7ee8-63a3-4530-a2ee-2068ff28dfcf
-# FitAgentBehavior(Ex2, "TT-TT")
-
 # ╔═╡ 8f11b4fa-440b-4ec3-8bf7-d63b376ea1d0
 md"""
 ## Experiment 3
 """
-
-# ╔═╡ 7d91e44c-f738-4bec-b909-5ed821424e88
-# PlotBoxTransparency(Ex3)
-
-# ╔═╡ aad8ba23-11a9-4c5b-9e19-2df7303de72a
-# FitBoxTransparency(Ex3, "Chosen")
-
-# ╔═╡ 1fe1b8f8-feec-4a19-9b75-71ff191bf2d9
-# FitBoxTransparency(Ex3, "Basket")
-
-# ╔═╡ 39ffdc92-bbf7-4539-84c5-e72271a9d24f
-# PlotAgentBehavior(Ex3)
-
-# ╔═╡ ff4ed2c1-1c3f-49e9-9a11-cea63aa00b66
-# FitAgentBehavior(Ex3, "TO-OO")
-
-# ╔═╡ a628acc7-77ff-497b-9adf-eff1209ae62c
-# FitAgentBehavior(Ex3, "TT-OO")
-
-# ╔═╡ 3901c060-91ea-411c-bb28-47fe076ea42b
-# FitAgentBehavior(Ex3, "TT-OT")
-
-# ╔═╡ 8820c2b2-c115-41a7-a206-2e8d04702064
-md"""
-## Experiments combined
-"""
-
-# ╔═╡ ccc5a309-3ae2-4a39-b08a-6af26e5702fe
-md"""
-### Box Transparency
-"""
-
-# ╔═╡ 18b1d0f6-1a29-48ea-8930-132500af1a81
-# PlotBoxTransparency(ExS)
-
-# ╔═╡ 336298c5-f69c-4ffb-a1bb-828d23fa6421
-# FitBoxTransparency(ExS, "UnChosen")
-
-# ╔═╡ dd113e74-42d9-48d0-a741-51b5e803b902
-# FitBoxTransparency(ExS, "Chosen")
-
-# ╔═╡ c7e73376-020d-482a-9791-fc2da25f490e
-# FitBoxTransparency(ExS, "Basket")
-
-# ╔═╡ 7fe143be-ae8a-4cc7-9487-1e3cf4830385
-md"""
-### Agent Behavior
-"""
-
-# ╔═╡ 715f3064-d6c7-4d0e-8faa-e2565dcd6eec
-# PlotAgentBehavior(ExS)
-
-# ╔═╡ 1e8c6eca-1bf1-4c0b-b396-198be4c45590
-# FitAgentBehavior(ExS, "OO-OO")
-
-# ╔═╡ 803bb2cb-58ba-47ae-90dd-229687e95532
-# FitAgentBehavior(ExS, "TO-OO")
-
-# ╔═╡ 259c6c81-9a71-4aaa-afcb-0dbff9922090
-# FitAgentBehavior(ExS, "TO-TO")
-
-# ╔═╡ eb6f158f-fdb9-40f9-89ca-e93a03492a2c
-# FitAgentBehavior(ExS, "TT-OO")
-
-# ╔═╡ 2d4ca637-5794-4399-8b17-7c3558febc5f
-# FitAgentBehavior(ExS, "TT-OT")
-
-# ╔═╡ 979b9318-da99-48e6-a7d8-8298caa2a2a8
-# FitAgentBehavior(ExS, "TT-TO")
-
-# ╔═╡ 4a4cc155-ceeb-4195-92d8-2692e9b8d21a
-# FitAgentBehavior(ExS, "TT-TT")
 
 # ╔═╡ 5e47de4c-374a-4870-9fde-890e4237ebd9
 md"""
@@ -343,6 +229,12 @@ function read_combine_data(Experiment)
 			:Agent_Perspective
 	)
 
+	# 17. relevel Box_Trasnsparency
+	transform!(df,
+		:Box_Transparency => 
+		(x -> levels!(CategoricalArray(x), ["TT-TT", "TT-OT", "TT-OO", "TT-TO", "OO-OO", "TO-TO", "TO-OO"])) => :Box_Transparency
+	)
+
 	# 17. Select columns
 	select!(df, ["Experiment", "Participant", "Trial_Number", "Object_Number",
 		"Box_Transparency", "Participant_Perspective", "Agent_Perspective",
@@ -358,6 +250,11 @@ ExS = mapreduce(read_combine_data, vcat, 1:3); # Experiment 1 - 3
 
 # ╔═╡ ff9ef6ac-b930-4931-9873-4aa151f82678
 describe(ExS)
+
+# ╔═╡ e0a10983-47fd-47db-8306-0870345d8cef
+combine(groupby(ExS, :Experiment), 
+	:Participant => (x -> length(unique(x))) => "Number of Particiapnts"
+)
 
 # ╔═╡ 5cb6d10a-7e5f-4728-8b91-336b9f0fa549
 Ex1 = subset(ExS, :Experiment => ByRow(==("Experiment_1")));
@@ -384,7 +281,7 @@ function FitBoxTransparency(data, behavior)
 		(1 + Box_Transparency | Trial_Number / Object_Number)
 	)
 	Contr = Dict(
-		:Box_Transparency => EffectsCoding(),
+		:Box_Transparency => DummyCoding(),
 		:Participant      => Grouping(),
 		:Object_Number    => Grouping()
 	)
@@ -414,7 +311,7 @@ function FitAgentBehavior(data, BoxTransparency)
 		(1 + Agent_Behavior | Trial_Number / Object_Number)
 	)
 	Contr = Dict(
-		:Agent_Behavior => EffectsCoding(),
+		:Agent_Behavior => DummyCoding(),
 		:Participant    => Grouping(),
 		:Object_Number  => Grouping()
 	)
@@ -2111,53 +2008,18 @@ version = "3.5.0+0"
 # ╠═b18f8835-dfb2-491b-b4f6-1cf885abdddd
 # ╠═0a9e79af-b016-4bbc-9070-f1c75b48571c
 # ╠═ff9ef6ac-b930-4931-9873-4aa151f82678
+# ╠═e0a10983-47fd-47db-8306-0870345d8cef
 # ╠═d37ab44f-6020-4b2c-9768-bffd4a586ece
 # ╠═3d378594-d577-43fd-8427-6c5cf7c867d9
 # ╟─d3b864ee-7991-401f-b1f7-7f692f605631
 # ╠═5cb6d10a-7e5f-4728-8b91-336b9f0fa549
 # ╠═863b7bc9-7ff7-4814-8daf-050ca59ed87a
-# ╠═946462c0-0c7f-4c28-968b-a2c43f97a287
-# ╠═1aedbde2-4ed0-4879-88cd-84fef564e9e5
-# ╠═bbb052f7-9d0c-4d23-9226-17f6b9da6a39
-# ╠═6d862bbc-b2a4-4cdd-b871-16d2d453faae
-# ╠═1f1d13f4-3422-49ae-98ff-1889bd673c8b
-# ╠═8ab0b603-888c-4de0-b1bb-2cddd2340346
-# ╠═29b7ba0c-380d-4102-9765-a8aa1ab5466f
 # ╟─b42f39c7-8e83-4604-9291-30115b8240e2
 # ╠═87389fe3-0c1d-40ec-863c-43e3189f64ed
 # ╠═4cc80b39-cb72-4fb8-8143-8c6f7c620bb1
-# ╠═e664a623-af69-444f-9eac-845e7b2cc0e2
-# ╠═66a9f995-e8fd-4adb-a89c-ffb52334f1a0
-# ╠═d29de449-f44c-4481-9033-1a8c8cf9e92c
-# ╠═409d8ef4-2aec-47cd-a62f-fc78687391b7
-# ╠═9f28f81f-1441-424b-8a6a-a3993a874c58
-# ╠═dc4060e7-b4bf-4ac5-9146-5e39012df40d
-# ╠═1ecd7ee8-63a3-4530-a2ee-2068ff28dfcf
 # ╟─8f11b4fa-440b-4ec3-8bf7-d63b376ea1d0
 # ╠═ca54d080-408e-4bcb-8810-fc8ca264def4
 # ╠═478864a8-8d31-472e-a565-ef19ade9df98
-# ╠═7d91e44c-f738-4bec-b909-5ed821424e88
-# ╠═aad8ba23-11a9-4c5b-9e19-2df7303de72a
-# ╠═1fe1b8f8-feec-4a19-9b75-71ff191bf2d9
-# ╠═39ffdc92-bbf7-4539-84c5-e72271a9d24f
-# ╠═ff4ed2c1-1c3f-49e9-9a11-cea63aa00b66
-# ╠═a628acc7-77ff-497b-9adf-eff1209ae62c
-# ╠═3901c060-91ea-411c-bb28-47fe076ea42b
-# ╟─8820c2b2-c115-41a7-a206-2e8d04702064
-# ╟─ccc5a309-3ae2-4a39-b08a-6af26e5702fe
-# ╠═18b1d0f6-1a29-48ea-8930-132500af1a81
-# ╠═336298c5-f69c-4ffb-a1bb-828d23fa6421
-# ╠═dd113e74-42d9-48d0-a741-51b5e803b902
-# ╠═c7e73376-020d-482a-9791-fc2da25f490e
-# ╟─7fe143be-ae8a-4cc7-9487-1e3cf4830385
-# ╠═715f3064-d6c7-4d0e-8faa-e2565dcd6eec
-# ╠═1e8c6eca-1bf1-4c0b-b396-198be4c45590
-# ╠═803bb2cb-58ba-47ae-90dd-229687e95532
-# ╠═259c6c81-9a71-4aaa-afcb-0dbff9922090
-# ╠═eb6f158f-fdb9-40f9-89ca-e93a03492a2c
-# ╠═2d4ca637-5794-4399-8b17-7c3558febc5f
-# ╠═979b9318-da99-48e6-a7d8-8298caa2a2a8
-# ╠═4a4cc155-ceeb-4195-92d8-2692e9b8d21a
 # ╟─5e47de4c-374a-4870-9fde-890e4237ebd9
 # ╟─f93407b7-ee46-46c3-ba01-69e8674aa931
 # ╠═fda7ab2f-1a46-4842-94b6-ed818fe53be7
