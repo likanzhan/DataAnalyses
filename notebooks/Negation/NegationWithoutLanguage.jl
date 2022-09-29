@@ -30,19 +30,29 @@ md"""
 # ╔═╡ f0b1a34d-9dc5-479b-b514-3493758e1377
 cd(@__DIR__) # pwd()
 
+# ╔═╡ df1d6cab-072b-4844-9463-6556f1fd6544
+md"""
+## Descriptive analyses
+"""
+
+# ╔═╡ 164918ea-6b94-4dfb-958f-8adf6bce577b
+md"""
+## Inferential analyses
+"""
+
 # ╔═╡ d3b864ee-7991-401f-b1f7-7f692f605631
 md"""
-## Experiment 1
+### Experiment 1
 """
 
 # ╔═╡ b42f39c7-8e83-4604-9291-30115b8240e2
 md"""
-## Experiment 2
+### Experiment 2
 """
 
 # ╔═╡ 8f11b4fa-440b-4ec3-8bf7-d63b376ea1d0
 md"""
-## Experiment 3
+### Experiment 3
 """
 
 # ╔═╡ 5e47de4c-374a-4870-9fde-890e4237ebd9
@@ -342,7 +352,7 @@ function PlotAgentBehavior(data)
 		bxtr = subset(sdata, :Box_Transparency => ByRow(==(val1)) )
 		ax1 = Axis(gl1[1, id1], title = val1, 
 			xticks = (1:length(AgentBehav), AgentBehav),
-			xlabel = "Agent Behavior", ylabel = "Preference Rating",
+			xlabel = "Agent Behavior", ylabel = "Likeness Rating",
 			xticklabelrotation = rt
 		)
 	
@@ -382,7 +392,7 @@ function PlotBoxTransparency(data)
 		bxtr = subset(sdata, :Agent_Behavior => ByRow(==(val2)) )
 		ax2 = Axis(gl2[1, id2], title = val2, 
 				xticks = (1:length(BoxTrans), BoxTrans),
-				xlabel = "Box Transparency", ylabel = "Preference Rating",
+				xlabel = "Box Transparency", ylabel = "Likeness Rating",
 				xticklabelrotation = rt
 		)
 		for (id1, val1) in enumerate(BoxTrans)
@@ -421,7 +431,7 @@ function PlotUnChosen(data)
 		ax2 = Axis(gl2[1, id2], 
 			title = replace(val2, r"\_" => " "), 
 			xticks = (1:length(BoxTrans), BoxTrans),
-			xlabel = "Box Transparency", ylabel = "Preference Rating"
+			xlabel = "Box Transparency", ylabel = "Likeness Rating"
 		)
 		for (id1, val1) in enumerate(BoxTrans)
 			ab = subset(bxtr, :Box_Transparency => ByRow(==(val1)))
@@ -465,7 +475,7 @@ function MyBoxPlot(data)
 		bxtr = subset(sdata, :Box_Transparency => ByRow(==(val1)) )
 		ax1 = Axis(gl1[1, id1], title = val1, 
 			xticks = (1:length(AgentBehav), AgentBehav),
-			xlabel = "Agent Behavior", ylabel = "Preference Rating",
+			xlabel = "Agent Behavior", ylabel = "Likeness Rating",
 			xticklabelrotation = rt
 		)
 	
@@ -492,7 +502,7 @@ function MyBoxPlot(data)
 		bxtr = subset(sdata, :Agent_Behavior => ByRow(==(val2)) )
 		ax2 = Axis(gl2[1, id2], title = val2, 
 				xticks = (1:length(BoxTrans), BoxTrans),
-				xlabel = "Box Transparency", ylabel = "Preference Rating",
+				xlabel = "Box Transparency", ylabel = "Likeness Rating",
 				xticklabelrotation = rt
 		)
 		for (id1, val1) in enumerate(BoxTrans)
@@ -2007,10 +2017,12 @@ version = "3.5.0+0"
 # ╠═f0b1a34d-9dc5-479b-b514-3493758e1377
 # ╠═b18f8835-dfb2-491b-b4f6-1cf885abdddd
 # ╠═0a9e79af-b016-4bbc-9070-f1c75b48571c
+# ╟─df1d6cab-072b-4844-9463-6556f1fd6544
 # ╠═ff9ef6ac-b930-4931-9873-4aa151f82678
 # ╠═e0a10983-47fd-47db-8306-0870345d8cef
 # ╠═d37ab44f-6020-4b2c-9768-bffd4a586ece
 # ╠═3d378594-d577-43fd-8427-6c5cf7c867d9
+# ╟─164918ea-6b94-4dfb-958f-8adf6bce577b
 # ╟─d3b864ee-7991-401f-b1f7-7f692f605631
 # ╠═5cb6d10a-7e5f-4728-8b91-336b9f0fa549
 # ╠═863b7bc9-7ff7-4814-8daf-050ca59ed87a
