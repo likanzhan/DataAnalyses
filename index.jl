@@ -11,7 +11,7 @@ md"""
 
 # ╔═╡ 95c53824-7376-4f0a-90c2-8863a4ddd0de
 const NOTEBOOKS = [
-    ("条件概率的理解", "ConditionalProbability/ConditionalProbability.jl")
+    ("条件概率的理解", "ConditionalProbability/ConditionalProbability.jl"),
     ("后悔情绪理解",  "Regret/Regret.jl"),
     ("脑电简单统计",  "Disjunctions/DisjunctionStatistics.jl"),
     ("脑电事件提取",  "Disjunctions/DisjunctionEvents.jl"),
