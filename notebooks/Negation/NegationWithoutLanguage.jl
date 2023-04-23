@@ -1,11 +1,25 @@
 ### A Pluto.jl notebook ###
-# v0.19.22
+# v0.19.25
 
 using Markdown
 using InteractiveUtils
 
 # ╔═╡ aa13f80d-87d5-4c88-af19-6ffe76d737bd
 using PlutoUI; TableOfContents(title = "Negation Processing", aside = true)
+
+# ╔═╡ 214b6943-7672-47ce-99f8-f7c253d6490d
+md"""
+## Load packages and data
+"""
+
+# ╔═╡ f0b1a34d-9dc5-479b-b514-3493758e1377
+cd(@__DIR__) # pwd()
+
+# ╔═╡ 98c6b2db-c4ee-4422-8f4d-6cdf6a3d0106
+outFolder = "_Outputs" # Directory to store outputs
+
+# ╔═╡ e881c96b-9f46-4025-b245-d705d8884b52
+isdir(outFolder) || mkdir(outFolder)
 
 # ╔═╡ b18f8835-dfb2-491b-b4f6-1cf885abdddd
 begin
@@ -22,39 +36,81 @@ begin
 		 )
 end
 
-# ╔═╡ 214b6943-7672-47ce-99f8-f7c253d6490d
-md"""
-## Load packages and data
-"""
-
-# ╔═╡ f0b1a34d-9dc5-479b-b514-3493758e1377
-cd(@__DIR__) # pwd()
-
-# ╔═╡ 98c6b2db-c4ee-4422-8f4d-6cdf6a3d0106
-outFolder = "_Outputs"
-
-# ╔═╡ e881c96b-9f46-4025-b245-d705d8884b52
-isdir(outFolder) || mkdir(outFolder)
+# ╔═╡ 0a9e79af-b016-4bbc-9070-f1c75b48571c
+ExS = mapreduce(read_combine_data, vcat, 1:3); # Experiment 1 - 3
 
 # ╔═╡ df1d6cab-072b-4844-9463-6556f1fd6544
 md"""
 ## Basic Information
 """
 
+# ╔═╡ ff9ef6ac-b930-4931-9873-4aa151f82678
+describe(ExS)
+
+# ╔═╡ e0a10983-47fd-47db-8306-0870345d8cef
+combine(groupby(ExS, :Experiment), 
+	:Participant => (x -> length(unique(x))) => "Number of Particiapnts"
+)
+
 # ╔═╡ d3b864ee-7991-401f-b1f7-7f692f605631
 md"""
 ## Experiment 1
 """
+
+# ╔═╡ 5cb6d10a-7e5f-4728-8b91-336b9f0fa549
+Ex1 = subset(ExS, :Experiment => ByRow(==("Experiment_1")));
+
+# ╔═╡ b9d79b81-fe19-415b-91d4-560b7ce8359d
+PlotAgentBehavior(Ex1)
+
+# ╔═╡ 8a8d6f29-2c15-4fda-8a4f-6da7849c4f91
+FitAgentBehavior(Ex1)
+
+# ╔═╡ 1ff7d8d7-4d67-4a7b-b5fa-c00eb944c374
+PlotBoxTransparency(Ex1)
+
+# ╔═╡ 31e4fde5-86c3-4930-9454-19b9c399a5f2
+FitBoxTransparency(Ex1)
 
 # ╔═╡ b42f39c7-8e83-4604-9291-30115b8240e2
 md"""
 ## Experiment 2
 """
 
+# ╔═╡ 87389fe3-0c1d-40ec-863c-43e3189f64ed
+Ex2 = subset(ExS, :Experiment => ByRow(==("Experiment_2")));
+
+# ╔═╡ 9c5206cf-2fd7-4a15-b179-1a7695b5fc35
+PlotAgentBehavior(Ex2)
+
+# ╔═╡ 9b1deaf6-677b-45d5-a858-f269ba3e0276
+FitAgentBehavior(Ex2)
+
+# ╔═╡ 5c9084b2-b993-46a0-9182-e5d2e8e7b9f3
+PlotBoxTransparency(Ex2)
+
+# ╔═╡ 4cc80b39-cb72-4fb8-8143-8c6f7c620bb1
+FitBoxTransparency(Ex2)
+
 # ╔═╡ 8f11b4fa-440b-4ec3-8bf7-d63b376ea1d0
 md"""
 ## Experiment 3
 """
+
+# ╔═╡ ca54d080-408e-4bcb-8810-fc8ca264def4
+Ex3 = subset(ExS, :Experiment => ByRow(==("Experiment_3")));
+
+# ╔═╡ ce5f7f4d-b544-46bc-a8f6-dde6debb51d9
+PlotAgentBehavior(Ex3)
+
+# ╔═╡ b7f44d21-f5ac-4095-abba-fe0d3891fc06
+FitAgentBehavior(Ex3)
+
+# ╔═╡ aa520d59-450d-41a4-98f1-1bf34fbccf9f
+PlotBoxTransparency(Ex3)
+
+# ╔═╡ 478864a8-8d31-472e-a565-ef19ade9df98
+FitBoxTransparency(Ex3)
 
 # ╔═╡ 5e47de4c-374a-4870-9fde-890e4237ebd9
 md"""
@@ -67,7 +123,7 @@ md"""
 """
 
 # ╔═╡ fda7ab2f-1a46-4842-94b6-ed818fe53be7
-Image_Object_Cor = CSV.read("Image_Object_Correspondance.csv", 
+Image_Object_Cor = CSV.read("_Sources/Image_Object_Correspondance.csv", 
 	DataFrame, stringtype = String
 );
 
@@ -79,7 +135,7 @@ md"""
 # ╔═╡ ce71136a-2d3d-44f4-8efc-6b69670759ac
 begin
 	Video_Object_Box = CSV.read(
-		"Video_Object_Correspondance.csv", DataFrame, stringtype = String
+		"_Sources/Video_Object_Correspondance.csv", DataFrame, stringtype = String
 	);
 	
 	Object_Box_Color = stack(Video_Object_Box, 
@@ -241,12 +297,22 @@ function read_combine_data(Experiment)
 	)
 
 	# 17. relevel Box_Trasnsparency
-	transform!(df,
-		:Box_Transparency => 
-		(x -> levels!(CategoricalArray(x), ["TT-TT", "TT-OT", "TT-OO", "TT-TO", "OO-OO", "TO-TO", "TO-OO"])) => :Box_Transparency
+	Box_Ex1 = ["OO-OO", "TT-TT", "TT-OO"]
+	Box_Ex2 = ["TO-TO", "TT-TT", "TT-TO"]
+	Box_Ex3 = ["TO-OO", "TT-OT", "TT-OO"]
+	Box_Levels = sort(unique(vcat(Box_Ex1, Box_Ex2, Box_Ex3)), rev = true)
+		#["TT-TT", "TT-OT", "TT-OO", "TT-TO", "OO-OO", "TO-TO", "TO-OO"]
+	transform!(df, :Box_Transparency => 
+		(x -> levels!(CategoricalArray(x), Box_Levels)) => :Box_Transparency
 	)
 
-	# 17. Select columns
+	# 18. relevel Agent_Behavior
+	Agent_Levels = sort(["Basket", "Chosen", "UnChosen"], rev = true)
+	transform!(df, :Agent_Behavior => 
+		(x -> levels!(CategoricalArray(x), Agent_Levels)) => :Agent_Behavior
+	)
+
+	# 19. Select columns
 	select!(df, ["Experiment", "Participant", "Trial_Number", "Object_Number",
 		"Box_Transparency", "Participant_Perspective", "Agent_Perspective",
 		 "Agent_Behavior", "Box_Color", "Object_Rate"]
@@ -256,39 +322,22 @@ function read_combine_data(Experiment)
 
 end
 
-# ╔═╡ 0a9e79af-b016-4bbc-9070-f1c75b48571c
-ExS = mapreduce(read_combine_data, vcat, 1:3); # Experiment 1 - 3
-
-# ╔═╡ ff9ef6ac-b930-4931-9873-4aa151f82678
-describe(ExS)
-
-# ╔═╡ e0a10983-47fd-47db-8306-0870345d8cef
-combine(groupby(ExS, :Experiment), 
-	:Participant => (x -> length(unique(x))) => "Number of Particiapnts"
-)
-
-# ╔═╡ 5cb6d10a-7e5f-4728-8b91-336b9f0fa549
-Ex1 = subset(ExS, :Experiment => ByRow(==("Experiment_1")));
-
-# ╔═╡ 87389fe3-0c1d-40ec-863c-43e3189f64ed
-Ex2 = subset(ExS, :Experiment => ByRow(==("Experiment_2")));
-
-# ╔═╡ ca54d080-408e-4bcb-8810-fc8ca264def4
-Ex3 = subset(ExS, :Experiment => ByRow(==("Experiment_3")));
-
 # ╔═╡ cb471c5c-6bdf-422b-a9f4-3fc5b46df1d2
 md"""
 ### Define statistical models
 """
 
 # ╔═╡ ceb8ef36-b417-4202-a1f3-a7a3c985434a
-Contr = Dict(
+Contr(base) = Dict(
 			:Agent_Behavior   => DummyCoding(),
-			:Box_Transparency => DummyCoding(),
+			:Box_Transparency => DummyCoding(; base = base),
 			:Participant      => Grouping(),
 			:Trial_Number     => Grouping(),
 			:Object_Number    => Grouping()
 	);
+
+# ╔═╡ e1f8c162-4c29-4208-869f-af3e11ac3290
+boot_times = 1_000
 
 # ╔═╡ 9b131dad-38fb-433d-ac8a-7c3ade486c44
 begin
@@ -305,17 +354,17 @@ formula2 = @formula(
 			(1 | Trial_Number / Object_Number)
 		)
 Ex1a = subset(Ex1, :Box_Transparency => ByRow(==("TT-TT")) );
-fm1 = fit(MixedModel, formula1, Ex1a, contrasts = Contr, progress = false)
-fm2 = fit(MixedModel, formula2, Ex1a, contrasts = Contr, progress = false)
+fm1 = fit(MixedModel, formula1, Ex1a, contrasts = Contr(nothing), progress = false)
+fm2 = fit(MixedModel, formula2, Ex1a, contrasts = Contr(nothing), progress = false)
 MixedModels.likelihoodratiotest(fm1, fm2)
 end
 
 # ╔═╡ 230e2415-2c21-4873-9448-3c36ab206e0e
-_FitAgentBehavior(DataSubset) = fit(MixedModel, formula2, DataSubset, contrasts = Contr, progress = false)
+_FitAgentBehavior(DataSubset; base = nothing) = fit(MixedModel, formula2, DataSubset, contrasts = Contr(base), progress = false)
 
 # ╔═╡ f244d8c3-6e86-4532-b5d8-2792e6b09503
 function FitAgentBehavior(data)
-	sort!(data, [:Box_Transparency, :Agent_Behavior], rev = [true, false])
+	sort!(data, [:Agent_Perspective, :Agent_Behavior], rev = [false, false])
 	EX = string(replace.(unique(data.Experiment), "Experiment_"=>"")...)
 	BoxTransparency = unique(data.Box_Transparency)
 	results = []
@@ -323,7 +372,12 @@ function FitAgentBehavior(data)
 		push!(results, "$(id). Box Transparency: $box")
 		SData = subset(data, :Box_Transparency => ByRow(==(box)) )
 		fm = _FitAgentBehavior(SData)
-		push!(results, coeftable(fm))	
+		samp = parametricbootstrap(boot_times, fm, use_threads = true)
+		CIs = subset(DataFrame(shortestcovint(samp)), :group => ByRow(ismissing))
+		CIs = CIs[:, [:names, :lower, :upper]]
+		push!(results, coeftable(fm))
+		push!(results, "Coverage Intervals")
+		push!(results, CIs)
 	end	
 	open(outFolder * "/" * "Ex_" * EX * "_AgentBehavior.md", "w") do io
 		for line in results
@@ -332,15 +386,6 @@ function FitAgentBehavior(data)
 	end
 	results
 end
-
-# ╔═╡ 8a8d6f29-2c15-4fda-8a4f-6da7849c4f91
-FitAgentBehavior(Ex1)
-
-# ╔═╡ 9b1deaf6-677b-45d5-a858-f269ba3e0276
-FitAgentBehavior(Ex2)
-
-# ╔═╡ b7f44d21-f5ac-4095-abba-fe0d3891fc06
-FitAgentBehavior(Ex3)
 
 # ╔═╡ aee90f61-9bde-41cc-b052-639059b988b6
 begin
@@ -357,25 +402,35 @@ formula4 = @formula(
 		(1  | Trial_Number / Object_Number)
 	)
 ExXa = subset(Ex1, :Agent_Behavior => ByRow(==("UnChosen")) );
-fm3 = fit(MixedModel, formula3, ExXa, contrasts = Contr, progress = false)
-fm4 = fit(MixedModel, formula4, ExXa, contrasts = Contr, progress = false)
+fm3 = fit(MixedModel, formula3, ExXa, contrasts = Contr(nothing), progress = false)
+fm4 = fit(MixedModel, formula4, ExXa, contrasts = Contr(nothing), progress = false)
 MixedModels.likelihoodratiotest(fm3, fm4)
 end
 
 # ╔═╡ 1e2b0fe1-c214-4bd0-a511-784ec9b7bb0e
-_FitBoxTransparency(DataSubset) = fit(MixedModel, formula4, DataSubset, contrasts = Contr, progress = false)
+_FitBoxTransparency(DataSubset; base = nothing) = fit(MixedModel, formula4, DataSubset, contrasts = Contr(base), progress = false)
 
 # ╔═╡ 044cc4e3-239f-450f-9f78-e56283f73fa7
 function FitBoxTransparency(data)
-	sort!(data, [:Box_Transparency, :Agent_Behavior], rev = [true, false])
+	sort!(data, [:Box_Transparency, :Agent_Behavior], rev = [false, false])
 	EX = string(replace.(unique(data.Experiment), "Experiment_"=>"")...)
 	AgentBehavior = unique(data.Agent_Behavior)
+	BoxTransparency = unique(data.Box_Transparency)
 	results = []
 	for (id, box) in enumerate(AgentBehavior)
 		push!(results, "$(id). AgentBehavior: $box")
 		SData = subset(data, :Agent_Behavior => ByRow(==(box)) )
-		fm = _FitBoxTransparency(SData)
-		push!(results, coeftable(fm))	
+		if box != "Chosen"
+			fm = _FitBoxTransparency(SData)
+		else
+			fm = _FitBoxTransparency(SData; base = BoxTransparency[2])
+		end
+		samp = parametricbootstrap(boot_times, fm, use_threads = true)
+		CIs = subset(DataFrame(shortestcovint(samp)), :group => ByRow(ismissing))
+		CIs = CIs[:, [:names, :lower, :upper]]
+		push!(results, coeftable(fm))
+		push!(results, "Coverage Intervals")
+		push!(results, CIs)
 	end	
 	open(outFolder * "/" * "Ex_" * EX * "_BoxTransparency.md", "w") do io
 		for line in results
@@ -385,26 +440,24 @@ function FitBoxTransparency(data)
 	results
 end
 
-# ╔═╡ 31e4fde5-86c3-4930-9454-19b9c399a5f2
-FitBoxTransparency(Ex1)
-
-# ╔═╡ 4cc80b39-cb72-4fb8-8143-8c6f7c620bb1
-FitBoxTransparency(Ex2)
-
-# ╔═╡ 478864a8-8d31-472e-a565-ef19ade9df98
-FitBoxTransparency(Ex3)
-
 # ╔═╡ a3b610ff-0e32-47f6-bfa8-9adafed64745
 md"""
 ### Define plot functions
 """
 
 # ╔═╡ 67e369b1-5fac-4022-86a5-a6fb20d18533
-stars(pval)  = pval < .001 ? "***" : pval < .01 ? "**" : pval < .05 ? "*" : ""
+begin
+_stars(pval)  = pval < .001 ? "***" : pval < .01 ? "**" : pval < .05 ? "*" : "n.s."
+_valign(pval) = pval >= .05 ? :bottom : :center
+end
 
 # ╔═╡ 572be4fa-93ca-4a90-83c0-13bca09147a0
 function PlotAgentBehavior(data)
-	sort!(data, [:Box_Transparency, :Agent_Behavior], rev = [true, false])
+	AgentPerspective = ["OO", "TT", "TO"]
+	transform!(data, :Agent_Perspective => 
+		(x -> levels!(CategoricalArray(x), AgentPerspective)) => :Agent_Perspective
+	)
+	sort!(data, [:Agent_Perspective, :Agent_Behavior], rev = [false, false])
 	Box_Transparency = unique(data.Box_Transparency)
 	Agent_Behavior   = unique(data.Agent_Behavior)
 	colors = Makie.default_palettes.patchcolor.val
@@ -433,22 +486,26 @@ function PlotAgentBehavior(data)
 			ab = subset(cdata, :Agent_Behavior => ByRow(==(val2)))
 			xx = repeat([id2], size(ab, 1))
 			yy = ab.Object_Rate
-			scatter!(ax1, xx .+ rand(-0.15:0.01:0.15, length(xx)), yy)
+			scatter!(ax1, xx .+ rand(-0.15:0.01:0.15, length(xx)), yy,
+				color = (colors[id2], 0.7)
+			)
 			boxplot!(ax1, xx, yy, 
-				color = (colors[id2], 0.6), 
+				color = (colors[id2], 0.5), 
 				whiskercolor = (colors[id2], 1), 
 				whiskerwidth = 0.6,
 				show_notch = false,
 				show_outliers = false
 			)
-			if id2 > 1 && pval1 < .05
+			if id2 > 1
 				lines!(ax1, [1, 2], [7.1, 7.1], color = :black, linewidth = 0.5)
-				text!(ax1, 1.5, 7.1, text = stars(pval1), align = (:center, :center))
+				text!(ax1, 1.5, 7.1, text = _stars(pval1), 
+					align = (:center, _valign(pval1)))
 			end
 
-			if id2 > 1 && pval2 < .05
+			if id2 > 1
 				lines!(ax1, [1, 3], [7.5, 7.5], color = :black, linewidth = 0.5)
-				text!(ax1, 2, 7.5, text = stars(pval2), align = (:center, :center))
+				text!(ax1, 2, 7.5, text = _stars(pval2), 
+					align = (:center, _valign(pval2)))
 			end
 		end
 		
@@ -462,19 +519,9 @@ function PlotAgentBehavior(data)
 	fig
 end
 
-# ╔═╡ b9d79b81-fe19-415b-91d4-560b7ce8359d
-PlotAgentBehavior(Ex1)
-
-# ╔═╡ 9c5206cf-2fd7-4a15-b179-1a7695b5fc35
-PlotAgentBehavior(Ex2)
-
-# ╔═╡ ce5f7f4d-b544-46bc-a8f6-dde6debb51d9
-PlotAgentBehavior(Ex3)
-
 # ╔═╡ 0833bf9f-802a-4fd0-a344-40534d6421f1
 function PlotBoxTransparency(data)
-	sort!(data, [:Box_Transparency, :Agent_Behavior], rev = [true, false])
-	
+	sort!(data, [:Box_Transparency, :Agent_Behavior], rev = [false, false])
 	BoxTransparency = unique(data.Box_Transparency)
 	AgentBehavior   = unique(data.Agent_Behavior)
 	colors = Makie.default_palettes.patchcolor.val
@@ -502,42 +549,36 @@ function PlotBoxTransparency(data)
 			xx = repeat([id1], size(ab, 1))
 			yy = ab.Object_Rate
 			scatter!(ax2, xx .+ rand(-0.15:0.01:0.15, length(xx)), yy,
-				color = (colors[id2], 1)
+				color = (colors[id2], 0.7)
 			)
 			boxplot!(ax2, xx, yy, 
-				color = (colors[id2], 0.6), 
+				color = (colors[id2], 0.5), 
 				whiskercolor = (colors[id2], 1), 
 				whiskerwidth = 0.6,
 				show_notch = false,
 				show_outliers = false
 			)
-			if id1 > 1 && pval1 < .05
+			l2p2 = val2 != "Chosen" ? 1 : 2
+			if id1 > 1
 				lines!(ax2, [1, 2], [7.1, 7.1], color = :black, linewidth = 0.5)
-				text!(ax2, 1.5, 7.1, text = stars(pval1), align = (:center, :center))
+				text!(ax2, 1.5, 7.1, text = _stars(pval1), 
+					align = (:center, _valign(pval1)))
 			end
-			if id1 > 1 && pval2 < .05
-				lines!(ax2, [1, 3], [7.5, 7.5], color = :black, linewidth = 0.5)
-				text!(ax2, 2, 7.5, text = stars(pval2), align = (:center, :center))
+			if id1 > 1
+				lines!(ax2, [l2p2, 3], [7.5, 7.5], color = :black, linewidth = 0.5)
+				text!(ax2, mean([l2p2, 3]), 7.5, text = _stars(pval2), 
+					align = (:center, _valign(pval2)))
 			end
 		end
 		ylims!(ax2, 0, 8)
 		id2 > 1 && hideydecorations!(ax2)
 	end
 
-	EX = string(replace.(unique(data.Experiment), "Experiment_"=>"")...)
+	EX = string(replace.(unique(data.Experiment), "Experiment_" => "")...)
 	save(outFolder * "/" * "Ex_" * EX * "_BoxTransparency.png", fig, px_per_unit = 10)
 	
 	fig
 end
-
-# ╔═╡ 1ff7d8d7-4d67-4a7b-b5fa-c00eb944c374
-PlotBoxTransparency(Ex1)
-
-# ╔═╡ 5c9084b2-b993-46a0-9182-e5d2e8e7b9f3
-PlotBoxTransparency(Ex2)
-
-# ╔═╡ aa520d59-450d-41a4-98f1-1bf34fbccf9f
-PlotBoxTransparency(Ex3)
 
 # ╔═╡ b325c732-6e45-4110-8287-9449a360e778
 # function PlotUnChosen(data)
@@ -674,6 +715,15 @@ FreqTables = "da1fdf0e-e0ff-5433-a45f-9bb5ff651cb1"
 MixedModels = "ff71e718-51f3-5ec2-a782-8ffcbfa3c316"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+
+[compat]
+CSV = "~0.10.9"
+CairoMakie = "~0.10.4"
+CategoricalArrays = "~0.10.7"
+DataFrames = "~1.5.0"
+FreqTables = "~0.4.5"
+MixedModels = "~4.8.2"
+PlutoUI = "~0.7.50"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -682,7 +732,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.5"
 manifest_format = "2.0"
-project_hash = "54171863ef511bc706554838e93d595a884f02f8"
+project_hash = "8ba28032bba7a294530ab99aaf7aad816d5b5948"
 
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra"]
@@ -718,16 +768,16 @@ uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
 version = "1.1.1"
 
 [[deps.Arrow]]
-deps = ["ArrowTypes", "BitIntegers", "CodecLz4", "CodecZstd", "DataAPI", "Dates", "LoggingExtras", "Mmap", "PooledArrays", "SentinelArrays", "Tables", "TimeZones", "UUIDs", "WorkerUtilities"]
-git-tree-sha1 = "4e40f4868281b7fd702c605c764ab82a52ac3f4b"
+deps = ["ArrowTypes", "BitIntegers", "CodecLz4", "CodecZstd", "DataAPI", "Dates", "LoggingExtras", "Mmap", "PooledArrays", "SentinelArrays", "Tables", "TimeZones", "TranscodingStreams", "UUIDs", "WorkerUtilities"]
+git-tree-sha1 = "3b7d963a83ee6d894383b3a4b11837c9d51b42ff"
 uuid = "69666777-d1a9-59fb-9406-91d4454c9d45"
-version = "2.4.3"
+version = "2.5.2"
 
 [[deps.ArrowTypes]]
-deps = ["UUIDs"]
-git-tree-sha1 = "563d60f89fcb730668bd568ba3e752ee71dde023"
+deps = ["Sockets", "UUIDs"]
+git-tree-sha1 = "f7e3797796fbb56b2d61354d6e1c0f3ebc260a84"
 uuid = "31f734f8-188a-4ce0-8406-c8a06bd891cd"
-version = "2.0.2"
+version = "2.1.0"
 
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
@@ -793,9 +843,9 @@ version = "1.0.5"
 
 [[deps.CairoMakie]]
 deps = ["Base64", "Cairo", "Colors", "FFTW", "FileIO", "FreeType", "GeometryBasics", "LinearAlgebra", "Makie", "SHA", "SnoopPrecompile"]
-git-tree-sha1 = "abb7df708fe1335367518659989627100a61f3f0"
+git-tree-sha1 = "2aba202861fd2b7603beb80496b6566491229855"
 uuid = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
-version = "0.10.2"
+version = "0.10.4"
 
 [[deps.Cairo_jll]]
 deps = ["Artifacts", "Bzip2_jll", "CompilerSupportLibraries_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "JLLWrappers", "LZO_jll", "Libdl", "Pixman_jll", "Pkg", "Xorg_libXext_jll", "Xorg_libXrender_jll", "Zlib_jll", "libpng_jll"]
@@ -973,9 +1023,9 @@ uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[deps.Distributions]]
 deps = ["ChainRulesCore", "DensityInterface", "FillArrays", "LinearAlgebra", "PDMats", "Printf", "QuadGK", "Random", "SparseArrays", "SpecialFunctions", "Statistics", "StatsBase", "StatsFuns", "Test"]
-git-tree-sha1 = "da9e1a9058f8d3eec3a8c9fe4faacfb89180066b"
+git-tree-sha1 = "13027f188d26206b9e7b863036f87d2f2e7d013a"
 uuid = "31c24e10-a181-5473-b8eb-7969acd0382f"
-version = "0.25.86"
+version = "0.25.87"
 
 [[deps.DocStringExtensions]]
 deps = ["LibGit2"]
@@ -1057,9 +1107,9 @@ uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
 
 [[deps.FillArrays]]
 deps = ["LinearAlgebra", "Random", "SparseArrays", "Statistics"]
-git-tree-sha1 = "d3ba08ab64bdfd27234d3f61956c966266757fe6"
+git-tree-sha1 = "fc86b4fd3eff76c3ce4f5e96e2fdfa6282722885"
 uuid = "1a297f60-69ca-5386-bcde-b61e274b549b"
-version = "0.13.7"
+version = "1.0.0"
 
 [[deps.FixedPointNumbers]]
 deps = ["Statistics"]
@@ -1121,9 +1171,9 @@ uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
 
 [[deps.GLM]]
 deps = ["Distributions", "LinearAlgebra", "Printf", "Reexport", "SparseArrays", "SpecialFunctions", "Statistics", "StatsAPI", "StatsBase", "StatsFuns", "StatsModels"]
-git-tree-sha1 = "884477b9886a52a84378275737e2823a5c98e349"
+git-tree-sha1 = "cd3e314957dc11c4c905d54d1f5a65c979e4748a"
 uuid = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
-version = "1.8.1"
+version = "1.8.2"
 
 [[deps.GPUArraysCore]]
 deps = ["Adapt"]
@@ -1133,15 +1183,15 @@ version = "0.1.4"
 
 [[deps.GeoInterface]]
 deps = ["Extents"]
-git-tree-sha1 = "e07a1b98ed72e3cdd02c6ceaab94b8a606faca40"
+git-tree-sha1 = "0eb6de0b312688f852f347171aba888658e29f20"
 uuid = "cf35fbd7-0cd7-5166-be24-54bfbe79505f"
-version = "1.2.1"
+version = "1.3.0"
 
 [[deps.GeometryBasics]]
 deps = ["EarCut_jll", "GeoInterface", "IterTools", "LinearAlgebra", "StaticArrays", "StructArrays", "Tables"]
-git-tree-sha1 = "fe9aea4ed3ec6afdfbeb5a4f39a2208909b162a6"
+git-tree-sha1 = "303202358e38d2b01ba46844b92e48a3c238fd9e"
 uuid = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
-version = "0.4.5"
+version = "0.4.6"
 
 [[deps.Gettext_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Libiconv_jll", "Pkg", "XML2_jll"]
@@ -1185,10 +1235,10 @@ uuid = "2e76f6c2-a576-52d4-95c1-20adfe4de566"
 version = "2.8.1+1"
 
 [[deps.HypergeometricFunctions]]
-deps = ["DualNumbers", "LinearAlgebra", "OpenLibm_jll", "SpecialFunctions", "Test"]
-git-tree-sha1 = "709d864e3ed6e3545230601f94e11ebc65994641"
+deps = ["DualNumbers", "LinearAlgebra", "OpenLibm_jll", "SpecialFunctions"]
+git-tree-sha1 = "432b5b03176f8182bd6841fbfc42c718506a2d5f"
 uuid = "34004b35-14d8-5ef3-9330-4cdb6864b03a"
-version = "0.3.11"
+version = "0.3.15"
 
 [[deps.Hyperscript]]
 deps = ["Test"]
@@ -1239,10 +1289,10 @@ uuid = "bc367c6b-8a6b-528e-b4bd-a4b897500b49"
 version = "0.9.8"
 
 [[deps.Imath_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "87f7662e03a649cffa2e05bf19c303e168732d3e"
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "3d09a9f60edf77f8a4d99f9e015e8fbf9989605d"
 uuid = "905a6f67-0a94-5f89-b386-d35d92009cd1"
-version = "3.1.2+0"
+version = "3.1.7+0"
 
 [[deps.IndirectArrays]]
 git-tree-sha1 = "012e604e1c7458645cb8b436f8fba789a51b257f"
@@ -1262,9 +1312,9 @@ version = "1.4.0"
 
 [[deps.IntelOpenMP_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "d979e54b71da82f3a65b62553da4fc3d18c9004c"
+git-tree-sha1 = "0cb9352ef2e01574eeebdb102948a58740dcaf83"
 uuid = "1d5cc7b8-4909-519e-a0f8-d0f5ad9712d0"
-version = "2018.0.3+2"
+version = "2023.1.0+0"
 
 [[deps.InteractiveUtils]]
 deps = ["Markdown"]
@@ -1289,9 +1339,9 @@ uuid = "3587e190-3f89-42d0-90ee-14403ec27112"
 version = "0.1.8"
 
 [[deps.InvertedIndices]]
-git-tree-sha1 = "82aec7a3dd64f4d9584659dc0b62ef7db2ef3e19"
+git-tree-sha1 = "0dc7b50b8d436461be01300fd8cd45aa0274b038"
 uuid = "41ab1584-1d38-5bbf-9106-f11c6c58b48f"
-version = "1.2.0"
+version = "1.3.0"
 
 [[deps.IrrationalConstants]]
 git-tree-sha1 = "630b497eafcc20001bba38a4651b327dcfc491d2"
@@ -1322,9 +1372,9 @@ version = "1.4.1"
 
 [[deps.JSON]]
 deps = ["Dates", "Mmap", "Parsers", "Unicode"]
-git-tree-sha1 = "3c837543ddb02250ef42f4738347454f95079d4e"
+git-tree-sha1 = "31e996f0a15c7b280ba9f76636b3ff9e2ae58c9a"
 uuid = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
-version = "0.21.3"
+version = "0.21.4"
 
 [[deps.JSON3]]
 deps = ["Dates", "Mmap", "Parsers", "SnoopPrecompile", "StructTypes", "UUIDs"]
@@ -1478,15 +1528,15 @@ version = "0.5.10"
 
 [[deps.Makie]]
 deps = ["Animations", "Base64", "ColorBrewer", "ColorSchemes", "ColorTypes", "Colors", "Contour", "Distributions", "DocStringExtensions", "Downloads", "FFMPEG", "FileIO", "FixedPointNumbers", "Formatting", "FreeType", "FreeTypeAbstraction", "GeometryBasics", "GridLayoutBase", "ImageIO", "InteractiveUtils", "IntervalSets", "Isoband", "KernelDensity", "LaTeXStrings", "LinearAlgebra", "MakieCore", "Markdown", "Match", "MathTeXEngine", "MiniQhull", "Observables", "OffsetArrays", "Packing", "PlotUtils", "PolygonOps", "Printf", "Random", "RelocatableFolders", "Setfield", "Showoff", "SignedDistanceFields", "SnoopPrecompile", "SparseArrays", "StableHashTraits", "Statistics", "StatsBase", "StatsFuns", "StructArrays", "TriplotBase", "UnicodeFun"]
-git-tree-sha1 = "274fa9c60a10b98ab8521886eb4fe22d257dca65"
+git-tree-sha1 = "74657542dc85c3b72b8a5a9392d57713d8b7a999"
 uuid = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
-version = "0.19.2"
+version = "0.19.4"
 
 [[deps.MakieCore]]
 deps = ["Observables"]
-git-tree-sha1 = "2c3fc86d52dfbada1a2e5e150e50f06c30ef149c"
+git-tree-sha1 = "9926529455a331ed73c19ff06d16906737a876ed"
 uuid = "20f20a25-4f0e-4fdf-b5d1-57303727442b"
-version = "0.6.2"
+version = "0.6.3"
 
 [[deps.MappedArrays]]
 git-tree-sha1 = "e8b359ef06ec72e8c030463fe02efe5527ee5142"
@@ -1504,9 +1554,9 @@ version = "1.2.0"
 
 [[deps.MathOptInterface]]
 deps = ["BenchmarkTools", "CodecBzip2", "CodecZlib", "DataStructures", "ForwardDiff", "JSON", "LinearAlgebra", "MutableArithmetics", "NaNMath", "OrderedCollections", "Printf", "SnoopPrecompile", "SparseArrays", "SpecialFunctions", "Test", "Unicode"]
-git-tree-sha1 = "f219b62e601c2f2e8adb7b6c48db8a9caf381c82"
+git-tree-sha1 = "3b38f6fbd62cbd61d8dbf625136d7b75478bf2c5"
 uuid = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
-version = "1.13.1"
+version = "1.15.0"
 
 [[deps.MathProgBase]]
 deps = ["LinearAlgebra", "SparseArrays"]
@@ -1516,9 +1566,9 @@ version = "0.7.8"
 
 [[deps.MathTeXEngine]]
 deps = ["AbstractTrees", "Automa", "DataStructures", "FreeTypeAbstraction", "GeometryBasics", "LaTeXStrings", "REPL", "RelocatableFolders", "Test", "UnicodeFun"]
-git-tree-sha1 = "f04120d9adf4f49be242db0b905bea0be32198d1"
+git-tree-sha1 = "8f52dbaa1351ce4cb847d95568cb29e62a307d93"
 uuid = "0a4f8689-d25c-4efe-a92b-7142dfc1aa53"
-version = "0.5.4"
+version = "0.5.6"
 
 [[deps.MbedTLS_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -1588,9 +1638,9 @@ version = "1.0.2"
 
 [[deps.NamedArrays]]
 deps = ["Combinatorics", "DataStructures", "DelimitedFiles", "InvertedIndices", "LinearAlgebra", "Random", "Requires", "SparseArrays", "Statistics"]
-git-tree-sha1 = "2fd5787125d1a93fbe30961bd841707b8a80d75b"
+git-tree-sha1 = "b84e17976a40cb2bfe3ae7edb3673a8c630d4f95"
 uuid = "86f7a689-2022-50b4-a561-43c23ac3c673"
-version = "0.9.6"
+version = "0.9.8"
 
 [[deps.Netpbm]]
 deps = ["FileIO", "ImageCore", "ImageMetadata"]
@@ -1631,10 +1681,10 @@ uuid = "52e1d378-f018-4a11-a4be-720524705ac7"
 version = "0.3.2"
 
 [[deps.OpenEXR_jll]]
-deps = ["Artifacts", "Imath_jll", "JLLWrappers", "Libdl", "Pkg", "Zlib_jll"]
-git-tree-sha1 = "923319661e9a22712f24596ce81c54fc0366f304"
+deps = ["Artifacts", "Imath_jll", "JLLWrappers", "Libdl", "Zlib_jll"]
+git-tree-sha1 = "a4ca623df1ae99d09bc9868b008262d0c0ac1e4f"
 uuid = "18a262bb-aa17-5467-a713-aee519bc75cb"
-version = "3.1.1+0"
+version = "3.1.4+0"
 
 [[deps.OpenLibm_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -1660,9 +1710,9 @@ uuid = "91d4177d-7536-5919-b921-800302f37372"
 version = "1.3.2+0"
 
 [[deps.OrderedCollections]]
-git-tree-sha1 = "85f8e6578bf1f9ee0d11e7bb1b1456435479d47c"
+git-tree-sha1 = "d321bf2de576bf25ec4d3e4360faca399afca282"
 uuid = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
-version = "1.4.1"
+version = "1.6.0"
 
 [[deps.PCRE2_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -1689,9 +1739,9 @@ version = "0.5.0"
 
 [[deps.PaddedViews]]
 deps = ["OffsetArrays"]
-git-tree-sha1 = "03a7a85b76381a3d04c7a1656039197e70eda03d"
+git-tree-sha1 = "0fac6313486baae819364c52b4f483450a9d793f"
 uuid = "5432bcbf-9aad-5242-b902-cca2824c8663"
-version = "0.5.11"
+version = "0.5.12"
 
 [[deps.Pango_jll]]
 deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "FriBidi_jll", "Glib_jll", "HarfBuzz_jll", "JLLWrappers", "Libdl", "Pkg"]
@@ -1753,9 +1803,9 @@ version = "1.3.0"
 
 [[deps.PrettyTables]]
 deps = ["Crayons", "Formatting", "LaTeXStrings", "Markdown", "Reexport", "StringManipulation", "Tables"]
-git-tree-sha1 = "96f6db03ab535bdb901300f88335257b0018689d"
+git-tree-sha1 = "548793c7859e28ef026dba514752275ee871169f"
 uuid = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
-version = "2.2.2"
+version = "2.2.3"
 
 [[deps.Printf]]
 deps = ["Unicode"]
@@ -1791,9 +1841,9 @@ version = "8.0.1001+0"
 
 [[deps.QuadGK]]
 deps = ["DataStructures", "LinearAlgebra"]
-git-tree-sha1 = "786efa36b7eff813723c4849c90456609cf06661"
+git-tree-sha1 = "6ec7ac8412e83d57e313393220879ede1740f9ee"
 uuid = "1fd47b50-473d-5c70-9696-f719f8f3bcdc"
-version = "2.8.1"
+version = "2.8.2"
 
 [[deps.REPL]]
 deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
@@ -1958,9 +2008,9 @@ version = "0.1.1"
 
 [[deps.StaticArrays]]
 deps = ["LinearAlgebra", "Random", "StaticArraysCore", "Statistics"]
-git-tree-sha1 = "2d7d9e1ddadc8407ffd460e24218e37ef52dd9a3"
+git-tree-sha1 = "63e84b7fdf5021026d0f17f76af7c57772313d99"
 uuid = "90137ffa-7385-5640-81b9-e52037218182"
-version = "1.5.16"
+version = "1.5.21"
 
 [[deps.StaticArraysCore]]
 git-tree-sha1 = "6b7ba252635a5eff6a0b0664a41ee140a1c9e72a"
@@ -1973,9 +2023,9 @@ uuid = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [[deps.StatsAPI]]
 deps = ["LinearAlgebra"]
-git-tree-sha1 = "f9af7f195fb13589dd2e2d57fdb401717d2eb1f6"
+git-tree-sha1 = "45a7769a04a3cf80da1c1c7c60caf932e6f4c9f7"
 uuid = "82ae8749-77ed-4fe6-ae5f-f523153014b0"
-version = "1.5.0"
+version = "1.6.0"
 
 [[deps.StatsBase]]
 deps = ["DataAPI", "DataStructures", "LinearAlgebra", "LogExpFunctions", "Missings", "Printf", "Random", "SortingAlgorithms", "SparseArrays", "Statistics", "StatsAPI"]
@@ -2002,9 +2052,9 @@ version = "0.3.0"
 
 [[deps.StructArrays]]
 deps = ["Adapt", "DataAPI", "GPUArraysCore", "StaticArraysCore", "Tables"]
-git-tree-sha1 = "b03a3b745aa49b566f128977a7dd1be8711c5e71"
+git-tree-sha1 = "521a0e828e98bb69042fec1809c1b5a680eb7389"
 uuid = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
-version = "0.6.14"
+version = "0.6.15"
 
 [[deps.StructTypes]]
 deps = ["Dates", "UUIDs"]
@@ -2029,9 +2079,9 @@ version = "1.0.1"
 
 [[deps.Tables]]
 deps = ["DataAPI", "DataValueInterfaces", "IteratorInterfaceExtensions", "LinearAlgebra", "OrderedCollections", "TableTraits", "Test"]
-git-tree-sha1 = "c79322d36826aa2f4fd8ecfa96ddb47b174ac78d"
+git-tree-sha1 = "1544b926975372da01227b382066ab70e574a3ec"
 uuid = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
-version = "1.10.0"
+version = "1.10.1"
 
 [[deps.Tar]]
 deps = ["ArgTools", "SHA"]
@@ -2050,9 +2100,9 @@ uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [[deps.TiffImages]]
 deps = ["ColorTypes", "DataStructures", "DocStringExtensions", "FileIO", "FixedPointNumbers", "IndirectArrays", "Inflate", "Mmap", "OffsetArrays", "PkgVersion", "ProgressMeter", "UUIDs"]
-git-tree-sha1 = "7e6b0e3e571be0b4dd4d2a9a3a83b65c04351ccc"
+git-tree-sha1 = "8621f5c499a8aa4aa970b1ae381aae0ef1576966"
 uuid = "731e570b-9d59-4bfa-96dc-6df516fadf69"
-version = "0.6.3"
+version = "0.6.4"
 
 [[deps.TimeZones]]
 deps = ["Dates", "Downloads", "InlineStrings", "LazyArtifacts", "Mocking", "Printf", "RecipesBase", "Scratch", "Unicode"]
@@ -2062,14 +2112,14 @@ version = "1.9.1"
 
 [[deps.TranscodingStreams]]
 deps = ["Random", "Test"]
-git-tree-sha1 = "94f38103c984f89cf77c402f2a68dbd870f8165f"
+git-tree-sha1 = "0b829474fed270a4b0ab07117dce9b9a2fa7581a"
 uuid = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
-version = "0.9.11"
+version = "0.9.12"
 
 [[deps.Tricks]]
-git-tree-sha1 = "6bac775f2d42a611cdfcd1fb217ee719630c4175"
+git-tree-sha1 = "aadb748be58b492045b4f56166b5188aa63ce549"
 uuid = "410a4b4d-49e4-4fbc-ab6d-cb71b17b3775"
-version = "0.1.6"
+version = "0.1.7"
 
 [[deps.TriplotBase]]
 git-tree-sha1 = "4d4ed7f294cda19382ff7de4c137d24d16adc89b"
@@ -2183,9 +2233,9 @@ version = "1.2.12+3"
 
 [[deps.Zstd_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "c6edfe154ad7b313c01aceca188c05c835c67360"
+git-tree-sha1 = "49ce682769cd5de6c72dcf1b94ed7790cd08974c"
 uuid = "3161d3a3-bdf6-5164-811a-617609db77b4"
-version = "1.5.4+0"
+version = "1.5.5+0"
 
 [[deps.isoband_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -2266,8 +2316,8 @@ version = "3.5.0+0"
 # ╠═b18f8835-dfb2-491b-b4f6-1cf885abdddd
 # ╠═0a9e79af-b016-4bbc-9070-f1c75b48571c
 # ╟─df1d6cab-072b-4844-9463-6556f1fd6544
-# ╠═ff9ef6ac-b930-4931-9873-4aa151f82678
-# ╠═e0a10983-47fd-47db-8306-0870345d8cef
+# ╟─ff9ef6ac-b930-4931-9873-4aa151f82678
+# ╟─e0a10983-47fd-47db-8306-0870345d8cef
 # ╟─d3b864ee-7991-401f-b1f7-7f692f605631
 # ╠═5cb6d10a-7e5f-4728-8b91-336b9f0fa549
 # ╠═b9d79b81-fe19-415b-91d4-560b7ce8359d
@@ -2297,6 +2347,7 @@ version = "3.5.0+0"
 # ╠═f2dc2797-c0f4-4f8e-8541-c71aa1a1358c
 # ╟─cb471c5c-6bdf-422b-a9f4-3fc5b46df1d2
 # ╠═ceb8ef36-b417-4202-a1f3-a7a3c985434a
+# ╠═e1f8c162-4c29-4208-869f-af3e11ac3290
 # ╠═9b131dad-38fb-433d-ac8a-7c3ade486c44
 # ╠═230e2415-2c21-4873-9448-3c36ab206e0e
 # ╠═f244d8c3-6e86-4532-b5d8-2792e6b09503
