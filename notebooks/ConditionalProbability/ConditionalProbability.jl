@@ -91,7 +91,7 @@ $$\begin{align*}
 
 # ╔═╡ 24acb329-3c46-43e3-9454-50f8d17cbb26
 md"""
-## Grouped Results
+## Group results
 """
 
 # ╔═╡ d65b0841-cf27-4dea-85e8-91ab459ccac8
@@ -102,38 +102,38 @@ let
 	fig = Figure(resolution = (2000, 1500))
 	for (idx, key) in enumerate(keys(gdf))
 		ax = Axis(fig[key[1], key[2]][key[3], key[4]], xticks = 0:0.25:1,
-			# limits = ((-0.1, 1.1), (-0.1, 1.1)),
+			limits = ((-0.1, 1.1), nothing),
 			xgridvisible = false, ygridvisible = false,
 			title = string(idx, ": ", NamedTuple(key))
 		)
-		hist!(ax, gdf[key].rate, bins = 25, normalization = :none)
-		(key[2] > 0 || key[4] > 0) && hideydecorations!(ax)
-		(key[1] < 1 || key[3] < 1) && hidexdecorations!(ax)
+		hist!(ax, gdf[key].rate, bins = 15, normalization = :none)
+		# (key[2] > 0 || key[4] > 0) && hideydecorations!(ax)
+		# (key[1] < 1 || key[3] < 1) && hidexdecorations!(ax)
 		hidespines!(ax, :r, :t)
 		
 	end
-	Label(fig[-1, 0], tellwidth = false, text = L"A^+C^-= 0", fontsize = 30, color = :red)
-	Label(fig[-1, 0][3, 0], tellwidth = false, tellheight = false, text = L"A^-C^-= 0", fontsize = 20, color = :red)
-	Label(fig[-1, 0][3, 1], tellwidth = false, tellheight = false, text = L"A^-C^- \neq 0", fontsize = 20, color = :red)
+	Label(fig[-1, 0], tellwidth = false, text = L"A \neg C = 0", fontsize = 30, color = :red)
+	Label(fig[-1, 0][3, 0], tellwidth = false, tellheight = false, text = L"\neg A \neg C = 0", fontsize = 20, color = :red)
+	Label(fig[-1, 0][3, 1], tellwidth = false, tellheight = false, text = L"\neg A \neg C \neq 0", fontsize = 20, color = :red)
 	
-	Label(fig[-1, 1], tellwidth = false, text = L"A^+C^- \neq 0", fontsize = 30, color = :blue)
-	Label(fig[-1, 1][3, 0], tellwidth = false, tellheight = false, text = L"A^-C^-= 0", fontsize = 20, color = :blue)
-	Label(fig[-1, 1][3, 1], tellwidth = false, tellheight = false, text = L"A^-C^- \neq 0", fontsize = 20, color = :blue)
+	Label(fig[-1, 1], tellwidth = false, text = L"A \neg C \neq 0", fontsize = 30, color = :blue)
+	Label(fig[-1, 1][3, 0], tellwidth = false, tellheight = false, text = L"\neg A \neg C = 0", fontsize = 20, color = :blue)
+	Label(fig[-1, 1][3, 1], tellwidth = false, tellheight = false, text = L"\neg A \neg C \neq 0", fontsize = 20, color = :blue)
 	
-	Label(fig[0, end + 1], tellheight = false, text = L"A^+C^+= 0", fontsize = 30, color = :green, rotation = -pi/2)
-	Label(fig[0, end][0, -1], tellwidth = false, tellheight = false, text = L"A^-C^+= 0", fontsize = 20, color = :green, rotation = -pi/2)
-	Label(fig[0, end][1, -1], tellwidth = false, tellheight = false, text = L"A^-C^+ \neq 0", fontsize = 20, color = :green, rotation = -pi/2)
+	Label(fig[0, end + 1], tellheight = false, text = L"AC = 0", fontsize = 30, color = :green, rotation = -pi/2)
+	Label(fig[0, end][0, -1], tellwidth = false, tellheight = false, text = L"\neg AC = 0", fontsize = 20, color = :green, rotation = -pi/2)
+	Label(fig[0, end][1, -1], tellwidth = false, tellheight = false, text = L"\neg AC \neq 0", fontsize = 20, color = :green, rotation = -pi/2)
 
-	Label(fig[1, end], tellwidth = false, tellheight = false, text = L"A^+C^+ \neq 0", fontsize = 30, color = :purple, rotation = -pi/2)
-	Label(fig[1, end][0, -1], tellwidth = false, tellheight = false, text = L"A^-C^+= 0", fontsize = 20, color = :purple, rotation = -pi/2)
-	Label(fig[1, end][1, -1], tellwidth = false, tellheight = false, text = L"A^-C^+ \neq 0", fontsize = 20, color = :purple, rotation = -pi/2)
+	Label(fig[1, end], tellwidth = false, tellheight = false, text = L"AC \neq 0", fontsize = 30, color = :purple, rotation = -pi/2)
+	Label(fig[1, end][0, -1], tellwidth = false, tellheight = false, text = L"\neg AC = 0", fontsize = 20, color = :purple, rotation = -pi/2)
+	Label(fig[1, end][1, -1], tellwidth = false, tellheight = false, text = L"\neg AC \neq 0", fontsize = 20, color = :purple, rotation = -pi/2)
 
 	Box(fig[:, 0], color = :transparent, strokewidth = 4, strokecolor = :red)
 	Box(fig[:, 1], color = :transparent, strokewidth = 4, strokecolor = :blue)
 	Box(fig[0, :], color = :transparent, strokewidth = 4, strokecolor = :green)
 	Box(fig[1, :], color = :transparent, strokewidth = 4, strokecolor = :purple)
 
-	Label(fig[:, -1], text = "Frequency", rotation = pi/2, fontsize = 40)
+	Label(fig[:, -1],    text = "Frequency", rotation = pi/2, fontsize = 40)
 	Label(fig[end+1, :], text = "Proportion", fontsize = 40)
 
 	save("ConditionalProbability.png", fig, px_per_unit = 10)
@@ -1929,9 +1929,9 @@ version = "3.5.0+0"
 # ╟─77fbd47a-2427-4d91-a971-b6c2185d6532
 # ╟─24acb329-3c46-43e3-9454-50f8d17cbb26
 # ╠═d65b0841-cf27-4dea-85e8-91ab459ccac8
-# ╠═1c7c7ada-49a4-4374-b95f-8b90d3b0c002
+# ╟─1c7c7ada-49a4-4374-b95f-8b90d3b0c002
 # ╠═a464cefb-3914-49e4-b0eb-2febd33eeb04
-# ╠═d897ff6a-d7bd-44e8-b721-82274b5b0379
+# ╟─d897ff6a-d7bd-44e8-b721-82274b5b0379
 # ╠═80f538fa-38b2-4a01-9014-20ca2601690f
 # ╠═72cf04d2-292f-496f-8728-bba231128ac7
 # ╟─80cd3965-91dd-406c-b2b9-3bea1271441b
