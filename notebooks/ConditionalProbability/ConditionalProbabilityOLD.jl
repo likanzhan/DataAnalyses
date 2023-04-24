@@ -19,9 +19,6 @@ using MixedModels
 # ╔═╡ bdfb6996-ac0e-4c27-90ce-e67353f1b1d7
 using CategoricalArrays
 
-# ╔═╡ 34f3a6ab-f820-4391-825e-732f03cde1c3
-using Makie.Colors
-
 # ╔═╡ 4eeecbe3-2126-4f90-97f7-7334630a213e
 md"""
 ## Load data
@@ -38,24 +35,19 @@ df = mapreduce(vcat, csv_list) do csv
 	dt = CSV.read(csv, DataFrame, stringtype = String,
 		drop = (i, name) -> startswith(string(name), "Column")
 	)
-	rename!(dt, :"Estimation.text" => "rate")
 	dropmissing!(dt, :Image)
-	# subset!(dt, :MI => ByRow(!=("None"))) # All zero
+	rename!(dt, :"Estimation.text" => "rate")
 	dropmissing!(dt, :rate)              # 1-10; Total 179
 	subset!(dt, :rate => ByRow(<=(100))) # > 100 Total 29
 	transform!(dt, :rate => ByRow(x -> x / 100) => :rate)
-	transform!(dt,[:A1C1, :A1C0, :A0C1, :A0C0] 
-		.=> ByRow(x -> x == 0 ? 0 : 1) 
-		.=> [:A1C1C, :A1C0C, :A0C1C, :A0C0C]
-	)
-	select!(dt, ["participant", "rate", "A1C1", "A1C1C", "A1C0", "A1C0C", "A0C1", "A0C1C", "A0C0", "A0C0C", "A1", "C1", "Total", "MI", "C0GvA1", "C1GvA1", "C1GvA0", "dltP", "dltPp"])
-	
+	subset!(dt, :MI => ByRow(!=("None")))
+	select!(dt, ["participant", "rate", "A1C1", "A1C0", "A0C1", "A0C0", "A1", "C1", "Total", "MI", "C0GvA1", "C1GvA1", "C1GvA0", "dltP", "dltPp"])
 	return dt
 end
 
 # ╔═╡ d63d50b1-4346-458c-96f8-9282b7ffa858
 md"""
-## Definitions
+## Definitations
 """
 
 # ╔═╡ 77fbd47a-2427-4d91-a971-b6c2185d6532
@@ -89,203 +81,386 @@ $$\begin{align*}
 
 
 
-# ╔═╡ 24acb329-3c46-43e3-9454-50f8d17cbb26
+# ╔═╡ 3c8e94c0-623c-405c-b5b7-a90dc2ed0924
 md"""
-## Grouped Results
+## $\Delta P^+$ Not defined
 """
 
-# ╔═╡ d65b0841-cf27-4dea-85e8-91ab459ccac8
-gdf = groupby(df, [:A1C1C, :A1C0C, :A0C1C, :A0C0C], sort = true);
+# ╔═╡ 25951402-401e-4d99-bf4f-a012449336d0
+md"""
+### A0C0 = 0
 
-# ╔═╡ 1c7c7ada-49a4-4374-b95f-8b90d3b0c002
+When $P(\neg A\neg C) = 0$, we have:
+
+(1) $P(C|\neg A) = 1$,
+
+(2) $\Delta P \leq 0$,
+
+(3) $\Delta P^+$ is not defined. 
+"""
+
+# ╔═╡ 40d5ba2d-05a9-43c7-9ee7-ac0ffed45a94
+NotName = let
+	df1 = subset(df, :dltPp => ByRow(==("#NAME?")) )
+	transform(df1,
+		[:MI, :C0GvA1, :C1GvA1, :C1GvA0, :dltP] .=> ByRow(x -> parse(Float64, x)),
+		renamecols = false
+	)
+end
+
+# ╔═╡ 9c882d7f-d1f7-4385-a13a-0cd8165e7737
+freqtable(NotName, :C1GvA1, :rate)
+
+# ╔═╡ c20e7ffd-af1f-444a-ad31-29afb1f75895
+fm1 = fit(MixedModel, @formula(rate ~ C1GvA1 + (1 | participant)), NotName)
+
+# ╔═╡ bb773cf3-86ae-4200-9eba-1da2aeb8b2c9
+hist(NotName.rate)
+
+# ╔═╡ d6902da8-d069-49c4-969e-f61f78c4079f
 let
-	fig = Figure(resolution = (2000, 1500))
-	for (idx, key) in enumerate(keys(gdf))
-		ax = Axis(fig[key[1], key[2]][key[3], key[4]], xticks = 0:0.25:1,
-			# limits = ((-0.1, 1.1), (-0.1, 1.1)),
-			xgridvisible = false, ygridvisible = false,
-			title = string(idx, ": ", NamedTuple(key))
-		)
-		hist!(ax, gdf[key].rate, bins = 25, normalization = :none)
-		(key[2] > 0 || key[4] > 0) && hideydecorations!(ax)
-		(key[1] < 1 || key[3] < 1) && hidexdecorations!(ax)
-		hidespines!(ax, :r, :t)
-		
-	end
-	Label(fig[-1, 0], tellwidth = false, text = L"A^+C^-= 0", fontsize = 30, color = :red)
-	Label(fig[-1, 0][3, 0], tellwidth = false, tellheight = false, text = L"A^-C^-= 0", fontsize = 20, color = :red)
-	Label(fig[-1, 0][3, 1], tellwidth = false, tellheight = false, text = L"A^-C^- \neq 0", fontsize = 20, color = :red)
-	
-	Label(fig[-1, 1], tellwidth = false, text = L"A^+C^- \neq 0", fontsize = 30, color = :blue)
-	Label(fig[-1, 1][3, 0], tellwidth = false, tellheight = false, text = L"A^-C^-= 0", fontsize = 20, color = :blue)
-	Label(fig[-1, 1][3, 1], tellwidth = false, tellheight = false, text = L"A^-C^- \neq 0", fontsize = 20, color = :blue)
-	
-	Label(fig[0, end + 1], tellheight = false, text = L"A^+C^+= 0", fontsize = 30, color = :green, rotation = -pi/2)
-	Label(fig[0, end][0, -1], tellwidth = false, tellheight = false, text = L"A^-C^+= 0", fontsize = 20, color = :green, rotation = -pi/2)
-	Label(fig[0, end][1, -1], tellwidth = false, tellheight = false, text = L"A^-C^+ \neq 0", fontsize = 20, color = :green, rotation = -pi/2)
-
-	Label(fig[1, end], tellwidth = false, tellheight = false, text = L"A^+C^+ \neq 0", fontsize = 30, color = :purple, rotation = -pi/2)
-	Label(fig[1, end][0, -1], tellwidth = false, tellheight = false, text = L"A^-C^+= 0", fontsize = 20, color = :purple, rotation = -pi/2)
-	Label(fig[1, end][1, -1], tellwidth = false, tellheight = false, text = L"A^-C^+ \neq 0", fontsize = 20, color = :purple, rotation = -pi/2)
-
-	Box(fig[:, 0], color = :transparent, strokewidth = 4, strokecolor = :red)
-	Box(fig[:, 1], color = :transparent, strokewidth = 4, strokecolor = :blue)
-	Box(fig[0, :], color = :transparent, strokewidth = 4, strokecolor = :green)
-	Box(fig[1, :], color = :transparent, strokewidth = 4, strokecolor = :purple)
-
-	Label(fig[:, -1], text = "Frequency", rotation = pi/2, fontsize = 40)
-	Label(fig[end+1, :], text = "Proportion", fontsize = 40)
-
-	save("ConditionalProbability.png", fig, px_per_unit = 10)
-
+	fig = Figure()
+	ax = Axis(fig[1, 1], 
+		xlabel = L"P(C|A)", ylabel = L"P (\text{if A, then C})")
+	scatter!(ax, NotName.C1GvA1, NotName.rate, color = (:blue, 0.1))
+	ablines!(ax, [0], [1], color = :green, 
+		label = L"P(C|A) = P (\text{if A, then C})")
+	ablines!(ax, coef(fm1)..., color = :red, 
+		label = L"\text{Actual Results}")
+	axislegend(position = :lt)
 	fig
 end
 
-# ╔═╡ a464cefb-3914-49e4-b0eb-2febd33eeb04
-GroupInfo(i) = [
-	NamedTuple(keys(gdf)[i]); 
-	"MI:     $(mapreduce(x -> string(x, ", "), *, unique(gdf[i].MI)))"; 
-	"C1GvA1: $(mapreduce(x -> string(x, ", "), *, unique(gdf[i].C1GvA1)))"; 
-	"dltP:   $(mapreduce(x -> string(x, ", "), *, unique(gdf[i].dltP)))"; 
-	"dltPp:  $(mapreduce(x -> string(x, ", "), *, unique(gdf[i].dltPp)))"
-]
-
-# ╔═╡ d897ff6a-d7bd-44e8-b721-82274b5b0379
+# ╔═╡ ee1a8b18-c49f-4a2e-9ee9-5b7f6a628f12
 md"""
-## Group 9 vs 10
+### A1C1 = 0, A1C0 = 0
+When $P(AC) = 0$ and  $P(A\neg C) = 0$, we have:
+
+(1) $P(A) = 0$.
+
+(2) $P(C|A)$, $\Delta P$, and $\Delta P^+$ not defined.
+
+(3) $MI = 1$
 """
 
-# ╔═╡ 80f538fa-38b2-4a01-9014-20ca2601690f
-[GroupInfo(10) GroupInfo(9)] 
+# ╔═╡ d3d5786b-e15d-45f8-9f80-4ec3dbb7c5a7
+NNN = let
+	dt = subset(df, :dltPp => ByRow(==("None")) )
+	subset!(dt, :dltP   => ByRow(==("None")))
+	subset!(dt, :C1GvA1 => ByRow(==("None")))
+	transform(dt,
+		[:MI, :C1GvA0] .=> ByRow(x -> parse(Float64, x)), renamecols = false
+	)
+end;
 
-# ╔═╡ 72cf04d2-292f-496f-8728-bba231128ac7
-fm0910 = let
-	dt = reduce(vcat, gdf[[9, 10]])
-	fit(MixedModel, @formula(rate ~ A0C0C + (1 | participant)), dt)
-end
+# ╔═╡ 7d913d6e-0e5b-45cd-881a-b209b4be9dc5
+freqtable(NNN, :C1GvA0, :rate)
 
-# ╔═╡ 80cd3965-91dd-406c-b2b9-3bea1271441b
+# ╔═╡ 22775e11-0c75-4a40-a378-f18b3266213b
+hist(NNN.rate)
+
+# ╔═╡ 5bfa0937-680e-4dc7-a626-731ba7bded43
 md"""
-## Group 10 vs 11
+### A0C1 = 0, A0C0 = 0
 """
 
-# ╔═╡ 40b2e15e-8dba-4906-9f41-3d88a5a1df16
-[GroupInfo(10) GroupInfo(11)]
-
-# ╔═╡ f9024188-2856-4fcd-b7ee-5992f3906a13
-fm1011 = let
-	dt = reduce(vcat, gdf[[10, 11]])
-	fit(MixedModel, @formula(rate ~ A0C0C + (1 | participant)), dt)
+# ╔═╡ 7b150c61-632f-488f-be1b-34a6c1a5229f
+NNY = let
+	dt = subset(df, :dltPp => ByRow(==("None")) )
+	subset!(dt, :dltP   => ByRow(==("None")))
+	subset!(dt, :C1GvA1 => ByRow(!=("None")))
+	transform(dt,
+		[:MI, :C0GvA1, :C1GvA1] .=> ByRow(x -> parse(Float64, x)), renamecols = false
+	)
 end
 
-# ╔═╡ 41d16615-3884-4f8b-ae7a-03ae09c054fd
+# ╔═╡ 654b3b6a-dcee-48a9-832c-94b9e1062d7a
+fm3 = fit(MixedModel, @formula(rate ~ C1GvA1 + (1 | participant)), NNY)
+
+# ╔═╡ 75f18bab-818d-47ff-be2f-ea63e8a4fb13
+hist(NNY.rate)
+
+# ╔═╡ 84591c9b-1388-47f8-875a-7f2736024fb4
+let
+	fig = Figure()
+	ax = Axis(fig[1, 1], 
+		xlabel = L"P(C|A)", ylabel = L"P (\text{if A, then C})")
+	scatter!(ax, NNY.C1GvA1, NNY.rate, color = (:blue, 0.1))
+	ablines!(ax, [0], [1], color = :green, 
+		label = L"P(C|A) = P (\text{if A, then C})")
+	ablines!(ax, coef(fm3)..., color = :red, 
+		label = L"\text{Actual Results}")
+	axislegend(position = :lt)
+	fig
+end
+
+# ╔═╡ a0337291-608e-4436-9bd5-8a4ecb0909f0
 md"""
-## Group 11 vs 12
+### A1C0 = 0, A0C0 = 0
 """
 
-# ╔═╡ 07baa639-01c0-4957-8631-afe8b91d3cbb
-[GroupInfo(11) GroupInfo(12)]
-
-# ╔═╡ bd5c248e-411e-4191-8113-c4872ec8dfc3
-fm1112 = let
-	dt = reduce(vcat, gdf[[11, 12]])
-	fit(MixedModel, @formula(rate ~ A0C0C + (1 | participant)), dt)
+# ╔═╡ 38d2ce74-fb81-461e-9fe4-c740966c478f
+NYY = let
+	dt = subset(df, :dltPp => ByRow(==("None")) )
+	subset!(dt, :dltP      => ByRow(!=("None")))
+	transform!(dt,
+		[:MI, :C0GvA1, :C1GvA1, :C1GvA0, :dltP] .=> ByRow(x -> parse(Float64, x)), renamecols = false
+	)
+	transform(dt,
+			:A1C1 => ByRow(x -> x / 36) => :PA1C1,
+			:A0C1 => ByRow(x -> x / 36) => :PA0C1
+	)
 end
 
-# ╔═╡ 4f9865ab-f94e-4cc0-b430-c4e895c6de9e
-md"""
-## Group 12 vs 13
-"""
+# ╔═╡ 6db47648-0b81-4810-a352-c2e11aad2e23
+hist(NYY.rate)
 
-# ╔═╡ e2df2124-d4c2-49e7-9701-42cd35707b08
-[GroupInfo(12) GroupInfo(13)]
+# ╔═╡ 6bafc20a-d222-4772-992f-794eb6e60831
+NYYF = subset(NYY, :rate => ByRow(!=(1)))
 
-# ╔═╡ a4fd3cae-745a-4a06-a449-698330e44b7c
-fm1213 = let
-	dt = reduce(vcat, gdf[[12, 13]])
-	fit(MixedModel, @formula(rate ~ C1GvA1 + (1 | participant)), dt)
-end
+# ╔═╡ b5dff94c-6277-42f7-af7b-bf31b8b25241
+hist(NYYF.rate)
 
-# ╔═╡ 6c2a486e-977d-4dbd-a5c4-d32ccea96a42
-md"""
-## Group 13 vs 14
-"""
+# ╔═╡ a3fb474c-3844-45d0-8cae-8147706ace93
+fm4 = fit(MixedModel, @formula(rate ~ PA1C1 + PA0C1 + (1 | participant)), NYYF)
 
-# ╔═╡ e0e7f87d-75cc-4870-b7a4-862462f9a975
-[GroupInfo(13) GroupInfo(14)]
-
-# ╔═╡ 8b029f05-468b-418b-a30e-e2b7a575f286
-fm1314 = let
-	dt = reduce(vcat, gdf[[13, 14]])
-	fit(MixedModel, @formula(rate ~ A0C0C + (1 | participant)), dt)
-end
-
-# ╔═╡ 08454732-1d56-49bd-acce-88668303e879
-md"""
-## Group 14 vs 15
-"""
-
-# ╔═╡ 8063a809-2c50-4294-9eb4-ce724eb751fe
-[GroupInfo(14) GroupInfo(15)]
-
-# ╔═╡ d073c481-7e7c-4e52-8687-645d8f18d56d
-fm1415 = let
-	dt = reduce(vcat, gdf[[14, 15]])
-	fit(MixedModel, @formula(rate ~ A0C0C + C1GvA1 + (1 | participant)), dt)
-end
-
-# ╔═╡ 49153f73-5a1a-44fa-8fea-8f49c1f579a3
+# ╔═╡ 34b45c6a-600d-46e2-9630-685a434755dd
 let
 	fig = Figure(resolution = (1000, 500))
-	ax1 = Axis(fig[1, 1])
-	ax2 = Axis(fig[1, 2])
+	ax1 = Axis(fig[1, 1], 
+		xlabel = L"A1C1/36", ylabel = L"P (\text{if A, then C})")
+	ax2 = Axis(fig[1, 2], 
+		xlabel = L"A0C1/36", ylabel = L"P (\text{if A, then C})")
+	scatter!(ax1, NYYF.A1C1 ./ 36, NYYF.rate, color = (:blue, 0.1))
+	ablines!(ax1, coef(fm4)[1], coef(fm4)[2], color = :red, 
+		label = L"\text{Actual Relation}")
+	axislegend(ax1, position = :lt)
 
-	f14 = fit(MixedModel, @formula(rate ~ C1GvA1 + (1 | participant)), gdf[14])
-	f15 = fit(MixedModel, @formula(rate ~ C1GvA1 + (1 | participant)), gdf[15])
-	scatter!(ax1, parse.(Float64, gdf[14].C1GvA1), gdf[14].rate)
-	ablines!(ax1, coef(f14)..., color = :red)
-	scatter!(ax2, parse.(Float64, gdf[15].C1GvA1), gdf[15].rate)
-	ablines!(ax2, coef(f15)..., color = :red)
+	scatter!(ax2, NYYF.A0C1 ./ 36, NYYF.rate, color = (:blue, 0.1))
+	ablines!(ax2, coef(fm4)[1], coef(fm4)[3], color = :red, 
+		label = L"\text{Actual Relation}")
+	axislegend(ax2, position = :lt)
 	fig
 end
 
-# ╔═╡ d342ec07-f6d6-4221-98fb-64dfa0cf72cb
+# ╔═╡ 8f4a59c8-ebde-48d0-8012-ae4376004151
 md"""
-## Group 15 vs 16
+### All ≠ 0
 """
 
-# ╔═╡ 2aebe818-444e-4aed-a5ee-5684e18bf615
-[GroupInfo(15) GroupInfo(16)]
-
-# ╔═╡ 5c5b6f70-907e-44cd-b9cf-c52f636ac7cd
-fm1516 = let
-	dt = reduce(vcat, gdf[[15, 16]])
-	transform!(dt,
-		:C1GvA1 => ByRow(x -> parse(Float64, x)) => :C1GvA1,
-		[:dltP, :A0C0C] => ByRow((x, y) -> y == 0 ? "N1" : parse(Float64, x) > 0 ? "P2" : "N2") => :dltPC
+# ╔═╡ b86ae01e-0535-40da-be81-cf2931488bf0
+YYY = let
+	dt = subset(df, :dltPp => ByRow(x -> x ∉ ["#NAME?", "None"]))
+	transform(dt,
+		[:MI, :C0GvA1, :C1GvA1, :C1GvA0, :dltP, :dltPp] .=> ByRow(x -> parse(Float64, x)), renamecols = false
 	)
-	fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant)), dt)
 end
 
-# ╔═╡ fe67d15e-9821-42ce-a7c3-4ae406190f22
+# ╔═╡ eb8be767-b022-4258-b867-5cc3a2bbe569
 md"""
-## Group 16
+## Experiment 1
 """
 
-# ╔═╡ 5c7a864a-3a47-420e-8ffe-6083b93024f4
-GroupInfo(16)
+# ╔═╡ 8eefbf0a-a8d2-4640-b379-42e38c87749e
+IsZero = subset(YYY, :A1C0 => ByRow(==(0)))
 
-# ╔═╡ 3e2f1e70-b217-4db3-82b9-ea573984391b
-freqtable(gdf[16], :C1GvA1, :dltP)
+# ╔═╡ ccc2f3ee-82cf-4ed1-a393-082a38a1afe2
+freqtable(IsZero, :rate, :A1C1)
 
-# ╔═╡ 666e463b-6181-4d23-89e0-dc9b4473edee
-g16 = transform(gdf[16],
-	:C1GvA1 => ByRow(x -> parse(Float64, x)) => :C1GvA1, 
-	:dltP   => ByRow(x -> parse(Float64, x) > 0 ? "P" : "N") => :dltPC 
-);
+# ╔═╡ bc1e972f-c7f4-413c-9e53-a2461aabc87d
+hist(IsZero.rate)
 
-# ╔═╡ b9048afb-7d0c-4df6-9d9b-969f3a668bed
-fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant)), g16)
+# ╔═╡ a627e08d-f54d-4c6f-8029-dd92ecbe1cf5
+fit(MixedModel, @formula(rate ~ A1C1 + A0C1 + A0C0 + (1 | participant)), IsZero)
+
+# ╔═╡ 70e86820-2e87-41bf-86bb-fee89a0390f2
+IsZeroF = subset(IsZero, :rate => ByRow(!=(1)))
+
+# ╔═╡ 6ba3ed5a-2bd7-4fbd-a22a-65158cff75f6
+hist(IsZeroF.rate)
+
+# ╔═╡ 1959a507-c507-468d-a7ea-fd80f010b8d7
+fit(MixedModel, @formula(rate ~ A1C1 + A0C1 + A0C0 + (1 | participant)), IsZero)
+
+# ╔═╡ 1be633f9-db6e-4b71-b3a3-4647771d1506
+fm5 = fit(MixedModel, @formula(rate ~ dltP + (1 | participant)), IsZeroF)
+
+# ╔═╡ 02dd4ef1-e806-4274-899e-9cffa1813bac
+let
+	fig = Figure()
+	ax = Axis(fig[1, 1], 
+		xlabel = L"\Delta P", ylabel = L"P (\text{if A, then C})")
+	scatter!(ax, IsZeroF.dltP, IsZeroF.rate, color = (:blue, 0.1))
+	ablines!(ax, [0], [1], color = :green, 
+		label = L"P(C|A) = P (\text{if A, then C})")
+	ablines!(ax, coef(fm5)..., color = :red, 
+		label = L"\text{Actual Results}")
+	axislegend(position = :lt)
+	fig
+end
+
+# ╔═╡ 9c84155e-46f9-481d-98cc-ed03132881aa
+md"""
+### Effects of 𝐴+𝐶+?
+"""
+
+# ╔═╡ d8ffc7ec-a6cd-497f-b245-1d80ada67b4c
+gg = groupby(IsZeroF, [:A0C1, :A0C0])[end]
+
+# ╔═╡ d8934bda-597d-4961-b355-856ff0f5a0a4
+fmgg = fit(MixedModel, @formula(rate ~ A1C1 + (1 | participant)), gg)
+
+# ╔═╡ c987f5da-4ce7-489f-b0a3-fbbec306ff79
+let
+	fig = Figure()
+	ax = Axis(fig[1, 1], 
+		xlabel = L"\Delta P", ylabel = L"P (\text{if A, then C})")
+	scatter!(ax, gg.A1C1, gg.rate, color = (:blue, 0.1))
+	ablines!(ax, [0], [1], color = :green, 
+		label = L"P(C|A) = P (\text{if A, then C})")
+	ablines!(ax, coef(fmgg)..., color = :red, 
+		label = L"\text{Actual Results}")
+	axislegend(position = :lt)
+	fig
+end
+
+# ╔═╡ 9c5289b6-c1b8-44ca-875c-3377e003dbf1
+md"""
+### Effectes of 𝐴−𝐶−?
+"""
+
+# ╔═╡ 88845f52-db9e-4d22-ae15-34bfaadba2c9
+gg2 = groupby(IsZeroF, [:A1C1, :A0C1])[10]
+
+# ╔═╡ 61aa7bed-c4f3-44b8-a75b-ee43aa0a14bf
+fit(MixedModel, @formula(rate ~ dltP + (1 | participant)), gg2)
+
+# ╔═╡ 0330f9c2-8547-49fa-a30d-695c041dc491
+fmgg2 = fit(MixedModel, @formula(rate ~ A0C0 + (1 | participant)), gg2)
+
+# ╔═╡ 7dd816d0-4c12-47b6-a832-ce5b670b4371
+md"""
+### Effectes of 𝐴−𝐶+?
+"""
+
+# ╔═╡ 62f71cc7-6f4e-4e67-8c5d-afe5a02104d5
+gg3 = groupby(IsZeroF, [:A1C1, :A0C0])[end]
+
+# ╔═╡ d2a1b479-e163-43dd-9465-a19d2147c0da
+fit(MixedModel, @formula(rate ~ dltP + (1 | participant)), gg3)
+
+# ╔═╡ 054ae03b-77bb-42cb-ae0a-0dbdbc37f2b4
+fit(MixedModel, @formula(rate ~ A0C1 + (1 | participant)), gg3)
+
+# ╔═╡ 96be229a-a20a-46ba-81e9-dcaa4eb111c7
+md"""
+## Experiment 2
+"""
+
+# ╔═╡ 642cc003-0114-4b35-a0da-7560b031ef74
+YNYN = let
+	YN  = transform(YYY, :A1C0 => ByRow(x -> x == 0 ? 1 : 0) => :IzZero)
+	YNG = groupby(YN, :dltP, sort = true)
+	gg  = []
+	
+	for idx in eachindex(YNG)
+		CGR = DataFrame(YNG[idx])
+		if 0 ∈ CGR.A1C0 && (true in ([9, 18, 36] .∈ Ref(CGR.A1C0)))
+			# subset!(CGR, :rate => ByRow(!=(1)))
+			push!(gg, CGR)
+		end
+	end	
+	gg
+end
+
+# ╔═╡ 40238f25-ec18-4c65-8e63-ff3cb81559aa
+hist(reduce(vcat, YNYN).rate)
+
+# ╔═╡ 95016842-3ad1-4484-ad5a-5702c5da205c
+for idx in eachindex(YNYN)
+	fm = fit(MixedModel, @formula(rate ~ IzZero + (1 | participant)), YNYN[idx])
+	print("Delta P: ")
+	println(unique(YNYN[idx].dltP))
+	println(coeftable(fm))
+end
+
+# ╔═╡ d005bc12-0530-431c-be8e-4dba4374a790
+let
+	fig = Figure(resolution = (1000, 300))
+	for idx in eachindex(YNYN)
+	ax = Axis(fig[1, idx], 
+		xlabel = L"IzZero", ylabel = L"P (\text{if A, then C})")
+	scatter!(ax, YNYN[idx].IzZero, YNYN[idx].rate, color = (:blue, 0.05))
+	fm = fit(MixedModel, @formula(rate ~ IzZero + (1 | participant)), YNYN[idx])
+	ablines!(ax, coef(fm)..., color = :red, 
+		label = L"\text{Actual Results}")
+	idx > 1 && hideydecorations!(ax)
+	end
+
+	fig
+end
+
+# ╔═╡ 9f259be5-3366-4aa7-b6cf-52448bc63185
+let
+	dt = reduce(vcat, YNYN)
+	subset!(dt, :IzZero => ByRow(!=(0)))
+	fit(MixedModel, @formula(rate ~ dltP + (1 | participant)), dt)
+end
+
+# ╔═╡ f697315d-bce7-4a90-b51d-72b138ec6252
+md"""
+## Experiment 3
+"""
+
+# ╔═╡ fcc73b87-f5bf-4593-af81-9f99547b42c1
+NotZero = let
+	SYY = subset(YYY, :A1C0 => ByRow(!=(0)))
+	# subset!(SYY, :rate => ByRow(!=(0)))
+end
+
+# ╔═╡ ba4f913f-194c-4e0e-9806-c8fe224c3b9e
+hist(NotZero.rate)
+
+# ╔═╡ dd1d12ee-6376-4eb6-ae18-e0d874683349
+fit(MixedModel, @formula(rate ~ C1GvA1 + (1 | participant)), NotZero[NotZero.dltP .< 0, :])
+
+# ╔═╡ b7ce5a9d-ff17-46b9-a51e-7e64153abed1
+fit(MixedModel, @formula(rate ~ C1GvA1 + (1 | participant)), NotZero[NotZero.dltP .> 0, :])
+
+# ╔═╡ 1ee21770-2906-4768-9dfe-b1f9b3758451
+fit(MixedModel, @formula(rate ~ C1GvA1 + (1 | participant)), NotZero[NotZero.dltP .== 0, :])
+
+# ╔═╡ a8c90eea-f4be-457a-95db-edfdc3d188b1
+df1 = NotZero[nonunique(NotZero, [:A1C1, :dltP, :dltPp], keep = :noduplicates), :]
+
+# ╔═╡ f02b2a36-a526-4224-b64f-bcf642eae909
+df3 = groupby(df1, [:A1C1, :dltP, :dltPp], sort = true);
+
+# ╔═╡ c3721915-8147-40f4-9fb5-3b8de41b636b
+df3n = df3[14]
+
+# ╔═╡ 1bd1d4bb-b76a-4fdc-b3a5-677681c5d07e
+unique(df3n.A0C1)
+
+# ╔═╡ 53f5ae45-571c-4be8-8505-fae5b20a1838
+hist(df3n.rate)
+
+# ╔═╡ 8521be4c-6249-4e8d-bc9d-5758fc431d2d
+fdf3 = fit(MixedModel, @formula(rate ~ A0C1 + (1 | participant)), df3n)
+
+# ╔═╡ 1e53740e-35ba-4487-ab83-2fcc1672c307
+let
+	fig = Figure()
+	ax = Axis(fig[1, 1], 
+		xlabel = L"C1", ylabel = L"P (\text{if A, then C})")
+	scatter!(ax, df3n.C1, df3n.rate, color = (:blue, 0.1))
+	ablines!(ax, [0], [1], color = :green, 
+		label = L"P(C|A) = P (\text{if A, then C})")
+	ablines!(ax, coef(fdf3)..., color = :red, 
+		label = L"\text{Actual Results}")
+	axislegend(position = :lt)
+	fig
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -295,7 +470,6 @@ CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 CategoricalArrays = "324d7699-5711-5eae-9e2f-1d82baa6b597"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 FreqTables = "da1fdf0e-e0ff-5433-a45f-9bb5ff651cb1"
-Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 MixedModels = "ff71e718-51f3-5ec2-a782-8ffcbfa3c316"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 
@@ -305,7 +479,6 @@ CairoMakie = "~0.10.4"
 CategoricalArrays = "~0.10.7"
 DataFrames = "~1.5.0"
 FreqTables = "~0.4.5"
-Makie = "~0.19.4"
 MixedModels = "~4.12.0"
 PlutoUI = "~0.7.50"
 """
@@ -316,7 +489,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.5"
 manifest_format = "2.0"
-project_hash = "e2ce635845337b49abd0f34fb21ec99775a4e318"
+project_hash = "1c9d91fba8f1998426746526280be6459026ffb5"
 
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra"]
@@ -1921,42 +2094,76 @@ version = "3.5.0+0"
 # ╠═c30023d2-e008-11ed-053b-09c07713c3dd
 # ╠═8723f362-e441-40d8-9600-ad7daa2fa791
 # ╠═bdfb6996-ac0e-4c27-90ce-e67353f1b1d7
-# ╠═34f3a6ab-f820-4391-825e-732f03cde1c3
 # ╠═22e82469-98a5-47c4-b2fa-34a5e9bfd36b
 # ╠═a8b183c7-5139-4bbe-9abe-2598642934d5
 # ╠═9bbd237a-905a-45f9-9c7d-d9e5a6d363ad
 # ╟─d63d50b1-4346-458c-96f8-9282b7ffa858
 # ╟─77fbd47a-2427-4d91-a971-b6c2185d6532
-# ╟─24acb329-3c46-43e3-9454-50f8d17cbb26
-# ╠═d65b0841-cf27-4dea-85e8-91ab459ccac8
-# ╠═1c7c7ada-49a4-4374-b95f-8b90d3b0c002
-# ╠═a464cefb-3914-49e4-b0eb-2febd33eeb04
-# ╠═d897ff6a-d7bd-44e8-b721-82274b5b0379
-# ╠═80f538fa-38b2-4a01-9014-20ca2601690f
-# ╠═72cf04d2-292f-496f-8728-bba231128ac7
-# ╟─80cd3965-91dd-406c-b2b9-3bea1271441b
-# ╠═40b2e15e-8dba-4906-9f41-3d88a5a1df16
-# ╠═f9024188-2856-4fcd-b7ee-5992f3906a13
-# ╟─41d16615-3884-4f8b-ae7a-03ae09c054fd
-# ╠═07baa639-01c0-4957-8631-afe8b91d3cbb
-# ╠═bd5c248e-411e-4191-8113-c4872ec8dfc3
-# ╟─4f9865ab-f94e-4cc0-b430-c4e895c6de9e
-# ╠═e2df2124-d4c2-49e7-9701-42cd35707b08
-# ╠═a4fd3cae-745a-4a06-a449-698330e44b7c
-# ╟─6c2a486e-977d-4dbd-a5c4-d32ccea96a42
-# ╠═e0e7f87d-75cc-4870-b7a4-862462f9a975
-# ╠═8b029f05-468b-418b-a30e-e2b7a575f286
-# ╟─08454732-1d56-49bd-acce-88668303e879
-# ╠═8063a809-2c50-4294-9eb4-ce724eb751fe
-# ╠═d073c481-7e7c-4e52-8687-645d8f18d56d
-# ╟─49153f73-5a1a-44fa-8fea-8f49c1f579a3
-# ╟─d342ec07-f6d6-4221-98fb-64dfa0cf72cb
-# ╠═2aebe818-444e-4aed-a5ee-5684e18bf615
-# ╠═5c5b6f70-907e-44cd-b9cf-c52f636ac7cd
-# ╟─fe67d15e-9821-42ce-a7c3-4ae406190f22
-# ╠═5c7a864a-3a47-420e-8ffe-6083b93024f4
-# ╠═3e2f1e70-b217-4db3-82b9-ea573984391b
-# ╠═666e463b-6181-4d23-89e0-dc9b4473edee
-# ╠═b9048afb-7d0c-4df6-9d9b-969f3a668bed
+# ╟─3c8e94c0-623c-405c-b5b7-a90dc2ed0924
+# ╟─25951402-401e-4d99-bf4f-a012449336d0
+# ╠═40d5ba2d-05a9-43c7-9ee7-ac0ffed45a94
+# ╠═9c882d7f-d1f7-4385-a13a-0cd8165e7737
+# ╠═c20e7ffd-af1f-444a-ad31-29afb1f75895
+# ╠═bb773cf3-86ae-4200-9eba-1da2aeb8b2c9
+# ╠═d6902da8-d069-49c4-969e-f61f78c4079f
+# ╟─ee1a8b18-c49f-4a2e-9ee9-5b7f6a628f12
+# ╠═d3d5786b-e15d-45f8-9f80-4ec3dbb7c5a7
+# ╠═7d913d6e-0e5b-45cd-881a-b209b4be9dc5
+# ╠═22775e11-0c75-4a40-a378-f18b3266213b
+# ╟─5bfa0937-680e-4dc7-a626-731ba7bded43
+# ╠═7b150c61-632f-488f-be1b-34a6c1a5229f
+# ╠═654b3b6a-dcee-48a9-832c-94b9e1062d7a
+# ╠═75f18bab-818d-47ff-be2f-ea63e8a4fb13
+# ╠═84591c9b-1388-47f8-875a-7f2736024fb4
+# ╟─a0337291-608e-4436-9bd5-8a4ecb0909f0
+# ╠═38d2ce74-fb81-461e-9fe4-c740966c478f
+# ╠═6db47648-0b81-4810-a352-c2e11aad2e23
+# ╠═6bafc20a-d222-4772-992f-794eb6e60831
+# ╠═b5dff94c-6277-42f7-af7b-bf31b8b25241
+# ╠═a3fb474c-3844-45d0-8cae-8147706ace93
+# ╠═34b45c6a-600d-46e2-9630-685a434755dd
+# ╟─8f4a59c8-ebde-48d0-8012-ae4376004151
+# ╠═b86ae01e-0535-40da-be81-cf2931488bf0
+# ╟─eb8be767-b022-4258-b867-5cc3a2bbe569
+# ╠═8eefbf0a-a8d2-4640-b379-42e38c87749e
+# ╠═ccc2f3ee-82cf-4ed1-a393-082a38a1afe2
+# ╠═bc1e972f-c7f4-413c-9e53-a2461aabc87d
+# ╠═a627e08d-f54d-4c6f-8029-dd92ecbe1cf5
+# ╠═70e86820-2e87-41bf-86bb-fee89a0390f2
+# ╠═6ba3ed5a-2bd7-4fbd-a22a-65158cff75f6
+# ╠═1959a507-c507-468d-a7ea-fd80f010b8d7
+# ╠═1be633f9-db6e-4b71-b3a3-4647771d1506
+# ╠═02dd4ef1-e806-4274-899e-9cffa1813bac
+# ╟─9c84155e-46f9-481d-98cc-ed03132881aa
+# ╠═d8ffc7ec-a6cd-497f-b245-1d80ada67b4c
+# ╠═d8934bda-597d-4961-b355-856ff0f5a0a4
+# ╠═c987f5da-4ce7-489f-b0a3-fbbec306ff79
+# ╟─9c5289b6-c1b8-44ca-875c-3377e003dbf1
+# ╠═88845f52-db9e-4d22-ae15-34bfaadba2c9
+# ╠═61aa7bed-c4f3-44b8-a75b-ee43aa0a14bf
+# ╠═0330f9c2-8547-49fa-a30d-695c041dc491
+# ╟─7dd816d0-4c12-47b6-a832-ce5b670b4371
+# ╠═62f71cc7-6f4e-4e67-8c5d-afe5a02104d5
+# ╠═d2a1b479-e163-43dd-9465-a19d2147c0da
+# ╠═054ae03b-77bb-42cb-ae0a-0dbdbc37f2b4
+# ╟─96be229a-a20a-46ba-81e9-dcaa4eb111c7
+# ╠═642cc003-0114-4b35-a0da-7560b031ef74
+# ╠═40238f25-ec18-4c65-8e63-ff3cb81559aa
+# ╠═95016842-3ad1-4484-ad5a-5702c5da205c
+# ╠═d005bc12-0530-431c-be8e-4dba4374a790
+# ╠═9f259be5-3366-4aa7-b6cf-52448bc63185
+# ╟─f697315d-bce7-4a90-b51d-72b138ec6252
+# ╠═fcc73b87-f5bf-4593-af81-9f99547b42c1
+# ╠═ba4f913f-194c-4e0e-9806-c8fe224c3b9e
+# ╠═dd1d12ee-6376-4eb6-ae18-e0d874683349
+# ╠═b7ce5a9d-ff17-46b9-a51e-7e64153abed1
+# ╠═1ee21770-2906-4768-9dfe-b1f9b3758451
+# ╠═a8c90eea-f4be-457a-95db-edfdc3d188b1
+# ╠═f02b2a36-a526-4224-b64f-bcf642eae909
+# ╠═c3721915-8147-40f4-9fb5-3b8de41b636b
+# ╠═1bd1d4bb-b76a-4fdc-b3a5-677681c5d07e
+# ╠═53f5ae45-571c-4be8-8505-fae5b20a1838
+# ╠═8521be4c-6249-4e8d-bc9d-5758fc431d2d
+# ╠═1e53740e-35ba-4487-ab83-2fcc1672c307
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
