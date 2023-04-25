@@ -7,20 +7,13 @@ using InteractiveUtils
 # ╔═╡ 360ba393-f01e-47c3-ae7b-19d82c6fa84c
 using PlutoUI; TableOfContents(aside = true)
 
-# ╔═╡ fbfe1451-7b3b-490e-b61d-f11afd98bb70
-using CairoMakie
-
-# ╔═╡ c30023d2-e008-11ed-053b-09c07713c3dd
-using FreqTables, DataFrames, CSV
-
-# ╔═╡ 8723f362-e441-40d8-9600-ad7daa2fa791
-using MixedModels
-
-# ╔═╡ bdfb6996-ac0e-4c27-90ce-e67353f1b1d7
-using CategoricalArrays
-
-# ╔═╡ 34f3a6ab-f820-4391-825e-732f03cde1c3
-using Makie.Colors
+# ╔═╡ c6a37acc-828c-42cf-81c1-f06793a1e331
+begin
+	using CairoMakie
+	using FreqTables, DataFrames, CSV
+	using MixedModels
+	using CategoricalArrays
+end
 
 # ╔═╡ 4eeecbe3-2126-4f90-97f7-7334630a213e
 md"""
@@ -156,12 +149,12 @@ md"""
 """
 
 # ╔═╡ 80f538fa-38b2-4a01-9014-20ca2601690f
-[GroupInfo(10) GroupInfo(9)] 
+[GroupInfo(9) GroupInfo(10)] 
 
 # ╔═╡ 72cf04d2-292f-496f-8728-bba231128ac7
 fm0910 = let
 	dt = reduce(vcat, gdf[[9, 10]])
-	fit(MixedModel, @formula(rate ~ A0C0C + (1 | participant)), dt)
+	fit(MixedModel, @formula(rate ~ dltP + (1 | participant)), dt)
 end
 
 # ╔═╡ 80cd3965-91dd-406c-b2b9-3bea1271441b
@@ -175,7 +168,7 @@ md"""
 # ╔═╡ f9024188-2856-4fcd-b7ee-5992f3906a13
 fm1011 = let
 	dt = reduce(vcat, gdf[[10, 11]])
-	fit(MixedModel, @formula(rate ~ A0C0C + (1 | participant)), dt)
+	fit(MixedModel, @formula(rate ~ dltP + (1 | participant)), dt)
 end
 
 # ╔═╡ 41d16615-3884-4f8b-ae7a-03ae09c054fd
@@ -189,8 +182,11 @@ md"""
 # ╔═╡ bd5c248e-411e-4191-8113-c4872ec8dfc3
 fm1112 = let
 	dt = reduce(vcat, gdf[[11, 12]])
-	fit(MixedModel, @formula(rate ~ A0C0C + (1 | participant)), dt)
+	fit(MixedModel, @formula(rate ~ dltPp+ (1 | participant)), dt)
 end
+
+# ╔═╡ 083660cc-8e0a-4af7-833b-32a5a27dc20f
+fit(MixedModel, @formula(rate ~ dltP + (1 | participant)), gdf[12])
 
 # ╔═╡ 4f9865ab-f94e-4cc0-b430-c4e895c6de9e
 md"""
@@ -203,8 +199,14 @@ md"""
 # ╔═╡ a4fd3cae-745a-4a06-a449-698330e44b7c
 fm1213 = let
 	dt = reduce(vcat, gdf[[12, 13]])
-	fit(MixedModel, @formula(rate ~ C1GvA1 + (1 | participant)), dt)
+	fit(MixedModel, @formula(rate ~ dltPp + (1 | participant)), dt)
 end
+
+# ╔═╡ 6ed1c273-68cb-456b-933c-1edf4dae51db
+fit(MixedModel, 
+	@formula(rate ~ C1GvA1 + (1 | participant)), 
+	reduce(vcat, gdf[[12, 13]])
+)
 
 # ╔═╡ 6c2a486e-977d-4dbd-a5c4-d32ccea96a42
 md"""
@@ -295,7 +297,6 @@ CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 CategoricalArrays = "324d7699-5711-5eae-9e2f-1d82baa6b597"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 FreqTables = "da1fdf0e-e0ff-5433-a45f-9bb5ff651cb1"
-Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 MixedModels = "ff71e718-51f3-5ec2-a782-8ffcbfa3c316"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 
@@ -305,7 +306,6 @@ CairoMakie = "~0.10.4"
 CategoricalArrays = "~0.10.7"
 DataFrames = "~1.5.0"
 FreqTables = "~0.4.5"
-Makie = "~0.19.4"
 MixedModels = "~4.12.0"
 PlutoUI = "~0.7.50"
 """
@@ -316,7 +316,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.5"
 manifest_format = "2.0"
-project_hash = "e2ce635845337b49abd0f34fb21ec99775a4e318"
+project_hash = "1c9d91fba8f1998426746526280be6459026ffb5"
 
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra"]
@@ -1917,11 +1917,7 @@ version = "3.5.0+0"
 # ╔═╡ Cell order:
 # ╟─360ba393-f01e-47c3-ae7b-19d82c6fa84c
 # ╟─4eeecbe3-2126-4f90-97f7-7334630a213e
-# ╠═fbfe1451-7b3b-490e-b61d-f11afd98bb70
-# ╠═c30023d2-e008-11ed-053b-09c07713c3dd
-# ╠═8723f362-e441-40d8-9600-ad7daa2fa791
-# ╠═bdfb6996-ac0e-4c27-90ce-e67353f1b1d7
-# ╠═34f3a6ab-f820-4391-825e-732f03cde1c3
+# ╠═c6a37acc-828c-42cf-81c1-f06793a1e331
 # ╠═22e82469-98a5-47c4-b2fa-34a5e9bfd36b
 # ╠═a8b183c7-5139-4bbe-9abe-2598642934d5
 # ╠═9bbd237a-905a-45f9-9c7d-d9e5a6d363ad
@@ -1940,9 +1936,11 @@ version = "3.5.0+0"
 # ╟─41d16615-3884-4f8b-ae7a-03ae09c054fd
 # ╠═07baa639-01c0-4957-8631-afe8b91d3cbb
 # ╠═bd5c248e-411e-4191-8113-c4872ec8dfc3
+# ╠═083660cc-8e0a-4af7-833b-32a5a27dc20f
 # ╟─4f9865ab-f94e-4cc0-b430-c4e895c6de9e
 # ╠═e2df2124-d4c2-49e7-9701-42cd35707b08
 # ╠═a4fd3cae-745a-4a06-a449-698330e44b7c
+# ╠═6ed1c273-68cb-456b-933c-1edf4dae51db
 # ╟─6c2a486e-977d-4dbd-a5c4-d32ccea96a42
 # ╠═e0e7f87d-75cc-4870-b7a4-862462f9a975
 # ╠═8b029f05-468b-418b-a30e-e2b7a575f286
