@@ -5,7 +5,7 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ 360ba393-f01e-47c3-ae7b-19d82c6fa84c
-using PlutoUI; TableOfContents(aside = true, depth = 5)
+using PlutoUI; TableOfContents(aside = true)
 
 # ╔═╡ c6a37acc-828c-42cf-81c1-f06793a1e331
 begin
@@ -17,51 +17,17 @@ end
 
 # ╔═╡ 4eeecbe3-2126-4f90-97f7-7334630a213e
 md"""
-# Load packages
+## Load packages and define function
 """
 
 # ╔═╡ 9e5ba0ff-0ede-47bf-b04c-cfef742e77b6
 md"""
-# Functions `partitions` and `GroupInfo`
+### `partitions` function
 """
-
-# ╔═╡ 08040cd2-afd4-4d91-86c1-e3403196085a
-function ScatterLines(dt)
-
-	## Model fitting
-	gp = groupby(dt, :dltPC)
-	form = @formula(rate ~ C1GvA1 + (1 | participant) + (1|image))
-	fm1 = fit(MixedModel, form, gp[1])
-	fm2 = fit(MixedModel, form, gp[2])
-
-	# do the plotting
-	fig = Figure(resolution = (1000, 500))
-	ax1 = Axis(fig[1, 1], limits = ((-0.1, 1.1), nothing), 
-		title = string(NamedTuple(keys(gp)[1]))
-	)
-	ax2 = Axis(fig[1, 2], limits = ((-0.1, 1.1), nothing),
-			title = string(NamedTuple(keys(gp)[2]))
-	)
-	scatter!(ax1, gp[1].C1GvA1, gp[1].rate)
-	ablines!(ax1, [0], [1], color = :green, 
-		label = L"P(\text{If A then C}) = P(C|A)")
-	ablines!(ax1, coef(fm1)..., color = :red,
-		label = L"P(\text{If A then C}) \text{ Observed}")
-	axislegend(ax1, position = :rb)
-	
-	scatter!(ax2, gp[2].C1GvA1, gp[2].rate)
-	ablines!(ax2, [0], [1], color = :green,
-			label = L"P(\text{If A then C}) = P(C|A)")
-	ablines!(ax2, coef(fm2)..., color = :red,
-		label = L"P(\text{If A then C}) \text{ Observed}")
-	axislegend(ax2, position = :rb)
-	
-	fig
-end
 
 # ╔═╡ d63d50b1-4346-458c-96f8-9282b7ffa858
 md"""
-# Theoretical background
+## Definitions
 """
 
 # ╔═╡ 77fbd47a-2427-4d91-a971-b6c2185d6532
@@ -97,7 +63,7 @@ $$\begin{align*}
 
 # ╔═╡ 3d136e0c-1cbc-434d-a509-b5044af2fd7b
 md"""
-# Load data
+## Load data
 """
 
 # ╔═╡ 22e82469-98a5-47c4-b2fa-34a5e9bfd36b
@@ -140,11 +106,11 @@ end;
 df0 = leftjoin(Recorded_Data, Original_Stimuli, on = :image);
 
 # ╔═╡ 9c0035dd-b12f-451b-bdce-a721829c3fa5
-transform!(df0, :dltP => ByRow(x -> x > 0 ? "Positive" : "Negative") => :dltPC);
+transform!(df0, :dltP => ByRow(x -> x > 0 ? "P" : "M") => :dltPC);
 
 # ╔═╡ ebceda55-b5cf-4bcb-98ca-e117045cb6ea
 md"""
-# Overview
+## Overview
 """
 
 # ╔═╡ b461a1e6-386b-4a89-9213-2ce963722d11
@@ -166,10 +132,10 @@ NamedTuple(keys(gdf)[i]);
 ]
 
 # ╔═╡ fc65fc1c-ce7f-4f10-981f-6dba60bba050
-gdf0keys = keys(gdf0)
+gdfkeys = keys(gdf0)
 
 # ╔═╡ ebdb3b34-8236-4627-b65f-9b4c9c5d6dfb
-function partitions(dt; gdtkeys = gdf0keys)
+function partitions(dt; gdtkeys = gdfkeys)
 	gdt = groupby(dt, [:A1C1C, :A1C0C, :A0C1C, :A0C0C], sort = true)
 	fig = Figure(resolution = (2000, 1500))
 	for (idx, key) in enumerate(gdtkeys)
@@ -216,290 +182,311 @@ function partitions(dt; gdtkeys = gdf0keys)
 end
 
 # ╔═╡ 800b4679-bca4-4a6e-bc56-52e55ee9794c
-partitions(df0)
+# partitions(df0)
 
 # ╔═╡ a34878fb-f0ce-4ed2-bcad-7c8512e05ce5
 df = deepcopy(df0);
 
 # ╔═╡ cd72a095-aaab-47e4-a929-c95d7944cfc4
 md"""
-# Effect of $\Delta$P
+## Effect of $\Delta$P
 """
 
 # ╔═╡ a9d91421-709f-4001-b20f-3a4aa0a60137
 md"""
-## No effect in general
+### $\Delta$ P: No effect in general
 """
 
 # ╔═╡ 7b676124-cfc4-433c-8711-bfc92f6a3f9d
 fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), df)
 
-# ╔═╡ 2f567276-2076-4bf4-b506-75e003d72f2c
-fit(MixedModel, @formula(rate ~ C1GvA1 * dltP + (1 | participant) + (1|image)), df)
-
 # ╔═╡ fc7125ee-a3ac-4fea-98e1-1f84a1893d1d
-g1 = groupby(df, :dltPC);
+gdf1 = groupby(df, :dltPC);
 
 # ╔═╡ ac03428a-fd16-4a31-a925-540e4a45a026
-partitions(g1[1])
+partitions(gdf1[1])
 
 # ╔═╡ 211dc5b9-619f-4733-aaef-98486c1da117
-partitions(g1[2])
+partitions(gdf1[2])
 
 # ╔═╡ e45ae05f-a1db-49ef-82de-bd7840481e66
-fg11 = fit(MixedModel, 
-		@formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), g1[1])
+fm11 = fit(MixedModel, 
+		@formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), gdf1[1])
 
 # ╔═╡ 5c040718-9ddc-40c0-9070-eb278bbb145e
-fg12 = fit(MixedModel, 
-		@formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), g1[2])
+fm12 = fit(MixedModel, 
+		@formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), gdf1[2])
 
-# ╔═╡ cf50aa22-9aa3-4406-a250-f9748f2d1fb8
-ScatterLines(df)
+# ╔═╡ 0c4cecef-e85c-4a9d-9747-9375472d9939
+let
+	fig = Figure(resolution = (1000, 500))
+	ax1 = Axis(fig[1, 1], limits = ((-0.1, 1.1), nothing))
+	ax2 = Axis(fig[1, 2], limits = ((-0.1, 1.1), nothing))
+	scatter!(ax1, gdf1[1].C1GvA1, gdf1[1].rate)
+	ablines!(ax1, [0], [1], color = :green)
+	ablines!(ax1, coef(fm11)..., color = :red)
+	
+	scatter!(ax2, gdf1[2].C1GvA1, gdf1[2].rate)
+	ablines!(ax2, [0], [1], color = :green)
+	ablines!(ax2, coef(fm12)..., color = :red)
+
+	fig
+end
 
 # ╔═╡ 216f8c2b-c0f6-47a2-800c-516760d41345
 md"""
-## No effect when $A\neg C = 0$
+### $\Delta$ P: Has effect when $A\neg C = 0$ or when $A\neg C \neq 0$
 """
 
 # ╔═╡ c6f7fc2a-569a-4f85-a6d9-e251a08d1a1b
-s1 = subset(df, :A1C0 => ByRow(==(0)));
+sdf1 = subset(df, :A1C0 => ByRow(!=(0)));
 
 # ╔═╡ 68f4be33-d6c3-4bd8-b1c9-46731d5f0800
-partitions(s1)
+partitions(sdf1)
 
 # ╔═╡ 86baf85c-8cd5-40ed-a3c8-f9e1a9bf5c6b
-fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), s1)
+fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), sdf1)
 
 # ╔═╡ fa0beea6-bc35-487e-93d7-28d97bdd581c
-gs1 = groupby(s1, :dltPC);
+gsdf1 = groupby(sdf1, :dltPC);
 
 # ╔═╡ 2b5420e4-62db-4cdd-82f1-7cb507ce190b
-keys(gs1)
+keys(gsdf1)
 
 # ╔═╡ 24da21ce-fdce-4350-8a37-59ca61a4c625
-partitions(gs1[1])
+partitions(gsdf1[1])
 
 # ╔═╡ 712c9beb-404d-4300-8a9a-87eff971fb33
-partitions(gs1[2])
+partitions(gsdf1[2])
 
 # ╔═╡ a32d4e21-4a05-46bc-9b73-678d355eefbc
-fgs11 = fit(MixedModel, 
-		@formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), gs1[1]);
+fm21 = fit(MixedModel, 
+		@formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), gsdf1[1])
 
 # ╔═╡ c01ece91-aa38-4f09-8c65-78d934ea6461
-fgs12 = fit(MixedModel, @formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), gs1[2]);
+fm22 = fit(MixedModel, @formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), gsdf1[2])
 
-# ╔═╡ f97c8cf7-94b7-4212-96af-cd33e75abe7c
-ScatterLines(s1)
+# ╔═╡ 26fca0a4-9fe6-4f50-97a1-24b03709e38d
+let
+	fig = Figure(resolution = (1000, 500))
+	ax1 = Axis(fig[1, 1], limits = ((-0.1, 1.1), nothing))
+	ax2 = Axis(fig[1, 2], limits = ((-0.1, 1.1), nothing))
+	scatter!(ax1, gsdf1[1].C1GvA1, gsdf1[1].rate)
+	ablines!(ax1, [0], [1], color = :green)
+	ablines!(ax1, coef(fm11)..., color = :red)
+	
+	scatter!(ax2, gsdf1[2].C1GvA1, gsdf1[2].rate)
+	ablines!(ax2, [0], [1], color = :green)
+	ablines!(ax2, coef(fm12)..., color = :red)
 
-# ╔═╡ fcbf402a-72f8-4020-89b9-17ad56168aef
-md"""
-### Group 4: Still no effect
-"""
-
-# ╔═╡ 8f7cc0ae-0d59-4125-b011-2b5dfb1f17b6
-GroupInfo(4)
-
-# ╔═╡ 82f4465f-8173-45e2-9065-86e2286d35e9
-fit(MixedModel, @formula(rate ~ dltPC + (1 | participant) + (1|image)), gdf0[4])
-
-# ╔═╡ 83158904-0278-4277-aa11-906d975e1956
-fit(MixedModel, @formula(rate ~ dltP + (1 | participant) + (1|image)), gdf0[4])
+	fig
+end
 
 # ╔═╡ e9717416-f74f-4c5d-b9ab-63e5020408c2
 md"""
-## YES effect when $A\neg C \neq 0$
+### $\Delta$ P: Has effect when $A\neg C \neq 0$
 """
 
-# ╔═╡ 23c65bfe-accc-4719-aade-5a2615971d4c
-s2 = subset(df, :A1C0 => ByRow(!=(0)));
-
-# ╔═╡ 4c4d0e66-4dd8-46cb-8312-9d81fe4c56d2
-partitions(s2)
-
-# ╔═╡ 1ac36867-29c3-41c4-83fc-9ce18b336950
-fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), s2)
-
-# ╔═╡ 97dcdc9b-e8be-4520-b1af-34b4ae075a3e
-fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + A1C1C + (1 | participant) + (1|image)), s2)
-
-# ╔═╡ 78e98399-698d-491e-b63a-f29d8dc9c49d
-gs2 = groupby(s2, :dltPC);
-
-# ╔═╡ a35140ee-6a16-42d8-8f02-c5224ffc1c6e
-keys(gs2)
-
-# ╔═╡ 63206287-d776-4cb0-956c-274a59926c19
-partitions(gs2[1])
-
-# ╔═╡ 1c6c4a8d-f676-497f-b5db-c4df51c3a338
-partitions(gs2[2])
-
-# ╔═╡ f62cbdb4-d4b9-48a4-ac3a-f444dd6bc278
-fgs21 = fit(MixedModel, 
-		@formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), gs2[1])
-
-# ╔═╡ 9e1703e8-75d9-4a91-9591-d9e8b1803a76
-fgs22 = fit(MixedModel, 
-		@formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), gs2[2])
-
-# ╔═╡ fcce293a-d27c-4895-a970-db45d295f49d
-ScatterLines(s2)
-
-# ╔═╡ 0d4881cd-fabe-46bd-ab9d-c253e82297e7
+# ╔═╡ e165522b-0993-4052-862f-91da098d5662
 md"""
-### $AC = 0$: No effect
+## Group 2 vs 3
 """
 
-# ╔═╡ 7b0a6aca-b088-4bbd-8340-7a0385e82b92
-[GroupInfo(5); GroupInfo(6); GroupInfo(7); GroupInfo(8)]
+# ╔═╡ a4f86a92-60a4-48f3-9fad-1d73bb768c02
+[GroupInfo(2) GroupInfo(3)]
 
-# ╔═╡ 89263c1f-591d-4608-9b3d-6c25962019ed
-s1s2 = subset(s2, :A1C1 => ByRow(==(0)));
+# ╔═╡ ca09a94f-fb9d-434f-a61a-18de2a8f47ce
+let
+	dt = reduce(vcat, gdf[[2, 3]])
+	fit(MixedModel, @formula(rate ~ dltP + (1 | participant)), dt)
+end
 
-# ╔═╡ 61e16b0f-d897-451b-b162-4fa2be1f92ba
-fit(MixedModel, @formula(rate ~ dltP + (1 | participant) + (1|image)), s1s2)
-
-# ╔═╡ 252899e2-46eb-4391-aa1b-a167abbc0558
+# ╔═╡ fdb49852-e516-4eea-b19f-7f07f1b40cc3
 md"""
-### $AC \neq 0$: No effect in general !!
+## Group 3 vs 4
 """
 
-# ╔═╡ e82176d3-47a2-4ab6-8424-20d863c12328
-[GroupInfo(13); GroupInfo(14); GroupInfo(15); GroupInfo(16)]
+# ╔═╡ 9cf8d152-f16c-4606-99b6-e253e69fbfb9
+[GroupInfo(3) GroupInfo(4)]
 
-# ╔═╡ ffcea293-477e-4d29-861d-65821a46ebff
-s2s2 = subset(s2, :A1C1 => ByRow(!=(0)));
+# ╔═╡ 3894a412-676b-4df9-b4a0-a6598f9e7fa3
+let
+	dt = reduce(vcat, gdf[[3, 4]])
+	fit(MixedModel, @formula(rate ~ dltP + (1 | participant)), dt)
+end
 
-# ╔═╡ 2ec29a39-b321-4e99-ba4e-d67289ad4abe
-fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), s2s2)
-
-# ╔═╡ 7e87e837-ee15-40b4-b58f-b036692779ac
-partitions(s2s2)
-
-# ╔═╡ e12fcb83-132b-4b42-9c37-f8299212a18c
-gs2s2 = groupby(s2s2, :dltPC);
-
-# ╔═╡ cfedc4e2-89c8-44fb-9d6c-77872fed6e65
-partitions(gs2s2[1])
-
-# ╔═╡ b94a6ea7-6be8-460a-9724-22a1f339c3df
-partitions(gs2s2[2])
-
-# ╔═╡ 83fea4d4-3ae3-468e-a367-fe11736a9b4e
-fgs2s21 = fit(MixedModel, 
-		@formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), gs2s2[1])
-
-# ╔═╡ fc027aeb-e9bd-4594-b9eb-b2be574f356e
-fgs2s22 = fit(MixedModel, 
-		@formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), gs2s2[2])
-
-# ╔═╡ 573bfaec-17b1-41f2-abf3-6bf4c68055dc
-ScatterLines(s2s2)
-
-# ╔═╡ bd33b753-4df2-41ec-8070-57f273e3e251
+# ╔═╡ ef29286f-78d0-47b7-9106-a80d4815e207
 md"""
-#### $\neg AC = 0$: No effect !!
+## Group 4 vs 5
 """
 
-# ╔═╡ 845a46c6-1c0d-496a-9ad0-a0cf59e651a3
-s1s2s2 = subset(s2s2, :A0C1 => ByRow(==(0)));
+# ╔═╡ a32a3148-d068-4f0a-90c2-c0279e9b0fe0
+[GroupInfo(4) GroupInfo(5)]
 
-# ╔═╡ 7332e45e-7c04-401b-bf5f-68ae659f5999
-partitions(s1s2s2)
+# ╔═╡ edc90d89-34b7-404f-bc65-45ef55d186bc
+let
+	dt = reduce(vcat, gdf[[4, 5]])
+	fit(MixedModel, @formula(rate ~ A0C0C + (1 | participant)), dt)
+end
 
-# ╔═╡ b7ddf5b0-e297-4834-ad24-864267c64dd6
-fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), s1s2s2)
+# ╔═╡ f4a30c65-4827-446a-ba96-325a5e0a0ab2
+fit(MixedModel, @formula(rate ~ dltP + (1 | participant)), gdf[4])
 
-# ╔═╡ f601147d-ae5b-4209-8571-dbb7b9a8418e
+# ╔═╡ 4225300a-6999-4a3c-803e-928913deefdd
 md"""
-#### $\neg AC \neq 0$: No effect !!
+## Group 5 vs 6
 """
 
-# ╔═╡ 0a58a756-47f5-42af-8ea4-454bb456cc65
-s2s2s2 = subset(s2s2, :A0C1 => ByRow(!=(0)));
+# ╔═╡ 7fe74f1c-d910-4693-91a7-047a27a03721
+[GroupInfo(5) GroupInfo(6)]
 
-# ╔═╡ 551f9a32-d948-4097-813b-a7734aba615e
-partitions(s2s2s2)
+# ╔═╡ 647412a5-2b3e-4aa2-abde-522b9fed3590
+let
+	dt = reduce(vcat, gdf[[5, 6]])
+	fit(MixedModel, @formula(rate ~ MI + (1 | participant)), dt)
+end
 
-# ╔═╡ 06cb78a1-d434-4670-a59d-cfbb13cc1fb3
+# ╔═╡ d897ff6a-d7bd-44e8-b721-82274b5b0379
 md"""
-#### Group 13: No effect !!
+## Group 9 vs 10
 """
 
-# ╔═╡ 7f9340f2-7e60-4f5c-8c80-64ffd66db9d3
-GroupInfo(13)
+# ╔═╡ 80f538fa-38b2-4a01-9014-20ca2601690f
+[GroupInfo(9) GroupInfo(10)] 
 
-# ╔═╡ cd23ec95-0462-4f64-8b81-ffe50358d0dc
-fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), gdf0[13])
+# ╔═╡ 72cf04d2-292f-496f-8728-bba231128ac7
+fm0910 = let
+	dt = reduce(vcat, gdf[[9, 10]])
+	fit(MixedModel, @formula(rate ~ dltP + (1 | participant)), dt)
+end
 
-# ╔═╡ 205b37dd-48df-483c-9001-a4bd14bfc454
+# ╔═╡ 80cd3965-91dd-406c-b2b9-3bea1271441b
 md"""
-#### Group 14: Colinealized with C1GvA1
+## Group 10 vs 11
 """
 
-# ╔═╡ 8a22a57c-6da9-4414-966d-bd426b05235c
-GroupInfo(14)
+# ╔═╡ 40b2e15e-8dba-4906-9f41-3d88a5a1df16
+[GroupInfo(10) GroupInfo(11)]
 
-# ╔═╡ af735026-3e0c-4fd7-9b53-d9cbdb2be23c
-fit(MixedModel, @formula(rate ~  C1GvA1 + (1 | participant) + (1|image)), gdf0[14])
+# ╔═╡ f9024188-2856-4fcd-b7ee-5992f3906a13
+fm1011 = let
+	dt = reduce(vcat, gdf[[10, 11]])
+	fit(MixedModel, @formula(rate ~ dltP + (1 | participant)), dt)
+end
 
-# ╔═╡ e09e7b72-d560-42a6-9360-44ba1f5da88a
+# ╔═╡ 41d16615-3884-4f8b-ae7a-03ae09c054fd
 md"""
-#### Group 15: No effect !!
+## Group 11 vs 12
 """
 
-# ╔═╡ d8bb92f6-bf41-4dc8-8d5a-0d73de4c59ad
-GroupInfo(15)
+# ╔═╡ 07baa639-01c0-4957-8631-afe8b91d3cbb
+[GroupInfo(11) GroupInfo(12)]
 
-# ╔═╡ db57fd30-ec44-49b2-9f60-775f9b03121c
-fit(MixedModel, @formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), gdf0[15])
+# ╔═╡ bd5c248e-411e-4191-8113-c4872ec8dfc3
+fm1112 = let
+	dt = reduce(vcat, gdf[[11, 12]])
+	fit(MixedModel, @formula(rate ~ dltPp+ (1 | participant)), dt)
+end
 
-# ╔═╡ dfa7801c-c1f8-4814-b06a-6828ea432e3b
+# ╔═╡ 083660cc-8e0a-4af7-833b-32a5a27dc20f
+fit(MixedModel, @formula(rate ~ dltP + (1 | participant)), gdf[12])
+
+# ╔═╡ 4f9865ab-f94e-4cc0-b430-c4e895c6de9e
 md"""
-#### Group 14 vs 15: No effect !!
+## Group 12 vs 13
 """
 
-# ╔═╡ b1a0c34f-bcbb-4d2e-a3f8-5f6acc958446
-fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), reduce(vcat, gdf0[[14, 15]]))
+# ╔═╡ e2df2124-d4c2-49e7-9701-42cd35707b08
+[GroupInfo(12) GroupInfo(13)]
 
-# ╔═╡ 37e9dc86-f104-4caf-a27d-d8683e3b25a4
+# ╔═╡ a4fd3cae-745a-4a06-a449-698330e44b7c
+fm1213 = let
+	dt = reduce(vcat, gdf[[12, 13]])
+	fit(MixedModel, @formula(rate ~ dltPp + (1 | participant)), dt)
+end
+
+# ╔═╡ 6ed1c273-68cb-456b-933c-1edf4dae51db
+fit(MixedModel, 
+	@formula(rate ~ C1GvA1 + (1 | participant)), 
+	reduce(vcat, gdf[[12, 13]])
+)
+
+# ╔═╡ 6c2a486e-977d-4dbd-a5c4-d32ccea96a42
 md"""
-#### Group 16: No effect !!
+## Group 13 vs 14
 """
 
-# ╔═╡ e3033c14-f314-4d30-8ea7-58efa552efcc
+# ╔═╡ e0e7f87d-75cc-4870-b7a4-862462f9a975
+[GroupInfo(13) GroupInfo(14)]
+
+# ╔═╡ 8b029f05-468b-418b-a30e-e2b7a575f286
+fm1314 = let
+	dt = reduce(vcat, gdf[[13, 14]])
+	fit(MixedModel, @formula(rate ~ A0C0C + (1 | participant)), dt)
+end
+
+# ╔═╡ 08454732-1d56-49bd-acce-88668303e879
+md"""
+## Group 14 vs 15
+"""
+
+# ╔═╡ 8063a809-2c50-4294-9eb4-ce724eb751fe
+[GroupInfo(14) GroupInfo(15)]
+
+# ╔═╡ d073c481-7e7c-4e52-8687-645d8f18d56d
+fm1415 = let
+	dt = reduce(vcat, gdf[[14, 15]])
+	fit(MixedModel, @formula(rate ~ A0C0C + C1GvA1 + (1 | participant)), dt)
+end
+
+# ╔═╡ 49153f73-5a1a-44fa-8fea-8f49c1f579a3
+let
+	fig = Figure(resolution = (1000, 500))
+	ax1 = Axis(fig[1, 1])
+	ax2 = Axis(fig[1, 2])
+
+	f14 = fit(MixedModel, @formula(rate ~ C1GvA1 + (1 | participant)), gdf[14])
+	f15 = fit(MixedModel, @formula(rate ~ C1GvA1 + (1 | participant)), gdf[15])
+	scatter!(ax1, gdf[14].C1GvA1, gdf[14].rate)
+	ablines!(ax1, coef(f14)..., color = :red)
+	scatter!(ax2, gdf[15].C1GvA1, gdf[15].rate)
+	ablines!(ax2, coef(f15)..., color = :red)
+	fig
+end
+
+# ╔═╡ d342ec07-f6d6-4221-98fb-64dfa0cf72cb
+md"""
+## Group 15 vs 16
+"""
+
+# ╔═╡ 2aebe818-444e-4aed-a5ee-5684e18bf615
+[GroupInfo(15) GroupInfo(16)]
+
+# ╔═╡ 5c5b6f70-907e-44cd-b9cf-c52f636ac7cd
+fm1516 = let
+	dt = reduce(vcat, gdf[[15, 16]])
+	transform!(dt,
+		[:dltP, :A0C0C] => ByRow((x, y) -> y == 0 ? "N1" : x > 0 ? "P2" : "N2") => :dltPC
+	)
+	fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant)), dt)
+end
+
+# ╔═╡ fe67d15e-9821-42ce-a7c3-4ae406190f22
+md"""
+## Group 16
+"""
+
+# ╔═╡ 5c7a864a-3a47-420e-8ffe-6083b93024f4
 GroupInfo(16)
 
-# ╔═╡ ddd1d108-d92a-4170-9279-948d8cafc23f
-fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), gdf0[16])
+# ╔═╡ 3e2f1e70-b217-4db3-82b9-ea573984391b
+freqtable(gdf[16], :C1GvA1, :dltP)
 
-# ╔═╡ 0ba5ab56-c76b-447e-886e-85a4b2ff0cf0
-md"""
-#### Group 13 vs 16: No effect !!
-"""
+# ╔═╡ 666e463b-6181-4d23-89e0-dc9b4473edee
+g16 = transform(gdf[16], :dltP   => ByRow(x -> x > 0 ? "P" : "N") => :dltPC);
 
-# ╔═╡ 6ec16e16-59de-45db-9914-5e1632539343
-fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), reduce(vcat, gdf0[[13, 16]]))
-
-# ╔═╡ 2f793451-f88e-4bbf-bc94-e48c6d43b159
-md"""
-# Conclusion
-"""
-
-# ╔═╡ 7a4cff1e-7165-42cc-b800-ed7276f0c13c
-md"""
-The sign of $\Delta$ P could have an effect, but its effect was counfounded by the following two factors:
-- Whether $A\neg C$ exists
-- whether $AC$ exists.
-
-Only when 
--  $A\neg C$ does not exist. And
-- The existence of $AC$ could be varied, then
-
-the effects of $\Delta$P as has a simmliar effect as being descried in the Relevance theory.
-"""
+# ╔═╡ b9048afb-7d0c-4df6-9d9b-969f3a668bed
+fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant)), g16)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -2132,7 +2119,6 @@ version = "3.5.0+0"
 # ╠═c6a37acc-828c-42cf-81c1-f06793a1e331
 # ╟─9e5ba0ff-0ede-47bf-b04c-cfef742e77b6
 # ╠═ebdb3b34-8236-4627-b65f-9b4c9c5d6dfb
-# ╠═08040cd2-afd4-4d91-86c1-e3403196085a
 # ╠═0f199680-b1ed-4ff0-8f73-b927a13009ab
 # ╟─d63d50b1-4346-458c-96f8-9282b7ffa858
 # ╟─77fbd47a-2427-4d91-a971-b6c2185d6532
@@ -2153,13 +2139,12 @@ version = "3.5.0+0"
 # ╟─cd72a095-aaab-47e4-a929-c95d7944cfc4
 # ╟─a9d91421-709f-4001-b20f-3a4aa0a60137
 # ╠═7b676124-cfc4-433c-8711-bfc92f6a3f9d
-# ╠═2f567276-2076-4bf4-b506-75e003d72f2c
 # ╠═fc7125ee-a3ac-4fea-98e1-1f84a1893d1d
 # ╠═ac03428a-fd16-4a31-a925-540e4a45a026
 # ╠═211dc5b9-619f-4733-aaef-98486c1da117
 # ╠═e45ae05f-a1db-49ef-82de-bd7840481e66
 # ╠═5c040718-9ddc-40c0-9070-eb278bbb145e
-# ╠═cf50aa22-9aa3-4406-a250-f9748f2d1fb8
+# ╠═0c4cecef-e85c-4a9d-9747-9375472d9939
 # ╟─216f8c2b-c0f6-47a2-800c-516760d41345
 # ╠═c6f7fc2a-569a-4f85-a6d9-e251a08d1a1b
 # ╠═68f4be33-d6c3-4bd8-b1c9-46731d5f0800
@@ -2170,62 +2155,49 @@ version = "3.5.0+0"
 # ╠═712c9beb-404d-4300-8a9a-87eff971fb33
 # ╠═a32d4e21-4a05-46bc-9b73-678d355eefbc
 # ╠═c01ece91-aa38-4f09-8c65-78d934ea6461
-# ╠═f97c8cf7-94b7-4212-96af-cd33e75abe7c
-# ╟─fcbf402a-72f8-4020-89b9-17ad56168aef
-# ╠═8f7cc0ae-0d59-4125-b011-2b5dfb1f17b6
-# ╠═82f4465f-8173-45e2-9065-86e2286d35e9
-# ╠═83158904-0278-4277-aa11-906d975e1956
+# ╠═26fca0a4-9fe6-4f50-97a1-24b03709e38d
 # ╟─e9717416-f74f-4c5d-b9ab-63e5020408c2
-# ╠═23c65bfe-accc-4719-aade-5a2615971d4c
-# ╠═4c4d0e66-4dd8-46cb-8312-9d81fe4c56d2
-# ╠═1ac36867-29c3-41c4-83fc-9ce18b336950
-# ╠═97dcdc9b-e8be-4520-b1af-34b4ae075a3e
-# ╠═78e98399-698d-491e-b63a-f29d8dc9c49d
-# ╠═a35140ee-6a16-42d8-8f02-c5224ffc1c6e
-# ╠═63206287-d776-4cb0-956c-274a59926c19
-# ╠═1c6c4a8d-f676-497f-b5db-c4df51c3a338
-# ╠═f62cbdb4-d4b9-48a4-ac3a-f444dd6bc278
-# ╠═9e1703e8-75d9-4a91-9591-d9e8b1803a76
-# ╠═fcce293a-d27c-4895-a970-db45d295f49d
-# ╟─0d4881cd-fabe-46bd-ab9d-c253e82297e7
-# ╠═7b0a6aca-b088-4bbd-8340-7a0385e82b92
-# ╠═89263c1f-591d-4608-9b3d-6c25962019ed
-# ╠═61e16b0f-d897-451b-b162-4fa2be1f92ba
-# ╟─252899e2-46eb-4391-aa1b-a167abbc0558
-# ╠═e82176d3-47a2-4ab6-8424-20d863c12328
-# ╠═ffcea293-477e-4d29-861d-65821a46ebff
-# ╠═2ec29a39-b321-4e99-ba4e-d67289ad4abe
-# ╠═7e87e837-ee15-40b4-b58f-b036692779ac
-# ╠═e12fcb83-132b-4b42-9c37-f8299212a18c
-# ╠═cfedc4e2-89c8-44fb-9d6c-77872fed6e65
-# ╠═b94a6ea7-6be8-460a-9724-22a1f339c3df
-# ╠═83fea4d4-3ae3-468e-a367-fe11736a9b4e
-# ╠═fc027aeb-e9bd-4594-b9eb-b2be574f356e
-# ╠═573bfaec-17b1-41f2-abf3-6bf4c68055dc
-# ╟─bd33b753-4df2-41ec-8070-57f273e3e251
-# ╠═845a46c6-1c0d-496a-9ad0-a0cf59e651a3
-# ╠═7332e45e-7c04-401b-bf5f-68ae659f5999
-# ╠═b7ddf5b0-e297-4834-ad24-864267c64dd6
-# ╟─f601147d-ae5b-4209-8571-dbb7b9a8418e
-# ╠═0a58a756-47f5-42af-8ea4-454bb456cc65
-# ╠═551f9a32-d948-4097-813b-a7734aba615e
-# ╟─06cb78a1-d434-4670-a59d-cfbb13cc1fb3
-# ╠═7f9340f2-7e60-4f5c-8c80-64ffd66db9d3
-# ╠═cd23ec95-0462-4f64-8b81-ffe50358d0dc
-# ╟─205b37dd-48df-483c-9001-a4bd14bfc454
-# ╠═8a22a57c-6da9-4414-966d-bd426b05235c
-# ╠═af735026-3e0c-4fd7-9b53-d9cbdb2be23c
-# ╟─e09e7b72-d560-42a6-9360-44ba1f5da88a
-# ╠═d8bb92f6-bf41-4dc8-8d5a-0d73de4c59ad
-# ╠═db57fd30-ec44-49b2-9f60-775f9b03121c
-# ╟─dfa7801c-c1f8-4814-b06a-6828ea432e3b
-# ╠═b1a0c34f-bcbb-4d2e-a3f8-5f6acc958446
-# ╠═37e9dc86-f104-4caf-a27d-d8683e3b25a4
-# ╠═e3033c14-f314-4d30-8ea7-58efa552efcc
-# ╠═ddd1d108-d92a-4170-9279-948d8cafc23f
-# ╟─0ba5ab56-c76b-447e-886e-85a4b2ff0cf0
-# ╠═6ec16e16-59de-45db-9914-5e1632539343
-# ╟─2f793451-f88e-4bbf-bc94-e48c6d43b159
-# ╟─7a4cff1e-7165-42cc-b800-ed7276f0c13c
+# ╟─e165522b-0993-4052-862f-91da098d5662
+# ╠═a4f86a92-60a4-48f3-9fad-1d73bb768c02
+# ╠═ca09a94f-fb9d-434f-a61a-18de2a8f47ce
+# ╟─fdb49852-e516-4eea-b19f-7f07f1b40cc3
+# ╠═9cf8d152-f16c-4606-99b6-e253e69fbfb9
+# ╠═3894a412-676b-4df9-b4a0-a6598f9e7fa3
+# ╠═ef29286f-78d0-47b7-9106-a80d4815e207
+# ╠═a32a3148-d068-4f0a-90c2-c0279e9b0fe0
+# ╠═edc90d89-34b7-404f-bc65-45ef55d186bc
+# ╠═f4a30c65-4827-446a-ba96-325a5e0a0ab2
+# ╟─4225300a-6999-4a3c-803e-928913deefdd
+# ╠═7fe74f1c-d910-4693-91a7-047a27a03721
+# ╠═647412a5-2b3e-4aa2-abde-522b9fed3590
+# ╟─d897ff6a-d7bd-44e8-b721-82274b5b0379
+# ╠═80f538fa-38b2-4a01-9014-20ca2601690f
+# ╠═72cf04d2-292f-496f-8728-bba231128ac7
+# ╟─80cd3965-91dd-406c-b2b9-3bea1271441b
+# ╠═40b2e15e-8dba-4906-9f41-3d88a5a1df16
+# ╠═f9024188-2856-4fcd-b7ee-5992f3906a13
+# ╟─41d16615-3884-4f8b-ae7a-03ae09c054fd
+# ╠═07baa639-01c0-4957-8631-afe8b91d3cbb
+# ╠═bd5c248e-411e-4191-8113-c4872ec8dfc3
+# ╠═083660cc-8e0a-4af7-833b-32a5a27dc20f
+# ╟─4f9865ab-f94e-4cc0-b430-c4e895c6de9e
+# ╠═e2df2124-d4c2-49e7-9701-42cd35707b08
+# ╠═a4fd3cae-745a-4a06-a449-698330e44b7c
+# ╠═6ed1c273-68cb-456b-933c-1edf4dae51db
+# ╟─6c2a486e-977d-4dbd-a5c4-d32ccea96a42
+# ╠═e0e7f87d-75cc-4870-b7a4-862462f9a975
+# ╠═8b029f05-468b-418b-a30e-e2b7a575f286
+# ╟─08454732-1d56-49bd-acce-88668303e879
+# ╠═8063a809-2c50-4294-9eb4-ce724eb751fe
+# ╠═d073c481-7e7c-4e52-8687-645d8f18d56d
+# ╠═49153f73-5a1a-44fa-8fea-8f49c1f579a3
+# ╟─d342ec07-f6d6-4221-98fb-64dfa0cf72cb
+# ╠═2aebe818-444e-4aed-a5ee-5684e18bf615
+# ╠═5c5b6f70-907e-44cd-b9cf-c52f636ac7cd
+# ╟─fe67d15e-9821-42ce-a7c3-4ae406190f22
+# ╠═5c7a864a-3a47-420e-8ffe-6083b93024f4
+# ╠═3e2f1e70-b217-4db3-82b9-ea573984391b
+# ╠═666e463b-6181-4d23-89e0-dc9b4473edee
+# ╠═b9048afb-7d0c-4df6-9d9b-969f3a668bed
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
