@@ -4,467 +4,564 @@
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ 7ac0c689-419a-428b-9006-69d3e6c1ea7e
-using PlutoUI; TableOfContents(title = "目录", aside = false, depth = 4)
+# ╔═╡ 360ba393-f01e-47c3-ae7b-19d82c6fa84c
+using PlutoUI; TableOfContents(aside = true, depth = 5)
 
-# ╔═╡ e8a9ae4d-438a-4496-b75c-ee9a5e91d740
+# ╔═╡ 4eeecbe3-2126-4f90-97f7-7334630a213e
 md"""
-### 载入包
+# Load packages
 """
 
-# ╔═╡ d0dfdb8d-2b7a-4956-802d-73922db32330
+# ╔═╡ c6a37acc-828c-42cf-81c1-f06793a1e331
 begin
-	using DataFrames, CSV
-	using FreqTables
-	using Statistics: mean, std
-	using GLM
+	using CairoMakie
+	using FreqTables, DataFrames, CSV
+	using MixedModels
 	using CategoricalArrays
 end
 
-# ╔═╡ b36a8b22-992c-4b50-a8ef-23852f73e26c
-let
-	using CairoMakie #GLMakie
-	set_theme!(theme_minimal())
-	update_theme!(
-		backgroundcolor = RGBf(0.98, 0.98, 0.98),
-		resolution = (1024, 768)
-	 )
+# ╔═╡ 9e5ba0ff-0ede-47bf-b04c-cfef742e77b6
+md"""
+# Functions `partitions` and `GroupInfo`
+"""
+
+# ╔═╡ ebdb3b34-8236-4627-b65f-9b4c9c5d6dfb
+function partitions(dt; gdtkeys = gdf0keys)
+	gdt = groupby(dt, [:A1C1C, :A1C0C, :A0C1C, :A0C0C], sort = true)
+	fig = Figure(resolution = (2000, 1500))
+	for (idx, key) in enumerate(gdtkeys)
+		ax = Axis(fig[key[1], key[2]][key[3], key[4]], xticks = 0:0.25:1,
+			limits = ((-0.1, 1.1), nothing),
+			xgridvisible = false, ygridvisible = false,
+			title = string(idx, ": ", NamedTuple(key))
+		)
+		pos = findfirst(==(NamedTuple(key)), NamedTuple.(keys(gdt)))
+		isnothing(pos) ||
+		hist!(ax, gdt[keys(gdt)[pos]].rate, bins = 15, normalization = :none)
+		# (key[2] > 0 || key[4] > 0) && hideydecorations!(ax)
+		# (key[1] < 1 || key[3] < 1) && hidexdecorations!(ax)
+		hidespines!(ax, :r, :t)
+		
+	end
+	Label(fig[-1, 0], tellwidth = false, text = L"A \neg C = 0", fontsize = 30, color = :red)
+	Label(fig[-1, 0][3, 0], tellwidth = false, tellheight = false, text = L"\neg A \neg C = 0", fontsize = 20, color = :red)
+	Label(fig[-1, 0][3, 1], tellwidth = false, tellheight = false, text = L"\neg A \neg C \neq 0", fontsize = 20, color = :red)
+	
+	Label(fig[-1, 1], tellwidth = false, text = L"A \neg C \neq 0", fontsize = 30, color = :blue)
+	Label(fig[-1, 1][3, 0], tellwidth = false, tellheight = false, text = L"\neg A \neg C = 0", fontsize = 20, color = :blue)
+	Label(fig[-1, 1][3, 1], tellwidth = false, tellheight = false, text = L"\neg A \neg C \neq 0", fontsize = 20, color = :blue)
+	
+	Label(fig[0, end + 1], tellheight = false, text = L"AC = 0", fontsize = 30, color = :green, rotation = -pi/2)
+	Label(fig[0, end][0, -1], tellwidth = false, tellheight = false, text = L"\neg AC = 0", fontsize = 20, color = :green, rotation = -pi/2)
+	Label(fig[0, end][1, -1], tellwidth = false, tellheight = false, text = L"\neg AC \neq 0", fontsize = 20, color = :green, rotation = -pi/2)
+
+	Label(fig[1, end], tellwidth = false, tellheight = false, text = L"AC \neq 0", fontsize = 30, color = :purple, rotation = -pi/2)
+	Label(fig[1, end][0, -1], tellwidth = false, tellheight = false, text = L"\neg AC = 0", fontsize = 20, color = :purple, rotation = -pi/2)
+	Label(fig[1, end][1, -1], tellwidth = false, tellheight = false, text = L"\neg AC \neq 0", fontsize = 20, color = :purple, rotation = -pi/2)
+
+	Box(fig[:, 0], color = :transparent, strokewidth = 4, strokecolor = :red)
+	Box(fig[:, 1], color = :transparent, strokewidth = 4, strokecolor = :blue)
+	Box(fig[0, :], color = :transparent, strokewidth = 4, strokecolor = :green)
+	Box(fig[1, :], color = :transparent, strokewidth = 4, strokecolor = :purple)
+
+	Label(fig[:, -1],    text = "Frequency", rotation = pi/2, fontsize = 40)
+	Label(fig[end+1, :], text = "Proportion", fontsize = 40)
+
+	save("ConditionalProbability.png", fig, px_per_unit = 10)
+
+	fig
 end
 
-# ╔═╡ b7a11e97-fba8-4656-b529-ff6f21a75a0f
+# ╔═╡ 08040cd2-afd4-4d91-86c1-e3403196085a
+function ScatterLines(dt)
+
+	## Model fitting
+	gp = groupby(dt, :dltPC)
+	form = @formula(rate ~ C1GvA1 + (1 | participant) + (1|image))
+	fm1 = fit(MixedModel, form, gp[1])
+	fm2 = fit(MixedModel, form, gp[2])
+
+	# do the plotting
+	fig = Figure(resolution = (1000, 500))
+	ax1 = Axis(fig[1, 1], limits = ((-0.1, 1.1), nothing), 
+		title = string(NamedTuple(keys(gp)[1]))
+	)
+	ax2 = Axis(fig[1, 2], limits = ((-0.1, 1.1), nothing),
+			title = string(NamedTuple(keys(gp)[2]))
+	)
+	scatter!(ax1, gp[1].C1GvA1, gp[1].rate)
+	ablines!(ax1, [0], [1], color = :green, 
+		label = L"P(\text{If A then C}) = P(C|A)")
+	ablines!(ax1, coef(fm1)..., color = :red,
+		label = L"P(\text{If A then C}) \text{ Observed}")
+	axislegend(ax1, position = :rb)
+	
+	scatter!(ax2, gp[2].C1GvA1, gp[2].rate)
+	ablines!(ax2, [0], [1], color = :green,
+			label = L"P(\text{If A then C}) = P(C|A)")
+	ablines!(ax2, coef(fm2)..., color = :red,
+		label = L"P(\text{If A then C}) \text{ Observed}")
+	axislegend(ax2, position = :rb)
+	
+	fig
+end
+
+# ╔═╡ 0f199680-b1ed-4ff0-8f73-b927a13009ab
+GroupInfo(i; gdf = gdf0) = [
+NamedTuple(keys(gdf)[i]); 
+"MI:     $(mapreduce(x -> string(x, ", "), *, unique(gdf[i].MI))[1:end-2])"; 
+"C1GvA1: $(mapreduce(x -> string(x, ", "), *, unique(gdf[i].C1GvA1))[1:end-2])"; 
+"dltP:   $(mapreduce(x -> string(x, ", "), *, unique(gdf[i].dltP))[1:end-2])"; 
+# "dltPp:  $(mapreduce(x -> string(x, ", "), *, unique(gdf[i].dltPp))[1:end-2])"
+]
+
+# ╔═╡ d63d50b1-4346-458c-96f8-9282b7ffa858
 md"""
-### 实验一
+# Theoretical background
 """
 
-# ╔═╡ ab814eb8-b384-40d0-95b2-139031baaa35
+# ╔═╡ 77fbd47a-2427-4d91-a971-b6c2185d6532
 md"""
-#### 读入数据
+1. Two $\textit{conditional probabilities}$ can be defined as:
+$$\begin{align}
+	P(C|A)      & = \frac{P(AC)}{P(A)} = \frac{P(AC)}{P(AC) + P(A\neg C)}\\
+	P(C|\neg A) & = \frac{P(\neg AC)}{P(\neg A)} = \frac{P(\neg AC)}{P(\neg AC) + P(\neg A\neg C)}
+\end{align}$$
+
+2. Two $\Delta P$s can be defined as:
+
+$$
+\begin{align}
+   \Delta P  & =  P(C|A) - P(C|\neg A)\\
+   \Delta P^+ & =  \frac{\Delta P}{1 - P(C|\neg A)}
+\end{align}$$
+
+3. Relevance theory believed that
+
+$$\begin{align*}
+    P(\text{if A then C}) & = \lambda \times P(C|A)\\
+    & \text{where } \lambda = 
+        \left\{\begin{array}{ll}
+            1 & \text{if } \Delta P > 0\\
+            0\leq \lambda < 1 & \text{if } \Delta P \leq 0
+        \end{array}\right.
+\end{align*}$$
+
 """
 
-# ╔═╡ 3e149cf5-4387-4a05-a13c-4b00167965b5
+
+
+# ╔═╡ 3d136e0c-1cbc-434d-a509-b5044af2fd7b
 md"""
-- trialType: complete表示完全反馈条件； partial表示部分反馈条件
-- x1，y1：左边转盘的两个分数
-- p，p2：x1的概率为p1；y1的概率为p2
-- x2，y2：右边转盘的两个分数
-- q，q2：x2的概率为q1；y2的概率为q2
-- left points：选择左边转盘得到的分数
-- right points：选择右边转盘得到的分数
-- LeftYourUn：选择左边转盘没有得到的分数
-- RightYouUn：选择右边转盘没有得到的分数
-- `key_resp_4.keys`：被试选择了左边转盘（left）还是右边转盘（right）。因此从key_resp_4.keys和left  points、right points就能看出被试这轮得到的分数。
-- rating：被试的情绪评分
-- total score：被试在转盘上累计的总分，也可以通过下一轮的总分减去上一轮的总分得出被试上一轮得到的分数。
+# Load data
 """
 
-# ╔═╡ 2a9d311c-a766-4f32-ac8b-64a9b63cedcc
-csv_list1 = filter(endswith(".csv"), readdir("data/Experiment_1", join = true));
+# ╔═╡ 22e82469-98a5-47c4-b2fa-34a5e9bfd36b
+csv_list = reduce(vcat, 
+	@. filter(endswith(".csv"), readdir(joinpath("Data", ["dataall", "datamac"]), join = true)))
 
-# ╔═╡ 7235b483-8484-4ca2-a700-2dbea497ac26
-df1 = mapreduce(vcat, csv_list1[1:41]) do csv
-	CSV.read(csv, DataFrame, stringtype = String,
-			 drop = (i, name) -> startswith(string(name), "Column")
+# ╔═╡ a8b183c7-5139-4bbe-9abe-2598642934d5
+length(csv_list)
+
+# ╔═╡ cb7bd33b-60ad-4b14-be4a-70a253b3ac28
+Original_Stimuli = let
+ 	df = CSV.read(
+		"Conditional_Stimuli_Adjusted.csv", DataFrame, stringtype = String)
+	rename!(df, "Image" => "image")
+	transform!(df, [:A1C1, :A1C0, :A0C1, :A0C0] 
+		.=> ByRow(x -> x == 0 ? 0 : 1) .=> [:A1C1C, :A1C0C, :A0C1C, :A0C0C]
+	)
+	replace!(df.Total, 0 => 1)
+	transform!(df, 
+		[:A1C1, :Total] => ByRow((x, y) -> x / y) => :A1C1P,
+		[:A1C0, :Total] => ByRow((x, y) -> x / y) => :A1C0P,
+		[:A0C1, :Total] => ByRow((x, y) -> x / y) => :A0C1P,
+		[:A0C0, :Total] => ByRow((x, y) -> x / y) => :A0C0P
 	)
 end;
 
-# ╔═╡ 91006353-4ea7-4fd0-98c2-f23e6a38a351
-dropmissing!(df1, [Symbol("key_resp_4.keys"), :leftPoints, :rightPoints]);
-
-# ╔═╡ 06e153e3-f076-4e16-8ab6-141cc2b0d7bb
-function neg2pos2(key, left, right)
-	if key == "left"
-		if left + right < 0
-			return (OwnScore = left + 200, OtherScore = right + 200, Gain = "Lose")
-		elseif left + right >= 0
-			return (OwnScore = left,       OtherScore = right,       Gain = "Gain")
-		end
-	elseif key == "right"
-		if left + right < 0
-			return (OwnScore = right + 200, OtherScore = left + 200, Gain = "Lose")
-		elseif left + right >= 0
-			return (OwnScore = right,       OtherScore = left,       Gain = "Gain")
-		end
+# ╔═╡ 9bbd237a-905a-45f9-9c7d-d9e5a6d363ad
+Recorded_Data = mapreduce(vcat, csv_list) do csv
+	dt = CSV.read(csv, DataFrame, stringtype = String)
+	if "textbox_2.text" ∈ names(dt)
+		rename!(dt, :"textbox_2.text"  => "rate")
+	else
+		rename!(dt, :"Estimation.text" => "rate")
 	end
+	dropmissing!(dt, :Image)
+	dropmissing!(dt, :rate)              # 1-10; Total 179
+	subset!(dt, :rate => ByRow(<=(100))) # > 100 Total 29
+	transform!(dt, :rate => ByRow(x -> x / 100) => :rate)
+	transform!(dt,
+		:Image => ByRow(x -> replace(x, "stimuli/" => "")) => :image
+	)
+	select!(dt, ["image", "participant", "rate"])
+	return dt
+end;
+
+# ╔═╡ c6a540c3-ad50-4e01-a23b-15246f0dcdf6
+df0 = leftjoin(Recorded_Data, Original_Stimuli, on = :image);
+
+# ╔═╡ 531c6af8-2b2c-4d5c-a75b-bf84898e18d5
+names(df0)
+
+# ╔═╡ 9c0035dd-b12f-451b-bdce-a721829c3fa5
+transform!(df0, :dltP => ByRow(x -> x > 0 ? "Positive" : "Negative") => :dltPC);
+
+# ╔═╡ ebceda55-b5cf-4bcb-98ca-e117045cb6ea
+md"""
+# Overview
+"""
+
+# ╔═╡ b461a1e6-386b-4a89-9213-2ce963722d11
+# describe(df0)
+
+# ╔═╡ 32326ef0-a6e7-4e23-a0d9-b598eca8bdf7
+# names(df0)
+
+# ╔═╡ bbd9e0fb-f848-4a35-a6d9-fa37f9e97a51
+gdf0 = groupby(df0, [:A1C1C, :A1C0C, :A0C1C, :A0C0C], sort = true);
+
+# ╔═╡ fc65fc1c-ce7f-4f10-981f-6dba60bba050
+gdf0keys = keys(gdf0)
+
+# ╔═╡ 800b4679-bca4-4a6e-bc56-52e55ee9794c
+partitions(df0)
+
+# ╔═╡ a34878fb-f0ce-4ed2-bcad-7c8512e05ce5
+df = deepcopy(df0);
+
+# ╔═╡ 83535815-849b-41c3-bb94-d998ec78c89c
+contr = Dict(
+	:A1C1 => DummyCoding(),
+	:A1C0 => DummyCoding(),
+	:A0C1 => DummyCoding(),
+	:A0C0 => DummyCoding()
+)
+
+# ╔═╡ 6d636bc9-bf92-49f0-961b-de7ee4535cfe
+# subset!(df, :dltP => ByRow(!=(0)))
+
+# ╔═╡ 7f41f79c-bfaf-409f-9286-cb787fe47352
+f01 = let
+	fm = @formula(rate ~ 
+		A1C1 * A1C0 * A0C1 * A0C0
+		+ (1 | participant) + (1|image))
+	fit(MixedModel, fm, df)
 end
 
-# ╔═╡ 30ad6818-714b-4362-b8b4-af193dcd70cf
-transform!(df1, [Symbol("key_resp_4.keys"), :leftPoints, :rightPoints] => 
-		ByRow(neg2pos2) => AsTable
-);
-
-# ╔═╡ 401c49d8-4096-480f-8271-5e37e9a307f5
-select!(df1, 
-	["participant", "trialType", "OwnScore", "OtherScore", "Gain", "rating"]
-);
-
-# ╔═╡ 80ad622e-0783-4b7c-942d-73adb7eff2e8
-rename!(df1, "participant" => "Participant",  
-	"trialType" => "Feedback", "rating" => "Emotion");
-
-# ╔═╡ 1ba1c644-a1d9-4233-9085-3ac871d95a9e
-md"""
-#### 总体结果
-"""
-
-# ╔═╡ 9c8b0137-d0af-4a6e-b2ef-28d30bd80c28
-df1c = combine(
-	groupby(df1, [:Participant, :Feedback, :Gain]), 
-	:Emotion => mean => :Emotion
-);
-
-# ╔═╡ 436f5420-3ef0-4a9c-8fc7-b20ea714a889
-e1fm1 = lm(@formula(Emotion ~ Feedback * Gain), df1c);
-
-# ╔═╡ e5d58b40-7c37-43c8-a83a-5127b9b0ea38
-e1fm2 = lm(@formula(Emotion ~ Feedback + Gain), df1c);
-
-# ╔═╡ a1e0d71c-01a4-42bd-af08-993369cd74b9
-e1fm3 = lm(@formula(Emotion ~ Feedback), df1c);
-
-# ╔═╡ 83dfce03-65c2-4d0e-989d-5da22471a024
-e1fm4 = lm(@formula(Emotion ~ Gain), df1c);
-
-# ╔═╡ b14a6b03-768d-4bac-8dab-96db011a2acd
-ftest(e1fm1.model, e1fm2.model)
-
-# ╔═╡ a61067b2-83b9-4dbb-aa5f-94aaa399ac43
-coeftable(e1fm2)
-
-# ╔═╡ 12d7c32f-4a62-4cae-a9b2-39ef597bd084
-let
-	replace!(df1c.Gain,     "Gain"     => "获益框架", "Lose"    => "损失框架");
-	replace!(df1c.Feedback, "complete" => "完全反馈", "partial" => "不完全反馈");
-	transform!(df1c,
-		:Feedback => (x -> categorical(x, ordered = true)) => :Feedback
-	)
-	transform!(df1c,
-		:Gain => (x -> categorical(x, ordered = true)) => :Gain
-	)
-	Gain = unique(df1c.Gain)
-	Feedback = unique(df1c.Feedback)
-	
-	fig = Figure()
-	for (id1, gg) in enumerate(Gain)
-		ax = Axis(fig[1, id1], 
-			title = gg, xlabel = "反馈类型", ylabel = "被试情绪自评")
-		ylims!(-20, 40)
-		dt = df1c[df1c.Gain .== gg, :]
-		for (id2, fd) in enumerate(Feedback)
-			dtt = dt[dt.Feedback .== fd, :]
-			xx = Int.(dtt.Feedback.refs)
-			yy = dtt.Emotion
-			boxplot!(ax, xx, yy, width = 1, label = fd, whiskerwidth = 0.5)
-		end
-		ax.xticks = (1:length(levels(Feedback)), levels(Feedback))
-		id1 > 1 && hideydecorations!(ax)
-	end
-	fig
+# ╔═╡ 4223173c-529f-4367-8cf0-ea609b09315f
+f02 = let
+	fm = @formula(rate ~ 
+		A1C1 * A1C0
+		+ (1 | participant) + (1 |image))
+	fit(MixedModel, fm, df)
 end
 
-# ╔═╡ 76d4e45d-225e-4c4c-9f5e-3f30db7c53d9
-md"""
-#### 被试得分
-"""
+# ╔═╡ 6960d5de-5291-4ef0-b94d-151743a53558
+MixedModels.likelihoodratiotest(f01, f02)
 
-# ╔═╡ 1abbbc4d-5213-4632-9f3f-f45ad638b015
-df1d = combine(
-	groupby(df1, [:Participant, :Feedback, :Gain, :OwnScore]), 
-	:Emotion => mean => :Emotion
-);
-
-# ╔═╡ 5bd3d6c1-2187-4d24-b354-244ffcb9d41b
-e1fm51 = lm(@formula(Emotion ~ Feedback * Gain * OwnScore), df1d);
-
-# ╔═╡ 6b4a960b-205c-4e92-bc7e-ac4d36728316
-e1fm52 = lm(@formula(Emotion ~ Feedback + Gain + OwnScore), df1d);
-
-# ╔═╡ bda05cb8-6e31-4c5d-a0df-7b0eadefb1ce
-ftest(e1fm51.model, e1fm52.model)
-
-# ╔═╡ d0178ff1-4562-4be2-84d1-5f73ff561c91
-coeftable(e1fm52)
-
-# ╔═╡ 4b7d5041-7657-410b-abd6-2cbcb3ae7eb8
-let
-	replace!(df1d.Gain,     "Gain"     => "获益框架", "Lose"    => "损失框架");
-	replace!(df1d.Feedback, "complete" => "完全反馈", "partial" => "不完全反馈");
-	fig = Figure()
-	for (id1, ff) in enumerate(unique(df1d.Feedback))
-		dtt = df1d[df1d.Feedback .== ff, :]
-		ax = Axis(fig[1, id1], title = ff,
-			xlabel = "被试得分", ylabel = "被试情绪自评", 
-			xticks = -200:50:200, yticks = -40:20:40)
-		for (id2, gg) in enumerate(unique(df1d.Gain))
-			dt = dtt[dtt.Gain .== gg, :]
-			xx = dt.OwnScore .+ (iseven(id2) ? 1 : -1) * 6.5
-			yy = dt.Emotion
-			boxplot!(ax, xx, yy, width = 15, label = gg, whiskerwidth = 0.5)
-		end
-		id1 > 1 && hideydecorations!(ax)
-	end
-	axislegend("框架", position = :rb)
-	fig
+# ╔═╡ 1389b5aa-5cde-4712-8a5c-e439bfda35e2
+f03 = let
+	fm = @formula(rate ~  C1GvA1 * dltP
+		+ (1 | participant) + (1 | image))
+	fit(MixedModel, fm, df)
 end
 
-# ╔═╡ 396cbce1-4ab7-44f6-ae14-5ae041bf487a
-md"""
-### 实验二
-"""
-
-# ╔═╡ 29c07409-5d62-42aa-a002-b14dfd7c1685
-md"""
-#### 读入数据
-"""
-
-# ╔═╡ 3223d964-3424-4a91-87cd-690876844b4d
-md"""
-相关说明
-- `mychoice`: 被试本试次得分
-- `otherchoice`： 电脑本试次得分
-- `stay`: 剩余箱子得分
-- `key_resp_4.keys`： 电脑先选， 被试按键
-- `key_resp_6.keys`： 被试先选， 被试按键
-- `rating`: 情绪评分
-- `choicepos`: 电脑先选条件下， 电脑选择的位置
-"""
-
-# ╔═╡ af32e1d2-b575-11ec-34f6-25b42c355184
-cd(@__DIR__) # pwd()
-
-# ╔═╡ e2d72e3d-b16e-4782-92fb-743fd332f202
-ex2 = list2df("Experiment_2");
-
-# ╔═╡ 43f57dbc-3d7e-48e0-bce1-23e058938bd1
-size(ex2, 1) == 192 * 35 # 192 trial * 35 participant
-
-# ╔═╡ 218d3696-9ee4-4841-ad53-447849a238f9
-freqtable(ex2, :Gain, :Order)
-
-# ╔═╡ 0f5bd14c-638a-4eb1-85e5-729767c5fc4f
-md"""
-#### 总体结果
-"""
-
-# ╔═╡ ad4a9897-84fa-4e42-a653-fb36bb2e7657
-ex2t = groupby(ex2, [:Participant, :Gain, :Order]);
-
-# ╔═╡ a90937a1-1961-465a-bd7f-f8f35da9badc
-ex2ts = combine(ex2t, :Emotion => mean => :Emotion);
-
-# ╔═╡ 2eaf3273-0ac0-4cc8-8879-fd15903c75de
-fmt1 = lm(@formula(Emotion ~ Gain * Order), ex2ts);
-
-# ╔═╡ 699dd367-d4a3-431d-87a1-dd6ff276c84b
-fmt2 = lm(@formula(Emotion ~ Gain), ex2ts);
-
-# ╔═╡ a0691d8b-d80c-4b5c-b78c-163ee13faf85
-ftest(fmt1.model, fmt2.model)
-
-# ╔═╡ 71e9a4b4-5dbb-4a67-b898-0cfffd90998d
-coeftable(fmt2)
-
-# ╔═╡ cc35db1a-715b-419a-b5a7-3f4a3f8faab4
-let
-	replace!(ex2ts.Gain, "Gain" => "获益框架", "Lose" => "损失框架")
-	transform!(ex2ts,
-		:Gain => (x -> categorical(x, ordered = true)) => :Gain
-	)
-	xx = ex2ts.Gain
-	yy = ex2ts.Emotion
-	colors = Makie.default_palettes.patchcolor.val
-	boxplot(Int.(xx.refs), yy, whiskerwidth = 0.5,
-		color = colors[Int.(xx.refs)],
-		axis = (xticks = (1:length(levels(xx)), levels(xx)),
-			xlabel = "框架", ylabel = "被试情绪自评"
-		)
-	)
+# ╔═╡ 06146fdf-f953-423c-a0b6-41b8d17d0399
+f04 = let
+	fm = @formula(rate ~ A1C1 + A1C0 + (1 | participant) + (1|image))
+	fit(MixedModel, fm, df)
 end
 
-# ╔═╡ d5967d18-62d7-4870-b3b7-af7416acb2b4
+# ╔═╡ f36cd6dc-f609-4ccd-b03a-fd88883c9d9c
+unique(df.A1C1P)
+
+# ╔═╡ cfced893-8080-4b1e-805a-c74eede09465
+names(df)
+
+# ╔═╡ 2700a676-2cbb-4f38-9248-16622717bdd7
+MixedModels.likelihoodratiotest(f03, f04)
+
+# ╔═╡ cd72a095-aaab-47e4-a929-c95d7944cfc4
 md"""
-#### 被试得分
+# $\Delta$P: No effect in general
 """
 
-# ╔═╡ 1ebe900d-2301-44ea-86b3-0fd7f03769b1
-HM = combine(
-	groupby(ex2, [:Participant, :Gain, :Human]), 
-	:Emotion => mean => :Emotion
-);
+# ╔═╡ 7b676124-cfc4-433c-8711-bfc92f6a3f9d
+fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), df)
 
-# ╔═╡ a6d31357-bb6d-4fb2-a642-112f39d32832
-fHM1 = lm(@formula(Emotion ~ Gain * Human), HM);
+# ╔═╡ 2f567276-2076-4bf4-b506-75e003d72f2c
+fit(MixedModel, @formula(rate ~ C1GvA1 * dltP + (1 | participant) + (1|image)), df)
 
-# ╔═╡ ac88d890-6514-4e82-b776-ff98467d8708
-fHM2 = lm(@formula(Emotion ~ Gain + Human), HM);
+# ╔═╡ fc7125ee-a3ac-4fea-98e1-1f84a1893d1d
+g1 = groupby(df, :dltPC);
 
-# ╔═╡ 241d663c-dc41-4039-b9a2-0f48d792b8a1
-ftest(fHM1.model, fHM2.model)
+# ╔═╡ ac03428a-fd16-4a31-a925-540e4a45a026
+partitions(g1[1])
 
-# ╔═╡ 2a111cc4-a80c-43d0-83b3-7c827761a4fa
-coeftable(fHM2)
+# ╔═╡ 211dc5b9-619f-4733-aaef-98486c1da117
+partitions(g1[2])
 
-# ╔═╡ 5d2801db-a987-48e5-b71d-6674c0f7af58
-let
-	replace!(HM.Gain, "Gain" => "获益框架", "Lose" => "损失框架")
-	transform!(HM,
-		:Gain => (x -> categorical(x, ordered = true)) => :Gain
-	)
-	fig = Figure()
-	ax = Axis(fig[1, 1], 
-		xlabel = "被试得分", ylabel = "被试情绪自评", xticks = -200:50:200)
-	for (id, gg) in enumerate(unique(HM.Gain))
-		dt = HM[HM.Gain .== gg, :]
-		xx = dt.Human .+ (iseven(id) ? 1 : -1) * 6.5
-		yy = dt.Emotion
-		boxplot!(ax, xx, yy, width = 15, label = gg, whiskerwidth = 0.5)
-	end
-	axislegend("框架", position = :rb)
-	fig
-end
+# ╔═╡ e45ae05f-a1db-49ef-82de-bd7840481e66
+fg11 = fit(MixedModel, 
+		@formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), g1[1])
 
-# ╔═╡ ebc5cfbd-dd1d-4089-8798-e35357b38cac
+# ╔═╡ 5c040718-9ddc-40c0-9070-eb278bbb145e
+fg12 = fit(MixedModel, 
+		@formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), g1[2])
+
+# ╔═╡ cf50aa22-9aa3-4406-a250-f9748f2d1fb8
+ScatterLines(df)
+
+# ╔═╡ c0515df9-d604-400c-93db-36848f8b574a
 md"""
-### 实验三
+# Effect of $A\neg C$ on $\Delta$ p
 """
 
-# ╔═╡ 4e5c0d80-2871-4f57-a0a0-acbffb4ec199
+# ╔═╡ 216f8c2b-c0f6-47a2-800c-516760d41345
 md"""
-#### 读入数据
+## No effect when $A\neg C = 0$
 """
 
-# ╔═╡ af3c116c-510d-4c5c-9b64-fb56a106e5eb
-ex2n = list2df("Experiment_2_N");
+# ╔═╡ c6f7fc2a-569a-4f85-a6d9-e251a08d1a1b
+s1 = subset(df, :A1C0 => ByRow(==(0)));
 
-# ╔═╡ f5d03c3a-3854-4c08-9cf7-074dd628393b
+# ╔═╡ 68f4be33-d6c3-4bd8-b1c9-46731d5f0800
+partitions(s1)
+
+# ╔═╡ 86baf85c-8cd5-40ed-a3c8-f9e1a9bf5c6b
+fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), s1)
+
+# ╔═╡ fa0beea6-bc35-487e-93d7-28d97bdd581c
+gs1 = groupby(s1, :dltPC);
+
+# ╔═╡ 2b5420e4-62db-4cdd-82f1-7cb507ce190b
+keys(gs1)
+
+# ╔═╡ 24da21ce-fdce-4350-8a37-59ca61a4c625
+partitions(gs1[1])
+
+# ╔═╡ 712c9beb-404d-4300-8a9a-87eff971fb33
+partitions(gs1[2])
+
+# ╔═╡ a32d4e21-4a05-46bc-9b73-678d355eefbc
+fgs11 = fit(MixedModel, 
+		@formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), gs1[1]);
+
+# ╔═╡ c01ece91-aa38-4f09-8c65-78d934ea6461
+fgs12 = fit(MixedModel, @formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), gs1[2]);
+
+# ╔═╡ f97c8cf7-94b7-4212-96af-cd33e75abe7c
+ScatterLines(s1)
+
+# ╔═╡ fcbf402a-72f8-4020-89b9-17ad56168aef
 md"""
-#### 总体结果
+### Group 4: Still no effect
 """
 
-# ╔═╡ fe698e99-939b-44d4-aaed-1bdfdc5c58f0
-ex2nts = combine(
-	groupby(ex2n, [:Participant, :Gain, :Order]), 
-	:Emotion => mean => :Emotion);
+# ╔═╡ 8f7cc0ae-0d59-4125-b011-2b5dfb1f17b6
+GroupInfo(4)
 
-# ╔═╡ b4f7a35f-0f74-465b-82a0-31c404b49a10
-ex2n1 = lm(@formula(Emotion ~ Gain * Order), ex2nts);
+# ╔═╡ 82f4465f-8173-45e2-9065-86e2286d35e9
+fit(MixedModel, @formula(rate ~ dltPC + (1 | participant) + (1|image)), gdf0[4])
 
-# ╔═╡ 7516d09f-7356-41ac-a565-2c4e2c21408d
-ex2n2 = lm(@formula(Emotion ~ Gain + Order), ex2nts);
+# ╔═╡ 83158904-0278-4277-aa11-906d975e1956
+fit(MixedModel, @formula(rate ~ dltP + (1 | participant) + (1|image)), gdf0[4])
 
-# ╔═╡ 3e754434-5934-42df-861f-614bfa19643f
-ftest(ex2n1.model, ex2n2.model)
-
-# ╔═╡ 00762ff1-c860-4d2c-b5ef-4a27b28b5d7f
-coeftable(ex2n2)
-
-# ╔═╡ dccfe48e-4068-4f35-8446-8476033f90e6
-let
-	replace!(ex2nts.Gain, "Gain" => "获益框架", "Lose" => "损失框架")
-	transform!(ex2nts,
-		:Gain => (x -> categorical(x, ordered = true)) => :Gain
-	)
-	xx = ex2nts.Gain
-	yy = ex2nts.Emotion
-	colors = Makie.default_palettes.patchcolor.val
-	boxplot(Int.(xx.refs), yy, whiskerwidth = 0.5, color = colors[Int.(xx.refs)],
-		axis = (xticks = (1:length(levels(xx)), levels(xx)), 
-			xlabel = "框架", ylabel = "被试情绪自评")
-	)
-end
-
-# ╔═╡ dec0718e-799d-48ce-b444-cf07daf803c6
+# ╔═╡ e9717416-f74f-4c5d-b9ab-63e5020408c2
 md"""
-#### 被试得分
+## YES effect when $A\neg C \neq 0$
 """
 
-# ╔═╡ c36cb78e-09ce-4521-803f-3e94d5ebd7cd
-HMn = combine(
-	groupby(ex2n, [:Participant, :Gain, :Human]), 
-	:Emotion => mean => :Emotion
-);
+# ╔═╡ 23c65bfe-accc-4719-aade-5a2615971d4c
+s2 = subset(df, :A1C0 => ByRow(!=(0)));
 
-# ╔═╡ fa2bd5ca-1fc5-4706-86b1-c7baf5bd2a47
-fHMn1 = lm(@formula(Emotion ~ Gain * Human), HMn);
+# ╔═╡ 4c4d0e66-4dd8-46cb-8312-9d81fe4c56d2
+partitions(s2)
 
-# ╔═╡ 4a90cefa-9793-481d-ae1b-863a379369ec
-fHMn2 = lm(@formula(Emotion ~ Gain + Human), HMn);
+# ╔═╡ 1ac36867-29c3-41c4-83fc-9ce18b336950
+fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), s2)
 
-# ╔═╡ dc676a84-430c-4316-9e42-e935d3dc9e74
-ftest(fHMn1.model, fHMn2.model)
+# ╔═╡ 97dcdc9b-e8be-4520-b1af-34b4ae075a3e
+fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + A1C1C + (1 | participant) + (1|image)), s2)
 
-# ╔═╡ 366feb2b-b08e-4176-9623-149b6cbaf989
-coeftable(fHMn2)
+# ╔═╡ 78e98399-698d-491e-b63a-f29d8dc9c49d
+gs2 = groupby(s2, :dltPC);
 
-# ╔═╡ d0099447-0c7d-4573-b9b0-ff18398f36a4
-let
-	replace!(HMn.Gain, "Gain" => "获益框架", "Lose" => "损失框架")
-	transform!(HMn,
-		:Gain => (x -> categorical(x, ordered = true)) => :Gain
-	)
-	fig = Figure()
-	ax = Axis(fig[1, 1], 
-		xlabel = "被试得分", ylabel = "被试情绪自评", xticks = -200:50:200)
-	for (id, gg) in enumerate(unique(HMn.Gain))
-		dt = HMn[HMn.Gain .== gg, :]
-		xx = dt.Human .+ (iseven(id) ? 1 : -1) * 6.5
-		yy = dt.Emotion
-		boxplot!(ax, xx, yy, width = 15, label = gg, whiskerwidth = 0.5)
-	end
-	axislegend("框架", position = :rb)
-	fig
-end
+# ╔═╡ a35140ee-6a16-42d8-8f02-c5224ffc1c6e
+keys(gs2)
 
-# ╔═╡ af57ef9e-0030-4b2d-8b1b-127f50d9754a
+# ╔═╡ 63206287-d776-4cb0-956c-274a59926c19
+partitions(gs2[1])
+
+# ╔═╡ 1c6c4a8d-f676-497f-b5db-c4df51c3a338
+partitions(gs2[2])
+
+# ╔═╡ f62cbdb4-d4b9-48a4-ac3a-f444dd6bc278
+fgs21 = fit(MixedModel, 
+		@formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), gs2[1])
+
+# ╔═╡ 9e1703e8-75d9-4a91-9591-d9e8b1803a76
+fgs22 = fit(MixedModel, 
+		@formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), gs2[2])
+
+# ╔═╡ fcce293a-d27c-4895-a970-db45d295f49d
+ScatterLines(s2)
+
+# ╔═╡ 0d4881cd-fabe-46bd-ab9d-c253e82297e7
 md"""
-### 附录
+### $AC = 0$: No effect
 """
 
-# ╔═╡ ef982930-6388-466d-b0e1-8d715316a884
-function list2df(experiment)
-	
-	# 1. List csv files
-	csv_list = filter(endswith(".csv"), readdir(joinpath("data", experiment), join = true))
+# ╔═╡ 7b0a6aca-b088-4bbd-8340-7a0385e82b92
+[GroupInfo(5); GroupInfo(6); GroupInfo(7); GroupInfo(8)]
 
-	# 2. Read data to dataframe
-	df = mapreduce(vcat, csv_list) do csv
-		CSV.read(csv, DataFrame, stringtype = String,
-				 drop = (i, name) -> startswith(string(name), "Column")
-		)
-	end
+# ╔═╡ 89263c1f-591d-4608-9b3d-6c25962019ed
+s1s2 = subset(s2, :A1C1 => ByRow(==(0)));
 
-	# 3. Delete rows
-	dropmissing!(df, [:mychoice, :otherchoice, :stay, :rating])
-	
-	# 4. Create new columns
-	## a. Define a function to convert negative values to postive ones
-		function neg2pos(x, y, z)
-			if (x + y + z) < 0
-				mn = -200
-				return (Human = x-mn, Computer = y-mn, Remain = z-mn, Gain = "Lose")
-			else
-				return (Human = x,    Computer = y,    Remain = z,    Gain = "Gain")
-			end
-		end
-	
-	## b. Do the converting
-	transform!(df,
-		[:mychoice, :otherchoice, :stay] => ByRow(neg2pos)    => AsTable,
-		:choicepos => ByRow(x -> ismissing(x) ? "HC" : "CH")  => :Order,
-		[:mychoice, :stay] => ByRow( (x, y) -> x - y)         => :HumanRemainDiff,
-		[:mychoice, :otherchoice] => ByRow( (x, y) -> x - y)  => :HumanComputerDiff
-	)
+# ╔═╡ 61e16b0f-d897-451b-b162-4fa2be1f92ba
+fit(MixedModel, @formula(rate ~ dltP + (1 | participant) + (1|image)), s1s2)
 
-	# 5. Rename column names
-	rename!(df, "rating" => "Emotion", "participant"  => "Participant")
-	
-	# 6. Select usefule columns, "mychoice", "otherchoice", "stay"
-	select!(df, 
-		["Participant", "Gain", "Order", "Emotion", "Human", "Computer", "Remain",
-		"HumanRemainDiff", "HumanComputerDiff"]
-	)
-	
-	return df
-end
+# ╔═╡ 252899e2-46eb-4391-aa1b-a167abbc0558
+md"""
+### $AC \neq 0$: No effect in general !!
+"""
+
+# ╔═╡ e82176d3-47a2-4ab6-8424-20d863c12328
+[GroupInfo(13); GroupInfo(14); GroupInfo(15); GroupInfo(16)]
+
+# ╔═╡ ffcea293-477e-4d29-861d-65821a46ebff
+s2s2 = subset(s2, :A1C1 => ByRow(!=(0)));
+
+# ╔═╡ 2ec29a39-b321-4e99-ba4e-d67289ad4abe
+fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), s2s2)
+
+# ╔═╡ 7e87e837-ee15-40b4-b58f-b036692779ac
+partitions(s2s2)
+
+# ╔═╡ e12fcb83-132b-4b42-9c37-f8299212a18c
+gs2s2 = groupby(s2s2, :dltPC);
+
+# ╔═╡ cfedc4e2-89c8-44fb-9d6c-77872fed6e65
+partitions(gs2s2[1])
+
+# ╔═╡ b94a6ea7-6be8-460a-9724-22a1f339c3df
+partitions(gs2s2[2])
+
+# ╔═╡ 83fea4d4-3ae3-468e-a367-fe11736a9b4e
+fgs2s21 = fit(MixedModel, 
+		@formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), gs2s2[1])
+
+# ╔═╡ fc027aeb-e9bd-4594-b9eb-b2be574f356e
+fgs2s22 = fit(MixedModel, 
+		@formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), gs2s2[2])
+
+# ╔═╡ 573bfaec-17b1-41f2-abf3-6bf4c68055dc
+ScatterLines(s2s2)
+
+# ╔═╡ bd33b753-4df2-41ec-8070-57f273e3e251
+md"""
+#### $\neg AC = 0$: No effect !!
+"""
+
+# ╔═╡ 845a46c6-1c0d-496a-9ad0-a0cf59e651a3
+s1s2s2 = subset(s2s2, :A0C1 => ByRow(==(0)));
+
+# ╔═╡ 7332e45e-7c04-401b-bf5f-68ae659f5999
+partitions(s1s2s2)
+
+# ╔═╡ b7ddf5b0-e297-4834-ad24-864267c64dd6
+fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), s1s2s2)
+
+# ╔═╡ f601147d-ae5b-4209-8571-dbb7b9a8418e
+md"""
+#### $\neg AC \neq 0$: No effect !!
+"""
+
+# ╔═╡ 0a58a756-47f5-42af-8ea4-454bb456cc65
+s2s2s2 = subset(s2s2, :A0C1 => ByRow(!=(0)));
+
+# ╔═╡ 551f9a32-d948-4097-813b-a7734aba615e
+partitions(s2s2s2)
+
+# ╔═╡ 06cb78a1-d434-4670-a59d-cfbb13cc1fb3
+md"""
+#### Group 13: No effect !!
+"""
+
+# ╔═╡ 7f9340f2-7e60-4f5c-8c80-64ffd66db9d3
+GroupInfo(13)
+
+# ╔═╡ cd23ec95-0462-4f64-8b81-ffe50358d0dc
+fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), gdf0[13])
+
+# ╔═╡ 205b37dd-48df-483c-9001-a4bd14bfc454
+md"""
+#### Group 14: Colinealized with C1GvA1
+"""
+
+# ╔═╡ 8a22a57c-6da9-4414-966d-bd426b05235c
+GroupInfo(14)
+
+# ╔═╡ af735026-3e0c-4fd7-9b53-d9cbdb2be23c
+fit(MixedModel, @formula(rate ~  C1GvA1 + (1 | participant) + (1|image)), gdf0[14])
+
+# ╔═╡ e09e7b72-d560-42a6-9360-44ba1f5da88a
+md"""
+#### Group 15: No effect !!
+"""
+
+# ╔═╡ d8bb92f6-bf41-4dc8-8d5a-0d73de4c59ad
+GroupInfo(15)
+
+# ╔═╡ db57fd30-ec44-49b2-9f60-775f9b03121c
+fit(MixedModel, @formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), gdf0[15])
+
+# ╔═╡ dfa7801c-c1f8-4814-b06a-6828ea432e3b
+md"""
+#### Group 14 vs 15: No effect !!
+"""
+
+# ╔═╡ b1a0c34f-bcbb-4d2e-a3f8-5f6acc958446
+fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), reduce(vcat, gdf0[[14, 15]]))
+
+# ╔═╡ 37e9dc86-f104-4caf-a27d-d8683e3b25a4
+md"""
+#### Group 16: No effect !!
+"""
+
+# ╔═╡ e3033c14-f314-4d30-8ea7-58efa552efcc
+GroupInfo(16)
+
+# ╔═╡ ddd1d108-d92a-4170-9279-948d8cafc23f
+fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), gdf0[16])
+
+# ╔═╡ 0ba5ab56-c76b-447e-886e-85a4b2ff0cf0
+md"""
+#### Group 13 vs 16: No effect !!
+"""
+
+# ╔═╡ 6ec16e16-59de-45db-9914-5e1632539343
+fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), reduce(vcat, gdf0[[13, 16]]))
+
+# ╔═╡ 2f793451-f88e-4bbf-bc94-e48c6d43b159
+md"""
+# Conclusion
+"""
+
+# ╔═╡ 7a4cff1e-7165-42cc-b800-ed7276f0c13c
+md"""
+The sign of $\Delta$ P could have an effect, but its effect was counfounded by the following two factors:
+- Whether $A\neg C$ exists
+- whether $AC$ exists.
+
+Only when 
+-  $A\neg C$ does not exist. And
+- The existence of $AC$ could be varied, then
+
+the effects of $\Delta$P as has a simmliar effect as being descried in the Relevance theory.
+"""
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -474,18 +571,17 @@ CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 CategoricalArrays = "324d7699-5711-5eae-9e2f-1d82baa6b597"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 FreqTables = "da1fdf0e-e0ff-5433-a45f-9bb5ff651cb1"
-GLM = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
+MixedModels = "ff71e718-51f3-5ec2-a782-8ffcbfa3c316"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
-Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [compat]
-CSV = "~0.10.9"
-CairoMakie = "~0.7.5"
-CategoricalArrays = "~0.10.7"
-DataFrames = "~1.3.6"
+CSV = "~0.10.10"
+CairoMakie = "~0.10.5"
+CategoricalArrays = "~0.10.8"
+DataFrames = "~1.5.0"
 FreqTables = "~0.4.5"
-GLM = "~1.6.2"
-PlutoUI = "~0.7.50"
+MixedModels = "~4.12.1"
+PlutoUI = "~0.7.51"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -494,7 +590,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.9.0"
 manifest_format = "2.0"
-project_hash = "04d208efc366ebed367f3c713d7a0648b44b853d"
+project_hash = "5cbdd8cf7189fe1f4bd45141606b60cd31c77f16"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -513,9 +609,9 @@ uuid = "6e696c72-6542-2067-7265-42206c756150"
 version = "1.1.4"
 
 [[deps.AbstractTrees]]
-git-tree-sha1 = "03e0550477d86222521d254b741d470ba17ea0b5"
+git-tree-sha1 = "faa260e4cb5aba097a73fab382dd4b5819d8ec8c"
 uuid = "1520ce14-60c1-5f80-bbc7-55ef81b5835c"
-version = "0.3.4"
+version = "0.4.4"
 
 [[deps.Adapt]]
 deps = ["LinearAlgebra", "Requires"]
@@ -537,27 +633,17 @@ version = "0.4.1"
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
 version = "1.1.1"
 
-[[deps.ArrayInterface]]
-deps = ["Adapt", "LinearAlgebra", "Requires", "SparseArrays", "SuiteSparse"]
-git-tree-sha1 = "917286faa2abb288796e75b88ca67edc016f3219"
-uuid = "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9"
-version = "7.4.5"
+[[deps.Arrow]]
+deps = ["ArrowTypes", "BitIntegers", "CodecLz4", "CodecZstd", "DataAPI", "Dates", "LoggingExtras", "Mmap", "PooledArrays", "SentinelArrays", "Tables", "TimeZones", "TranscodingStreams", "UUIDs", "WorkerUtilities"]
+git-tree-sha1 = "3b7d963a83ee6d894383b3a4b11837c9d51b42ff"
+uuid = "69666777-d1a9-59fb-9406-91d4454c9d45"
+version = "2.5.2"
 
-    [deps.ArrayInterface.extensions]
-    ArrayInterfaceBandedMatricesExt = "BandedMatrices"
-    ArrayInterfaceBlockBandedMatricesExt = "BlockBandedMatrices"
-    ArrayInterfaceCUDAExt = "CUDA"
-    ArrayInterfaceGPUArraysCoreExt = "GPUArraysCore"
-    ArrayInterfaceStaticArraysCoreExt = "StaticArraysCore"
-    ArrayInterfaceTrackerExt = "Tracker"
-
-    [deps.ArrayInterface.weakdeps]
-    BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
-    BlockBandedMatrices = "ffab5731-97b5-5995-9138-79e8c1846df0"
-    CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
-    GPUArraysCore = "46192b85-c4d5-4398-a991-12ede77f4527"
-    StaticArraysCore = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
-    Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"
+[[deps.ArrowTypes]]
+deps = ["Sockets", "UUIDs"]
+git-tree-sha1 = "f7e3797796fbb56b2d61354d6e1c0f3ebc260a84"
+uuid = "31f734f8-188a-4ce0-8406-c8a06bd891cd"
+version = "2.1.0"
 
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
@@ -583,6 +669,18 @@ version = "0.4.6"
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 
+[[deps.BenchmarkTools]]
+deps = ["JSON", "Logging", "Printf", "Profile", "Statistics", "UUIDs"]
+git-tree-sha1 = "d9a9701b899b30332bbcb3e1679c41cce81fb0e8"
+uuid = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+version = "1.3.2"
+
+[[deps.BitIntegers]]
+deps = ["Random"]
+git-tree-sha1 = "fc54d5837033a170f3bad307f993e156eefc345f"
+uuid = "c3b6d118-76ef-56ca-8cc7-ebb389d030a1"
+version = "0.2.7"
+
 [[deps.Bzip2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "19a35467a82e236ff51bc17a3a44b69ef35185a2"
@@ -593,6 +691,9 @@ version = "1.0.8+0"
 git-tree-sha1 = "eb4cb44a499229b3b8426dcfb5dd85333951ff90"
 uuid = "fa961155-64e5-5f13-b03f-caf6b980ea82"
 version = "0.4.2"
+
+[[deps.CRC32c]]
+uuid = "8bf52ea8-c179-5cab-976a-9e18b702a9bc"
 
 [[deps.CSV]]
 deps = ["CodecZlib", "Dates", "FilePathsBase", "InlineStrings", "Mmap", "Parsers", "PooledArrays", "PrecompileTools", "SentinelArrays", "Tables", "Unicode", "WeakRefStrings", "WorkerUtilities"]
@@ -607,10 +708,10 @@ uuid = "159f3aea-2a34-519c-b102-8c37f9878175"
 version = "1.0.5"
 
 [[deps.CairoMakie]]
-deps = ["Base64", "Cairo", "Colors", "FFTW", "FileIO", "FreeType", "GeometryBasics", "LinearAlgebra", "Makie", "SHA", "StaticArrays"]
-git-tree-sha1 = "4a0de4f5aa2d5d27a1efa293aeabb1a081e46b2b"
+deps = ["Base64", "Cairo", "Colors", "FFTW", "FileIO", "FreeType", "GeometryBasics", "LinearAlgebra", "Makie", "PrecompileTools", "SHA"]
+git-tree-sha1 = "9e7f01dd16e576ebbdf8b453086f9d0eff814a09"
 uuid = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
-version = "0.7.5"
+version = "0.10.5"
 
 [[deps.Cairo_jll]]
 deps = ["Artifacts", "Bzip2_jll", "CompilerSupportLibraries_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "JLLWrappers", "LZO_jll", "Libdl", "Pixman_jll", "Pkg", "Xorg_libXext_jll", "Xorg_libXrender_jll", "Zlib_jll", "libpng_jll"]
@@ -618,11 +719,18 @@ git-tree-sha1 = "4b859a208b2397a7a623a03449e4636bdb17bcf2"
 uuid = "83423d85-b0ee-5818-9007-b63ccbeb887a"
 version = "1.16.1+1"
 
+[[deps.Calculus]]
+deps = ["LinearAlgebra"]
+git-tree-sha1 = "f641eb0a4f00c343bbc32346e1217b86f3ce9dad"
+uuid = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
+version = "0.5.1"
+
 [[deps.CategoricalArrays]]
 deps = ["DataAPI", "Future", "Missings", "Printf", "Requires", "Statistics", "Unicode"]
 git-tree-sha1 = "1568b28f91293458345dabba6a5ea3f183250a61"
 uuid = "324d7699-5711-5eae-9e2f-1d82baa6b597"
 version = "0.10.8"
+weakdeps = ["JSON", "RecipesBase", "SentinelArrays", "StructTypes"]
 
     [deps.CategoricalArrays.extensions]
     CategoricalArraysJSONExt = "JSON"
@@ -630,23 +738,35 @@ version = "0.10.8"
     CategoricalArraysSentinelArraysExt = "SentinelArrays"
     CategoricalArraysStructTypesExt = "StructTypes"
 
-    [deps.CategoricalArrays.weakdeps]
-    JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
-    RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
-    SentinelArrays = "91c51154-3ec4-41a3-a24f-3f23e20d615c"
-    StructTypes = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
-
 [[deps.ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
 git-tree-sha1 = "e30f2f4e20f7f186dc36529910beaedc60cfa644"
 uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 version = "1.16.0"
 
+[[deps.CodecBzip2]]
+deps = ["Bzip2_jll", "Libdl", "TranscodingStreams"]
+git-tree-sha1 = "2e62a725210ce3c3c2e1a3080190e7ca491f18d7"
+uuid = "523fee87-0ab8-5b00-afb7-3ecf72e48cfd"
+version = "0.7.2"
+
+[[deps.CodecLz4]]
+deps = ["Lz4_jll", "TranscodingStreams"]
+git-tree-sha1 = "59fe0cb37784288d6b9f1baebddbf75457395d40"
+uuid = "5ba52731-8f18-5e0d-9241-30f10d1ec561"
+version = "0.4.0"
+
 [[deps.CodecZlib]]
 deps = ["TranscodingStreams", "Zlib_jll"]
 git-tree-sha1 = "9c209fb7536406834aa938fb149964b985de6c83"
 uuid = "944b1d66-785c-5afd-91f1-9de20f533193"
 version = "0.7.1"
+
+[[deps.CodecZstd]]
+deps = ["CEnum", "TranscodingStreams", "Zstd_jll"]
+git-tree-sha1 = "849470b337d0fa8449c21061de922386f32949d9"
+uuid = "6b39b394-51ab-5f42-8807-6242bab2b4c2"
+version = "0.7.2"
 
 [[deps.ColorBrewer]]
 deps = ["Colors", "JSON", "Test"]
@@ -683,6 +803,12 @@ git-tree-sha1 = "08c8b6831dc00bfea825826be0bc8336fc369860"
 uuid = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 version = "1.0.2"
 
+[[deps.CommonSubexpressions]]
+deps = ["MacroTools", "Test"]
+git-tree-sha1 = "7b8a93dba8af7e3b42fecabf646260105ac373f7"
+uuid = "bbf7d656-a473-5ed7-a52c-81e309532950"
+version = "0.3.0"
+
 [[deps.Compat]]
 deps = ["UUIDs"]
 git-tree-sha1 = "7a60c856b9fa189eb34f5f8a6f6b5529b7942957"
@@ -698,11 +824,21 @@ deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
 version = "1.0.2+0"
 
+[[deps.ConstructionBase]]
+deps = ["LinearAlgebra"]
+git-tree-sha1 = "738fec4d684a9a6ee9598a8bfee305b26831f28c"
+uuid = "187b0558-2788-49d3-abe0-74a17ed4e7c9"
+version = "1.5.2"
+weakdeps = ["IntervalSets", "StaticArrays"]
+
+    [deps.ConstructionBase.extensions]
+    ConstructionBaseIntervalSetsExt = "IntervalSets"
+    ConstructionBaseStaticArraysExt = "StaticArrays"
+
 [[deps.Contour]]
-deps = ["StaticArrays"]
-git-tree-sha1 = "9f02045d934dc030edad45944ea80dbd1f0ebea7"
+git-tree-sha1 = "d05d9e7b7aedff4e5b51a029dced05cfb6125781"
 uuid = "d38c429a-6771-53c6-b99e-75d170b6e991"
-version = "0.5.7"
+version = "0.6.2"
 
 [[deps.Crayons]]
 git-tree-sha1 = "249fe38abf76d48563e2f4556bebd215aa317e15"
@@ -715,10 +851,10 @@ uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
 version = "1.15.0"
 
 [[deps.DataFrames]]
-deps = ["Compat", "DataAPI", "Future", "InvertedIndices", "IteratorInterfaceExtensions", "LinearAlgebra", "Markdown", "Missings", "PooledArrays", "PrettyTables", "Printf", "REPL", "Reexport", "SortingAlgorithms", "Statistics", "TableTraits", "Tables", "Unicode"]
-git-tree-sha1 = "db2a9cb664fcea7836da4b414c3278d71dd602d2"
+deps = ["Compat", "DataAPI", "Future", "InlineStrings", "InvertedIndices", "IteratorInterfaceExtensions", "LinearAlgebra", "Markdown", "Missings", "PooledArrays", "PrettyTables", "Printf", "REPL", "Random", "Reexport", "SentinelArrays", "SnoopPrecompile", "SortingAlgorithms", "Statistics", "TableTraits", "Tables", "Unicode"]
+git-tree-sha1 = "aa51303df86f8626a962fccb878430cdb0a97eee"
 uuid = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
-version = "1.3.6"
+version = "1.5.0"
 
 [[deps.DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
@@ -741,6 +877,24 @@ git-tree-sha1 = "9e2f36d3c96a820c678f2f1f1782582fcf685bae"
 uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 version = "1.9.1"
 
+[[deps.Dictionaries]]
+deps = ["Indexing", "Random", "Serialization"]
+git-tree-sha1 = "e82c3c97b5b4ec111f3c1b55228cebc7510525a2"
+uuid = "85a47980-9c8c-11e8-2b9f-f7ca1fa99fb4"
+version = "0.3.25"
+
+[[deps.DiffResults]]
+deps = ["StaticArraysCore"]
+git-tree-sha1 = "782dd5f4561f5d267313f23853baaaa4c52ea621"
+uuid = "163ba53b-c6d8-5494-b064-1a9d43ac40c5"
+version = "1.1.0"
+
+[[deps.DiffRules]]
+deps = ["IrrationalConstants", "LogExpFunctions", "NaNMath", "Random", "SpecialFunctions"]
+git-tree-sha1 = "a4ad7ef19d2cdc2eff57abbbe68032b1cd0bd8f8"
+uuid = "b552c78f-8df3-52c6-915a-8e097449b14b"
+version = "1.13.0"
+
 [[deps.Distributed]]
 deps = ["Random", "Serialization", "Sockets"]
 uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
@@ -761,14 +915,20 @@ version = "0.25.94"
 
 [[deps.DocStringExtensions]]
 deps = ["LibGit2"]
-git-tree-sha1 = "b19534d1895d702889b219c382a6e18010797f0b"
+git-tree-sha1 = "2fb1e02f2b635d0845df5d7c167fec4dd739b00d"
 uuid = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
-version = "0.8.6"
+version = "0.9.3"
 
 [[deps.Downloads]]
 deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
 uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
 version = "1.6.0"
+
+[[deps.DualNumbers]]
+deps = ["Calculus", "NaNMath", "SpecialFunctions"]
+git-tree-sha1 = "5837a837389fccf076445fce071c8ddaea35a566"
+uuid = "fa6b7ba4-c1ee-5f82-b5fc-ecf0adba8f74"
+version = "0.6.8"
 
 [[deps.EarCut_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -776,17 +936,16 @@ git-tree-sha1 = "e3290f2d49e661fbd94046d7e3726ffcb2d41053"
 uuid = "5ae413db-bbd1-5e63-b57d-d24a61df00f5"
 version = "2.2.4+0"
 
-[[deps.EllipsisNotation]]
-deps = ["StaticArrayInterface"]
-git-tree-sha1 = "d89f0d98f6296a08b73fdfed559f8e86f871cc06"
-uuid = "da5c29d0-fa7d-589e-88eb-ea29b0a81949"
-version = "1.7.0"
-
 [[deps.Expat_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "bad72f730e9e91c08d9427d5e8db95478a3c323d"
 uuid = "2e619515-83b5-522b-bb60-26c02a35a201"
 version = "2.4.8+0"
+
+[[deps.ExprTools]]
+git-tree-sha1 = "c1d06d129da9f55715c6c212866f5b1bddc5fa00"
+uuid = "e2ba6199-217a-4e67-a87a-7c52f15ade04"
+version = "0.1.9"
 
 [[deps.Extents]]
 git-tree-sha1 = "5e1e4c53fa39afe63a7d356e30452249365fba99"
@@ -856,6 +1015,16 @@ git-tree-sha1 = "8339d61043228fdd3eb658d86c926cb282ae72a8"
 uuid = "59287772-0a20-5a39-b81b-1366585eb4c0"
 version = "0.4.2"
 
+[[deps.ForwardDiff]]
+deps = ["CommonSubexpressions", "DiffResults", "DiffRules", "LinearAlgebra", "LogExpFunctions", "NaNMath", "Preferences", "Printf", "Random", "SpecialFunctions"]
+git-tree-sha1 = "00e252f4d706b3d55a8863432e742bf5717b498d"
+uuid = "f6369f11-7733-5829-9624-2563aa707210"
+version = "0.10.35"
+weakdeps = ["StaticArrays"]
+
+    [deps.ForwardDiff.extensions]
+    ForwardDiffStaticArraysExt = "StaticArrays"
+
 [[deps.FreeType]]
 deps = ["CEnum", "FreeType2_jll"]
 git-tree-sha1 = "cabd77ab6a6fdff49bfd24af2ebe76e6e018a2b4"
@@ -870,9 +1039,9 @@ version = "2.10.4+0"
 
 [[deps.FreeTypeAbstraction]]
 deps = ["ColorVectorSpace", "Colors", "FreeType", "GeometryBasics"]
-git-tree-sha1 = "b5c7fe9cea653443736d264b85466bad8c574f4a"
+git-tree-sha1 = "38a92e40157100e796690421e34a11c107205c86"
 uuid = "663a7486-cb36-511b-a19d-713bb74d65c9"
-version = "0.9.9"
+version = "0.10.0"
 
 [[deps.FreqTables]]
 deps = ["CategoricalArrays", "Missings", "NamedArrays", "Tables"]
@@ -891,10 +1060,10 @@ deps = ["Random"]
 uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
 
 [[deps.GLM]]
-deps = ["Distributions", "LinearAlgebra", "Printf", "Reexport", "SparseArrays", "SpecialFunctions", "Statistics", "StatsBase", "StatsFuns", "StatsModels"]
-git-tree-sha1 = "609115155b0dc532fa5130de65ed086efd27bfbd"
+deps = ["Distributions", "LinearAlgebra", "Printf", "Reexport", "SparseArrays", "SpecialFunctions", "Statistics", "StatsAPI", "StatsBase", "StatsFuns", "StatsModels"]
+git-tree-sha1 = "97829cfda0df99ddaeaafb5b370d6cab87b7013e"
 uuid = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
-version = "1.6.2"
+version = "1.8.3"
 
 [[deps.GPUArraysCore]]
 deps = ["Adapt"]
@@ -940,9 +1109,9 @@ version = "1.3.14+0"
 
 [[deps.GridLayoutBase]]
 deps = ["GeometryBasics", "InteractiveUtils", "Observables"]
-git-tree-sha1 = "169c3dc5acae08835a573a8a3e25c62f689f8b5c"
+git-tree-sha1 = "678d136003ed5bceaab05cf64519e3f956ffa4ba"
 uuid = "3955a311-db13-416c-9275-1d80ed98e5e9"
-version = "0.6.5"
+version = "0.9.1"
 
 [[deps.Grisu]]
 git-tree-sha1 = "53bb909d1151e57e2484c3d1b53e19552b887fb2"
@@ -954,6 +1123,12 @@ deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll",
 git-tree-sha1 = "129acf094d168394e80ee1dc4bc06ec835e510a3"
 uuid = "2e76f6c2-a576-52d4-95c1-20adfe4de566"
 version = "2.8.1+1"
+
+[[deps.HypergeometricFunctions]]
+deps = ["DualNumbers", "LinearAlgebra", "OpenLibm_jll", "SpecialFunctions"]
+git-tree-sha1 = "84204eae2dd237500835990bcade263e27674a93"
+uuid = "34004b35-14d8-5ef3-9330-4cdb6864b03a"
+version = "0.3.16"
 
 [[deps.Hyperscript]]
 deps = ["Test"]
@@ -972,11 +1147,6 @@ deps = ["Logging", "Random"]
 git-tree-sha1 = "d75853a0bdbfb1ac815478bacd89cd27b550ace6"
 uuid = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
 version = "0.2.3"
-
-[[deps.IfElse]]
-git-tree-sha1 = "debdd00ffef04665ccbb3e150747a77560e8fad1"
-uuid = "615f187c-cbe4-4ef1-ba3b-2fcf58d6d173"
-version = "0.1.1"
 
 [[deps.ImageAxes]]
 deps = ["AxisArrays", "ImageBase", "ImageCore", "Reexport", "SimpleTraits"]
@@ -1014,6 +1184,11 @@ git-tree-sha1 = "3d09a9f60edf77f8a4d99f9e015e8fbf9989605d"
 uuid = "905a6f67-0a94-5f89-b386-d35d92009cd1"
 version = "3.1.7+0"
 
+[[deps.Indexing]]
+git-tree-sha1 = "ce1566720fd6b19ff3411404d4b977acd4814f9f"
+uuid = "313cdc1a-70c2-5d6a-ae34-0150d3930a38"
+version = "1.1.1"
+
 [[deps.IndirectArrays]]
 git-tree-sha1 = "012e604e1c7458645cb8b436f8fba789a51b257f"
 uuid = "9b13fd28-a010-5f03-acff-a1bbcff69959"
@@ -1047,16 +1222,10 @@ uuid = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
 version = "0.14.7"
 
 [[deps.IntervalSets]]
-deps = ["Dates", "EllipsisNotation", "Statistics"]
-git-tree-sha1 = "bcf640979ee55b652f3b01650444eb7bbe3ea837"
+deps = ["Dates", "Random", "Statistics"]
+git-tree-sha1 = "16c0cc91853084cb5f58a78bd209513900206ce6"
 uuid = "8197267c-284f-5f27-9208-e0e47529a953"
-version = "0.5.4"
-
-[[deps.InverseFunctions]]
-deps = ["Test"]
-git-tree-sha1 = "6667aadd1cdee2c6cd068128b3d226ebc4fb0c67"
-uuid = "3587e190-3f89-42d0-90ee-14403ec27112"
-version = "0.1.9"
+version = "0.7.4"
 
 [[deps.InvertedIndices]]
 git-tree-sha1 = "0dc7b50b8d436461be01300fd8cd45aa0274b038"
@@ -1064,9 +1233,9 @@ uuid = "41ab1584-1d38-5bbf-9106-f11c6c58b48f"
 version = "1.3.0"
 
 [[deps.IrrationalConstants]]
-git-tree-sha1 = "7fd44fd4ff43fc60815f8e764c0f352b83c49151"
+git-tree-sha1 = "630b497eafcc20001bba38a4651b327dcfc491d2"
 uuid = "92d709cd-6900-40b7-9082-c6be49f344b6"
-version = "0.1.1"
+version = "0.2.2"
 
 [[deps.Isoband]]
 deps = ["isoband_jll"]
@@ -1095,6 +1264,12 @@ deps = ["Dates", "Mmap", "Parsers", "Unicode"]
 git-tree-sha1 = "31e996f0a15c7b280ba9f76636b3ff9e2ae58c9a"
 uuid = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 version = "0.21.4"
+
+[[deps.JSON3]]
+deps = ["Dates", "Mmap", "Parsers", "SnoopPrecompile", "StructTypes", "UUIDs"]
+git-tree-sha1 = "84b10656a41ef564c39d2d477d7236966d2b5683"
+uuid = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+version = "1.12.0"
 
 [[deps.JpegTurbo]]
 deps = ["CEnum", "FileIO", "ImageCore", "JpegTurbo_jll", "TOML"]
@@ -1221,6 +1396,18 @@ version = "0.3.23"
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
+[[deps.LoggingExtras]]
+deps = ["Dates", "Logging"]
+git-tree-sha1 = "cedb76b37bc5a6c702ade66be44f831fa23c681e"
+uuid = "e6f89c97-d47a-5376-807f-9c37f3926c36"
+version = "1.0.0"
+
+[[deps.Lz4_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "5d494bc6e85c4c9b626ee0cab05daa4085486ab1"
+uuid = "5ced341a-0733-55b8-9ab6-a4889d929147"
+version = "1.9.3+0"
+
 [[deps.MIMEs]]
 git-tree-sha1 = "65f28ad4b594aebe22157d6fac869786a255b7eb"
 uuid = "6c6e2e6c-3030-632d-7369-2d6c69616d65"
@@ -1239,16 +1426,16 @@ uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 version = "0.5.10"
 
 [[deps.Makie]]
-deps = ["Animations", "Base64", "ColorBrewer", "ColorSchemes", "ColorTypes", "Colors", "Contour", "Distributions", "DocStringExtensions", "FFMPEG", "FileIO", "FixedPointNumbers", "Formatting", "FreeType", "FreeTypeAbstraction", "GeometryBasics", "GridLayoutBase", "ImageIO", "IntervalSets", "Isoband", "KernelDensity", "LaTeXStrings", "LinearAlgebra", "MakieCore", "Markdown", "Match", "MathTeXEngine", "Observables", "OffsetArrays", "Packing", "PlotUtils", "PolygonOps", "Printf", "Random", "RelocatableFolders", "Serialization", "Showoff", "SignedDistanceFields", "SparseArrays", "StaticArrays", "Statistics", "StatsBase", "StatsFuns", "StructArrays", "UnicodeFun"]
-git-tree-sha1 = "63de3b8a5c1f764e4e3a036c7752a632b4f0b8d1"
+deps = ["Animations", "Base64", "ColorBrewer", "ColorSchemes", "ColorTypes", "Colors", "Contour", "Distributions", "DocStringExtensions", "Downloads", "FFMPEG", "FileIO", "FixedPointNumbers", "Formatting", "FreeType", "FreeTypeAbstraction", "GeometryBasics", "GridLayoutBase", "ImageIO", "InteractiveUtils", "IntervalSets", "Isoband", "KernelDensity", "LaTeXStrings", "LinearAlgebra", "MacroTools", "MakieCore", "Markdown", "Match", "MathTeXEngine", "MiniQhull", "Observables", "OffsetArrays", "Packing", "PlotUtils", "PolygonOps", "PrecompileTools", "Printf", "REPL", "Random", "RelocatableFolders", "Setfield", "Showoff", "SignedDistanceFields", "SparseArrays", "StableHashTraits", "Statistics", "StatsBase", "StatsFuns", "StructArrays", "TriplotBase", "UnicodeFun"]
+git-tree-sha1 = "3a9ca622a78dcbab3a034df35d1acd3ca7ad487d"
 uuid = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
-version = "0.16.6"
+version = "0.19.5"
 
 [[deps.MakieCore]]
 deps = ["Observables"]
-git-tree-sha1 = "c5fb1bfac781db766f9e4aef96adc19a729bc9b2"
+git-tree-sha1 = "9926529455a331ed73c19ff06d16906737a876ed"
 uuid = "20f20a25-4f0e-4fdf-b5d1-57303727442b"
-version = "0.2.1"
+version = "0.6.3"
 
 [[deps.MappedArrays]]
 git-tree-sha1 = "2dab0221fe2b0f2cb6754eaa743cc266339f527e"
@@ -1264,16 +1451,34 @@ git-tree-sha1 = "1d9bc5c1a6e7ee24effb93f175c9342f9154d97f"
 uuid = "7eb4fadd-790c-5f42-8a69-bfa0b872bfbf"
 version = "1.2.0"
 
+[[deps.MathOptInterface]]
+deps = ["BenchmarkTools", "CodecBzip2", "CodecZlib", "DataStructures", "ForwardDiff", "JSON", "LinearAlgebra", "MutableArithmetics", "NaNMath", "OrderedCollections", "PrecompileTools", "Printf", "SparseArrays", "SpecialFunctions", "Test", "Unicode"]
+git-tree-sha1 = "6ba094e471106981b278f60179170d8b10985052"
+uuid = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
+version = "1.16.0"
+
+[[deps.MathProgBase]]
+deps = ["LinearAlgebra", "SparseArrays"]
+git-tree-sha1 = "9abbe463a1e9fc507f12a69e7f29346c2cdc472c"
+uuid = "fdba3010-5040-5b88-9595-932c9decdf73"
+version = "0.7.8"
+
 [[deps.MathTeXEngine]]
-deps = ["AbstractTrees", "Automa", "DataStructures", "FreeTypeAbstraction", "GeometryBasics", "LaTeXStrings", "REPL", "RelocatableFolders", "Test"]
-git-tree-sha1 = "70e733037bbf02d691e78f95171a1fa08cdc6332"
+deps = ["AbstractTrees", "Automa", "DataStructures", "FreeTypeAbstraction", "GeometryBasics", "LaTeXStrings", "REPL", "RelocatableFolders", "Test", "UnicodeFun"]
+git-tree-sha1 = "8f52dbaa1351ce4cb847d95568cb29e62a307d93"
 uuid = "0a4f8689-d25c-4efe-a92b-7142dfc1aa53"
-version = "0.2.1"
+version = "0.5.6"
 
 [[deps.MbedTLS_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
 version = "2.28.2+0"
+
+[[deps.MiniQhull]]
+deps = ["QhullMiniWrapper_jll"]
+git-tree-sha1 = "9dc837d180ee49eeb7c8b77bb1c860452634b0d1"
+uuid = "978d7f02-9e05-4691-894f-ae31a51d76ca"
+version = "0.4.0"
 
 [[deps.Missings]]
 deps = ["DataAPI"]
@@ -1281,8 +1486,20 @@ git-tree-sha1 = "f66bdc5de519e8f8ae43bdc598782d35a25b1272"
 uuid = "e1d29d7a-bbdc-5cf2-9ac0-f12de2c33e28"
 version = "1.1.0"
 
+[[deps.MixedModels]]
+deps = ["Arrow", "DataAPI", "Distributions", "GLM", "JSON3", "LazyArtifacts", "LinearAlgebra", "Markdown", "NLopt", "PooledArrays", "PrecompileTools", "ProgressMeter", "Random", "SparseArrays", "StaticArrays", "Statistics", "StatsAPI", "StatsBase", "StatsFuns", "StatsModels", "StructTypes", "Tables", "TypedTables"]
+git-tree-sha1 = "829c88415124256495ad666ee3518630b75cd8f5"
+uuid = "ff71e718-51f3-5ec2-a782-8ffcbfa3c316"
+version = "4.12.1"
+
 [[deps.Mmap]]
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
+
+[[deps.Mocking]]
+deps = ["Compat", "ExprTools"]
+git-tree-sha1 = "782e258e80d68a73d8c916e55f8ced1de00c2cea"
+uuid = "78c3b35d-d492-501b-9361-3d52fe80e533"
+version = "0.7.6"
 
 [[deps.MosaicViews]]
 deps = ["MappedArrays", "OffsetArrays", "PaddedViews", "StackViews"]
@@ -1293,6 +1510,24 @@ version = "0.3.4"
 [[deps.MozillaCACerts_jll]]
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
 version = "2022.10.11"
+
+[[deps.MutableArithmetics]]
+deps = ["LinearAlgebra", "SparseArrays", "Test"]
+git-tree-sha1 = "964cb1a7069723727025ae295408747a0b36a854"
+uuid = "d8a4904e-b15c-11e9-3269-09a3773c0cb0"
+version = "1.3.0"
+
+[[deps.NLopt]]
+deps = ["MathOptInterface", "MathProgBase", "NLopt_jll"]
+git-tree-sha1 = "5a7e32c569200a8a03c3d55d286254b0321cd262"
+uuid = "76087f3c-5699-56af-9a33-bf431cd00edd"
+version = "0.6.5"
+
+[[deps.NLopt_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "9b1f15a08f9d00cdb2761dcfa6f453f5d0d6f973"
+uuid = "079eb43e-fd8e-5478-9966-2cf3e3edb778"
+version = "2.7.1+0"
 
 [[deps.NaNMath]]
 deps = ["OpenLibm_jll"]
@@ -1317,9 +1552,9 @@ uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
 version = "1.2.0"
 
 [[deps.Observables]]
-git-tree-sha1 = "fe29afdef3d0c4a8286128d4e45cc50621b1e43d"
+git-tree-sha1 = "6862738f9796b3edc1c09d0890afce4eca9e7e93"
 uuid = "510215fc-4207-5dde-b226-833fc4488ee2"
-version = "0.4.0"
+version = "0.5.4"
 
 [[deps.OffsetArrays]]
 deps = ["Adapt"]
@@ -1397,9 +1632,9 @@ version = "0.3.17"
 
 [[deps.Packing]]
 deps = ["GeometryBasics"]
-git-tree-sha1 = "1155f6f937fa2b94104162f01fa400e192e4272f"
+git-tree-sha1 = "ec3edfe723df33528e085e632414499f26650501"
 uuid = "19eb6ba3-879d-56ad-ad62-d5c202156566"
-version = "0.4.2"
+version = "0.5.0"
 
 [[deps.PaddedViews]]
 deps = ["OffsetArrays"]
@@ -1472,14 +1707,18 @@ uuid = "21216c6a-2e73-6563-6e65-726566657250"
 version = "1.4.0"
 
 [[deps.PrettyTables]]
-deps = ["Crayons", "Formatting", "Markdown", "Reexport", "Tables"]
-git-tree-sha1 = "dfb54c4e414caa595a1f2ed759b160f5a3ddcba5"
+deps = ["Crayons", "Formatting", "LaTeXStrings", "Markdown", "Reexport", "StringManipulation", "Tables"]
+git-tree-sha1 = "213579618ec1f42dea7dd637a42785a608b1ea9c"
 uuid = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
-version = "1.3.1"
+version = "2.2.4"
 
 [[deps.Printf]]
 deps = ["Unicode"]
 uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+
+[[deps.Profile]]
+deps = ["Printf"]
+uuid = "9abbd945-dff8-562f-b5e8-e1ebf5ef1b79"
 
 [[deps.ProgressMeter]]
 deps = ["Distributed", "Printf"]
@@ -1492,6 +1731,18 @@ deps = ["ColorTypes", "FileIO", "FixedPointNumbers"]
 git-tree-sha1 = "18e8f4d1426e965c7b532ddd260599e1510d26ce"
 uuid = "4b34888f-f399-49d4-9bb3-47ed5cae4e65"
 version = "1.0.0"
+
+[[deps.QhullMiniWrapper_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "Qhull_jll"]
+git-tree-sha1 = "607cf73c03f8a9f83b36db0b86a3a9c14179621f"
+uuid = "460c41e3-6112-5d7f-b78c-b6823adb3f2d"
+version = "1.0.0+1"
+
+[[deps.Qhull_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "be2449911f4d6cfddacdf7efc895eceda3eee5c1"
+uuid = "784f63db-0788-585a-bace-daefebcd302b"
+version = "8.0.1003+0"
 
 [[deps.QuadGK]]
 deps = ["DataStructures", "LinearAlgebra"]
@@ -1522,6 +1773,12 @@ weakdeps = ["FixedPointNumbers"]
     [deps.Ratios.extensions]
     RatiosFixedPointNumbersExt = "FixedPointNumbers"
 
+[[deps.RecipesBase]]
+deps = ["PrecompileTools"]
+git-tree-sha1 = "5c3d09cc4f31f5fc6af001c250bf1278733100ff"
+uuid = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
+version = "1.3.4"
+
 [[deps.Reexport]]
 git-tree-sha1 = "45e428421666073eab6f2da5c9d310d99bb12f9b"
 uuid = "189a3867-3050-52da-a836-e630ba90ab69"
@@ -1529,9 +1786,9 @@ version = "1.2.2"
 
 [[deps.RelocatableFolders]]
 deps = ["SHA", "Scratch"]
-git-tree-sha1 = "cdbd3b1338c72ce29d9584fdbe9e9b70eeb5adca"
+git-tree-sha1 = "90bc7a7c96410424509e4263e277e43250c05691"
 uuid = "05181044-ff0b-4ac5-8273-598c1e38db00"
-version = "0.1.3"
+version = "1.0.0"
 
 [[deps.Requires]]
 deps = ["UUIDs"]
@@ -1581,6 +1838,12 @@ version = "1.3.18"
 
 [[deps.Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
+
+[[deps.Setfield]]
+deps = ["ConstructionBase", "Future", "MacroTools", "StaticArraysCore"]
+git-tree-sha1 = "e2cc6d8c88613c05e1defb55170bf5ff211fbeac"
+uuid = "efcf1570-3423-57d1-acb7-fd33fddbac46"
+version = "1.1.1"
 
 [[deps.SharedArrays]]
 deps = ["Distributed", "Mmap", "Random", "Serialization"]
@@ -1644,28 +1907,23 @@ weakdeps = ["ChainRulesCore"]
     [deps.SpecialFunctions.extensions]
     SpecialFunctionsChainRulesCoreExt = "ChainRulesCore"
 
+[[deps.SplitApplyCombine]]
+deps = ["Dictionaries", "Indexing"]
+git-tree-sha1 = "48f393b0231516850e39f6c756970e7ca8b77045"
+uuid = "03a91e81-4c3e-53e1-a0a4-9c0c8f19dd66"
+version = "1.2.2"
+
+[[deps.StableHashTraits]]
+deps = ["CRC32c", "Compat", "Dates", "SHA", "Tables", "TupleTools", "UUIDs"]
+git-tree-sha1 = "0b8b801b8f03a329a4e86b44c5e8a7d7f4fe10a3"
+uuid = "c5dd0088-6c3f-4803-b00e-f31a60c170fa"
+version = "0.3.1"
+
 [[deps.StackViews]]
 deps = ["OffsetArrays"]
 git-tree-sha1 = "46e589465204cd0c08b4bd97385e4fa79a0c770c"
 uuid = "cae243ae-269e-4f55-b966-ac2d0dc13c15"
 version = "0.1.1"
-
-[[deps.Static]]
-deps = ["IfElse"]
-git-tree-sha1 = "dbde6766fc677423598138a5951269432b0fcc90"
-uuid = "aedffcd0-7271-4cad-89d0-dc628f76c6d3"
-version = "0.8.7"
-
-[[deps.StaticArrayInterface]]
-deps = ["ArrayInterface", "Compat", "IfElse", "LinearAlgebra", "Requires", "SnoopPrecompile", "SparseArrays", "Static", "SuiteSparse"]
-git-tree-sha1 = "33040351d2403b84afce74dae2e22d3f5b18edcb"
-uuid = "0d7ed370-da01-4f52-bd93-41d350b8b718"
-version = "1.4.0"
-weakdeps = ["OffsetArrays", "StaticArrays"]
-
-    [deps.StaticArrayInterface.extensions]
-    StaticArrayInterfaceOffsetArraysExt = "OffsetArrays"
-    StaticArrayInterfaceStaticArraysExt = "StaticArrays"
 
 [[deps.StaticArrays]]
 deps = ["LinearAlgebra", "Random", "StaticArraysCore", "Statistics"]
@@ -1696,22 +1954,41 @@ uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 version = "0.33.21"
 
 [[deps.StatsFuns]]
-deps = ["ChainRulesCore", "InverseFunctions", "IrrationalConstants", "LogExpFunctions", "Reexport", "Rmath", "SpecialFunctions"]
-git-tree-sha1 = "5950925ff997ed6fb3e985dcce8eb1ba42a0bbe7"
+deps = ["HypergeometricFunctions", "IrrationalConstants", "LogExpFunctions", "Reexport", "Rmath", "SpecialFunctions"]
+git-tree-sha1 = "f625d686d5a88bcd2b15cd81f18f98186fdc0c9a"
 uuid = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
-version = "0.9.18"
+version = "1.3.0"
+
+    [deps.StatsFuns.extensions]
+    StatsFunsChainRulesCoreExt = "ChainRulesCore"
+    StatsFunsInverseFunctionsExt = "InverseFunctions"
+
+    [deps.StatsFuns.weakdeps]
+    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+    InverseFunctions = "3587e190-3f89-42d0-90ee-14403ec27112"
 
 [[deps.StatsModels]]
 deps = ["DataAPI", "DataStructures", "LinearAlgebra", "Printf", "REPL", "ShiftedArrays", "SparseArrays", "StatsBase", "StatsFuns", "Tables"]
-git-tree-sha1 = "a5e15f27abd2692ccb61a99e0854dfb7d48017db"
+git-tree-sha1 = "8cc7a5385ecaa420f0b3426f9b0135d0df0638ed"
 uuid = "3eaba693-59b7-5ba5-a881-562e759f1c8d"
-version = "0.6.33"
+version = "0.7.2"
+
+[[deps.StringManipulation]]
+git-tree-sha1 = "46da2434b41f41ac3594ee9816ce5541c6096123"
+uuid = "892a3eda-7b42-436c-8928-eab12a02cf0e"
+version = "0.3.0"
 
 [[deps.StructArrays]]
 deps = ["Adapt", "DataAPI", "GPUArraysCore", "StaticArraysCore", "Tables"]
 git-tree-sha1 = "521a0e828e98bb69042fec1809c1b5a680eb7389"
 uuid = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
 version = "0.6.15"
+
+[[deps.StructTypes]]
+deps = ["Dates", "UUIDs"]
+git-tree-sha1 = "ca4bccb03acf9faaf4137a9abc1881ed1841aa70"
+uuid = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
+version = "1.10.0"
 
 [[deps.SuiteSparse]]
 deps = ["Libdl", "LinearAlgebra", "Serialization", "SparseArrays"]
@@ -1760,6 +2037,12 @@ git-tree-sha1 = "8621f5c499a8aa4aa970b1ae381aae0ef1576966"
 uuid = "731e570b-9d59-4bfa-96dc-6df516fadf69"
 version = "0.6.4"
 
+[[deps.TimeZones]]
+deps = ["Dates", "Downloads", "InlineStrings", "LazyArtifacts", "Mocking", "Printf", "RecipesBase", "Scratch", "Unicode"]
+git-tree-sha1 = "a5404eddfee0cf451cabb8ea8846413323712e25"
+uuid = "f269a46b-ccf7-5d73-abea-4c690281aa53"
+version = "1.9.2"
+
 [[deps.TranscodingStreams]]
 deps = ["Random", "Test"]
 git-tree-sha1 = "9a6ae7ed916312b41236fcef7e0af564ef934769"
@@ -1770,6 +2053,22 @@ version = "0.9.13"
 git-tree-sha1 = "aadb748be58b492045b4f56166b5188aa63ce549"
 uuid = "410a4b4d-49e4-4fbc-ab6d-cb71b17b3775"
 version = "0.1.7"
+
+[[deps.TriplotBase]]
+git-tree-sha1 = "4d4ed7f294cda19382ff7de4c137d24d16adc89b"
+uuid = "981d1d27-644d-49a2-9326-4793e63143c3"
+version = "0.1.0"
+
+[[deps.TupleTools]]
+git-tree-sha1 = "3c712976c47707ff893cf6ba4354aa14db1d8938"
+uuid = "9d95972d-f1c8-5527-a6e0-b4b365fa01f6"
+version = "1.3.0"
+
+[[deps.TypedTables]]
+deps = ["Adapt", "Dictionaries", "Indexing", "SplitApplyCombine", "Tables", "Unicode"]
+git-tree-sha1 = "d911ae4e642cf7d56b1165d29ef0a96ba3444ca9"
+uuid = "9d95f2ec-7b3d-5a63-8d20-e2491e220bb9"
+version = "1.4.3"
 
 [[deps.URIs]]
 git-tree-sha1 = "074f993b0ca030848b897beff716d93aca60f06a"
@@ -1871,6 +2170,12 @@ deps = ["Libdl"]
 uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
 version = "1.2.13+0"
 
+[[deps.Zstd_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "49ce682769cd5de6c72dcf1b94ed7790cd08974c"
+uuid = "3161d3a3-bdf6-5164-811a-617609db77b4"
+version = "1.5.5+0"
+
 [[deps.isoband_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "51b5eeb3f98367157a7a12a1fb0aa5328946c03c"
@@ -1942,76 +2247,116 @@ version = "3.5.0+0"
 """
 
 # ╔═╡ Cell order:
-# ╟─7ac0c689-419a-428b-9006-69d3e6c1ea7e
-# ╟─e8a9ae4d-438a-4496-b75c-ee9a5e91d740
-# ╠═d0dfdb8d-2b7a-4956-802d-73922db32330
-# ╠═b36a8b22-992c-4b50-a8ef-23852f73e26c
-# ╟─b7a11e97-fba8-4656-b529-ff6f21a75a0f
-# ╟─ab814eb8-b384-40d0-95b2-139031baaa35
-# ╟─3e149cf5-4387-4a05-a13c-4b00167965b5
-# ╠═2a9d311c-a766-4f32-ac8b-64a9b63cedcc
-# ╠═7235b483-8484-4ca2-a700-2dbea497ac26
-# ╠═91006353-4ea7-4fd0-98c2-f23e6a38a351
-# ╟─06e153e3-f076-4e16-8ab6-141cc2b0d7bb
-# ╠═30ad6818-714b-4362-b8b4-af193dcd70cf
-# ╠═401c49d8-4096-480f-8271-5e37e9a307f5
-# ╠═80ad622e-0783-4b7c-942d-73adb7eff2e8
-# ╟─1ba1c644-a1d9-4233-9085-3ac871d95a9e
-# ╠═9c8b0137-d0af-4a6e-b2ef-28d30bd80c28
-# ╠═436f5420-3ef0-4a9c-8fc7-b20ea714a889
-# ╠═e5d58b40-7c37-43c8-a83a-5127b9b0ea38
-# ╠═a1e0d71c-01a4-42bd-af08-993369cd74b9
-# ╠═83dfce03-65c2-4d0e-989d-5da22471a024
-# ╠═b14a6b03-768d-4bac-8dab-96db011a2acd
-# ╠═a61067b2-83b9-4dbb-aa5f-94aaa399ac43
-# ╟─12d7c32f-4a62-4cae-a9b2-39ef597bd084
-# ╟─76d4e45d-225e-4c4c-9f5e-3f30db7c53d9
-# ╠═1abbbc4d-5213-4632-9f3f-f45ad638b015
-# ╠═5bd3d6c1-2187-4d24-b354-244ffcb9d41b
-# ╠═6b4a960b-205c-4e92-bc7e-ac4d36728316
-# ╠═bda05cb8-6e31-4c5d-a0df-7b0eadefb1ce
-# ╠═d0178ff1-4562-4be2-84d1-5f73ff561c91
-# ╟─4b7d5041-7657-410b-abd6-2cbcb3ae7eb8
-# ╟─396cbce1-4ab7-44f6-ae14-5ae041bf487a
-# ╟─29c07409-5d62-42aa-a002-b14dfd7c1685
-# ╟─3223d964-3424-4a91-87cd-690876844b4d
-# ╠═af32e1d2-b575-11ec-34f6-25b42c355184
-# ╠═e2d72e3d-b16e-4782-92fb-743fd332f202
-# ╠═43f57dbc-3d7e-48e0-bce1-23e058938bd1
-# ╠═218d3696-9ee4-4841-ad53-447849a238f9
-# ╟─0f5bd14c-638a-4eb1-85e5-729767c5fc4f
-# ╠═ad4a9897-84fa-4e42-a653-fb36bb2e7657
-# ╠═a90937a1-1961-465a-bd7f-f8f35da9badc
-# ╠═2eaf3273-0ac0-4cc8-8879-fd15903c75de
-# ╠═699dd367-d4a3-431d-87a1-dd6ff276c84b
-# ╠═a0691d8b-d80c-4b5c-b78c-163ee13faf85
-# ╠═71e9a4b4-5dbb-4a67-b898-0cfffd90998d
-# ╟─cc35db1a-715b-419a-b5a7-3f4a3f8faab4
-# ╟─d5967d18-62d7-4870-b3b7-af7416acb2b4
-# ╠═1ebe900d-2301-44ea-86b3-0fd7f03769b1
-# ╠═a6d31357-bb6d-4fb2-a642-112f39d32832
-# ╠═ac88d890-6514-4e82-b776-ff98467d8708
-# ╠═241d663c-dc41-4039-b9a2-0f48d792b8a1
-# ╠═2a111cc4-a80c-43d0-83b3-7c827761a4fa
-# ╟─5d2801db-a987-48e5-b71d-6674c0f7af58
-# ╟─ebc5cfbd-dd1d-4089-8798-e35357b38cac
-# ╟─4e5c0d80-2871-4f57-a0a0-acbffb4ec199
-# ╠═af3c116c-510d-4c5c-9b64-fb56a106e5eb
-# ╟─f5d03c3a-3854-4c08-9cf7-074dd628393b
-# ╠═fe698e99-939b-44d4-aaed-1bdfdc5c58f0
-# ╠═b4f7a35f-0f74-465b-82a0-31c404b49a10
-# ╠═7516d09f-7356-41ac-a565-2c4e2c21408d
-# ╠═3e754434-5934-42df-861f-614bfa19643f
-# ╠═00762ff1-c860-4d2c-b5ef-4a27b28b5d7f
-# ╟─dccfe48e-4068-4f35-8446-8476033f90e6
-# ╟─dec0718e-799d-48ce-b444-cf07daf803c6
-# ╠═c36cb78e-09ce-4521-803f-3e94d5ebd7cd
-# ╠═fa2bd5ca-1fc5-4706-86b1-c7baf5bd2a47
-# ╠═4a90cefa-9793-481d-ae1b-863a379369ec
-# ╠═dc676a84-430c-4316-9e42-e935d3dc9e74
-# ╠═366feb2b-b08e-4176-9623-149b6cbaf989
-# ╟─d0099447-0c7d-4573-b9b0-ff18398f36a4
-# ╟─af57ef9e-0030-4b2d-8b1b-127f50d9754a
-# ╟─ef982930-6388-466d-b0e1-8d715316a884
+# ╟─360ba393-f01e-47c3-ae7b-19d82c6fa84c
+# ╟─4eeecbe3-2126-4f90-97f7-7334630a213e
+# ╠═c6a37acc-828c-42cf-81c1-f06793a1e331
+# ╟─9e5ba0ff-0ede-47bf-b04c-cfef742e77b6
+# ╟─ebdb3b34-8236-4627-b65f-9b4c9c5d6dfb
+# ╟─08040cd2-afd4-4d91-86c1-e3403196085a
+# ╟─0f199680-b1ed-4ff0-8f73-b927a13009ab
+# ╟─d63d50b1-4346-458c-96f8-9282b7ffa858
+# ╟─77fbd47a-2427-4d91-a971-b6c2185d6532
+# ╟─3d136e0c-1cbc-434d-a509-b5044af2fd7b
+# ╠═22e82469-98a5-47c4-b2fa-34a5e9bfd36b
+# ╠═a8b183c7-5139-4bbe-9abe-2598642934d5
+# ╠═cb7bd33b-60ad-4b14-be4a-70a253b3ac28
+# ╠═9bbd237a-905a-45f9-9c7d-d9e5a6d363ad
+# ╠═c6a540c3-ad50-4e01-a23b-15246f0dcdf6
+# ╠═531c6af8-2b2c-4d5c-a75b-bf84898e18d5
+# ╠═9c0035dd-b12f-451b-bdce-a721829c3fa5
+# ╟─ebceda55-b5cf-4bcb-98ca-e117045cb6ea
+# ╠═b461a1e6-386b-4a89-9213-2ce963722d11
+# ╠═32326ef0-a6e7-4e23-a0d9-b598eca8bdf7
+# ╠═bbd9e0fb-f848-4a35-a6d9-fa37f9e97a51
+# ╠═fc65fc1c-ce7f-4f10-981f-6dba60bba050
+# ╠═800b4679-bca4-4a6e-bc56-52e55ee9794c
+# ╠═a34878fb-f0ce-4ed2-bcad-7c8512e05ce5
+# ╠═83535815-849b-41c3-bb94-d998ec78c89c
+# ╠═6d636bc9-bf92-49f0-961b-de7ee4535cfe
+# ╠═7f41f79c-bfaf-409f-9286-cb787fe47352
+# ╠═4223173c-529f-4367-8cf0-ea609b09315f
+# ╠═6960d5de-5291-4ef0-b94d-151743a53558
+# ╠═1389b5aa-5cde-4712-8a5c-e439bfda35e2
+# ╠═06146fdf-f953-423c-a0b6-41b8d17d0399
+# ╠═f36cd6dc-f609-4ccd-b03a-fd88883c9d9c
+# ╠═cfced893-8080-4b1e-805a-c74eede09465
+# ╠═2700a676-2cbb-4f38-9248-16622717bdd7
+# ╟─cd72a095-aaab-47e4-a929-c95d7944cfc4
+# ╠═7b676124-cfc4-433c-8711-bfc92f6a3f9d
+# ╠═2f567276-2076-4bf4-b506-75e003d72f2c
+# ╠═fc7125ee-a3ac-4fea-98e1-1f84a1893d1d
+# ╠═ac03428a-fd16-4a31-a925-540e4a45a026
+# ╠═211dc5b9-619f-4733-aaef-98486c1da117
+# ╠═e45ae05f-a1db-49ef-82de-bd7840481e66
+# ╠═5c040718-9ddc-40c0-9070-eb278bbb145e
+# ╠═cf50aa22-9aa3-4406-a250-f9748f2d1fb8
+# ╟─c0515df9-d604-400c-93db-36848f8b574a
+# ╟─216f8c2b-c0f6-47a2-800c-516760d41345
+# ╠═c6f7fc2a-569a-4f85-a6d9-e251a08d1a1b
+# ╠═68f4be33-d6c3-4bd8-b1c9-46731d5f0800
+# ╠═86baf85c-8cd5-40ed-a3c8-f9e1a9bf5c6b
+# ╠═fa0beea6-bc35-487e-93d7-28d97bdd581c
+# ╠═2b5420e4-62db-4cdd-82f1-7cb507ce190b
+# ╠═24da21ce-fdce-4350-8a37-59ca61a4c625
+# ╠═712c9beb-404d-4300-8a9a-87eff971fb33
+# ╠═a32d4e21-4a05-46bc-9b73-678d355eefbc
+# ╠═c01ece91-aa38-4f09-8c65-78d934ea6461
+# ╠═f97c8cf7-94b7-4212-96af-cd33e75abe7c
+# ╟─fcbf402a-72f8-4020-89b9-17ad56168aef
+# ╠═8f7cc0ae-0d59-4125-b011-2b5dfb1f17b6
+# ╠═82f4465f-8173-45e2-9065-86e2286d35e9
+# ╠═83158904-0278-4277-aa11-906d975e1956
+# ╟─e9717416-f74f-4c5d-b9ab-63e5020408c2
+# ╠═23c65bfe-accc-4719-aade-5a2615971d4c
+# ╠═4c4d0e66-4dd8-46cb-8312-9d81fe4c56d2
+# ╠═1ac36867-29c3-41c4-83fc-9ce18b336950
+# ╠═97dcdc9b-e8be-4520-b1af-34b4ae075a3e
+# ╠═78e98399-698d-491e-b63a-f29d8dc9c49d
+# ╠═a35140ee-6a16-42d8-8f02-c5224ffc1c6e
+# ╠═63206287-d776-4cb0-956c-274a59926c19
+# ╠═1c6c4a8d-f676-497f-b5db-c4df51c3a338
+# ╠═f62cbdb4-d4b9-48a4-ac3a-f444dd6bc278
+# ╠═9e1703e8-75d9-4a91-9591-d9e8b1803a76
+# ╠═fcce293a-d27c-4895-a970-db45d295f49d
+# ╟─0d4881cd-fabe-46bd-ab9d-c253e82297e7
+# ╠═7b0a6aca-b088-4bbd-8340-7a0385e82b92
+# ╠═89263c1f-591d-4608-9b3d-6c25962019ed
+# ╠═61e16b0f-d897-451b-b162-4fa2be1f92ba
+# ╟─252899e2-46eb-4391-aa1b-a167abbc0558
+# ╠═e82176d3-47a2-4ab6-8424-20d863c12328
+# ╠═ffcea293-477e-4d29-861d-65821a46ebff
+# ╠═2ec29a39-b321-4e99-ba4e-d67289ad4abe
+# ╠═7e87e837-ee15-40b4-b58f-b036692779ac
+# ╠═e12fcb83-132b-4b42-9c37-f8299212a18c
+# ╠═cfedc4e2-89c8-44fb-9d6c-77872fed6e65
+# ╠═b94a6ea7-6be8-460a-9724-22a1f339c3df
+# ╠═83fea4d4-3ae3-468e-a367-fe11736a9b4e
+# ╠═fc027aeb-e9bd-4594-b9eb-b2be574f356e
+# ╠═573bfaec-17b1-41f2-abf3-6bf4c68055dc
+# ╟─bd33b753-4df2-41ec-8070-57f273e3e251
+# ╠═845a46c6-1c0d-496a-9ad0-a0cf59e651a3
+# ╠═7332e45e-7c04-401b-bf5f-68ae659f5999
+# ╠═b7ddf5b0-e297-4834-ad24-864267c64dd6
+# ╟─f601147d-ae5b-4209-8571-dbb7b9a8418e
+# ╠═0a58a756-47f5-42af-8ea4-454bb456cc65
+# ╠═551f9a32-d948-4097-813b-a7734aba615e
+# ╟─06cb78a1-d434-4670-a59d-cfbb13cc1fb3
+# ╠═7f9340f2-7e60-4f5c-8c80-64ffd66db9d3
+# ╠═cd23ec95-0462-4f64-8b81-ffe50358d0dc
+# ╟─205b37dd-48df-483c-9001-a4bd14bfc454
+# ╠═8a22a57c-6da9-4414-966d-bd426b05235c
+# ╠═af735026-3e0c-4fd7-9b53-d9cbdb2be23c
+# ╟─e09e7b72-d560-42a6-9360-44ba1f5da88a
+# ╠═d8bb92f6-bf41-4dc8-8d5a-0d73de4c59ad
+# ╠═db57fd30-ec44-49b2-9f60-775f9b03121c
+# ╟─dfa7801c-c1f8-4814-b06a-6828ea432e3b
+# ╠═b1a0c34f-bcbb-4d2e-a3f8-5f6acc958446
+# ╟─37e9dc86-f104-4caf-a27d-d8683e3b25a4
+# ╠═e3033c14-f314-4d30-8ea7-58efa552efcc
+# ╠═ddd1d108-d92a-4170-9279-948d8cafc23f
+# ╟─0ba5ab56-c76b-447e-886e-85a4b2ff0cf0
+# ╠═6ec16e16-59de-45db-9914-5e1632539343
+# ╟─2f793451-f88e-4bbf-bc94-e48c6d43b159
+# ╟─7a4cff1e-7165-42cc-b800-ed7276f0c13c
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
