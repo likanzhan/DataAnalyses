@@ -7,66 +7,27 @@ using InteractiveUtils
 # ╔═╡ 360ba393-f01e-47c3-ae7b-19d82c6fa84c
 using PlutoUI; TableOfContents(aside = true, depth = 5)
 
-# ╔═╡ c6a37acc-828c-42cf-81c1-f06793a1e331
-begin
-	using CairoMakie
-	using FreqTables, DataFrames, CSV
-	using MixedModels
-	using CategoricalArrays
-end
-
 # ╔═╡ 4eeecbe3-2126-4f90-97f7-7334630a213e
 md"""
 # Load packages
 """
 
-# ╔═╡ 9e5ba0ff-0ede-47bf-b04c-cfef742e77b6
-md"""
-# Functions `partitions` and `GroupInfo`
-"""
-
-# ╔═╡ 08040cd2-afd4-4d91-86c1-e3403196085a
-function ScatterLines(dt)
-
-	## Model fitting
-	gp = groupby(dt, :dltPC)
-	form = @formula(rate ~ C1GvA1 + (1 | participant) + (1|image))
-	fm1 = fit(MixedModel, form, gp[1])
-	fm2 = fit(MixedModel, form, gp[2])
-
-	# do the plotting
-	fig = Figure(resolution = (1000, 500))
-	ax1 = Axis(fig[1, 1], limits = ((-0.1, 1.1), nothing), 
-		title = string(NamedTuple(keys(gp)[1]))
-	)
-	ax2 = Axis(fig[1, 2], limits = ((-0.1, 1.1), nothing),
-			title = string(NamedTuple(keys(gp)[2]))
-	)
-	scatter!(ax1, gp[1].C1GvA1, gp[1].rate)
-	ablines!(ax1, [0], [1], color = :green, 
-		label = L"P(\text{If A then C}) = P(C|A)")
-	ablines!(ax1, coef(fm1)..., color = :red,
-		label = L"P(\text{If A then C}) \text{ Observed}")
-	axislegend(ax1, position = :rb)
-	
-	scatter!(ax2, gp[2].C1GvA1, gp[2].rate)
-	ablines!(ax2, [0], [1], color = :green,
-			label = L"P(\text{If A then C}) = P(C|A)")
-	ablines!(ax2, coef(fm2)..., color = :red,
-		label = L"P(\text{If A then C}) \text{ Observed}")
-	axislegend(ax2, position = :rb)
-	
-	fig
+# ╔═╡ c6a37acc-828c-42cf-81c1-f06793a1e331
+begin
+	using CairoMakie
+	using FreqTables, DataFrames, CSV
+	using MixedModels
+	using Colors, Dates
 end
 
 # ╔═╡ d63d50b1-4346-458c-96f8-9282b7ffa858
 md"""
-# Theoretical background
+# Theories
 """
 
 # ╔═╡ 77fbd47a-2427-4d91-a971-b6c2185d6532
 md"""
-1. Two $\textit{Conditional probabilities}$ can be defined as:
+1. Two $\textit{conditional probabilities}$ can be defined as:
 $$\begin{align}
 	P(C|A)      & = \frac{P(AC)}{P(A)} = \frac{P(AC)}{P(AC) + P(A\neg C)}\\
 	P(C|\neg A) & = \frac{P(\neg AC)}{P(\neg A)} = \frac{P(\neg AC)}{P(\neg AC) + P(\neg A\neg C)}
@@ -83,8 +44,8 @@ $$
 3. Relevance theory believed that
 
 $$\begin{align*}
-    P(\text{if A then C}) & = \lambda \times P(C|A)\\
-    & \text{where } \lambda = 
+    P(\text{if A then C})  = & \lambda \times P(C|A)\\
+    \text{where } & \lambda = 
         \left\{\begin{array}{ll}
             1 & \text{if } \Delta P > 0\\
             0\leq \lambda < 1 & \text{if } \Delta P \leq 0
@@ -95,393 +56,51 @@ $$\begin{align*}
 
 
 
-# ╔═╡ 3d136e0c-1cbc-434d-a509-b5044af2fd7b
-md"""
-# Load data
-"""
-
-# ╔═╡ 22e82469-98a5-47c4-b2fa-34a5e9bfd36b
-csv_list = reduce(vcat, 
-	@. filter(endswith(".csv"), readdir(joinpath("Data", ["dataall", "datamac"]), join = true)))
-
-# ╔═╡ a8b183c7-5139-4bbe-9abe-2598642934d5
-length(csv_list)
-
-# ╔═╡ cb7bd33b-60ad-4b14-be4a-70a253b3ac28
-Original_Stimuli = let
- 	df = CSV.read(
-		"Conditional_Stimuli_Adjusted.csv", DataFrame, stringtype = String)
-	rename!(df, "Image" => "image")
-	transform!(df,[:A1C1, :A1C0, :A0C1, :A0C0] 
-		.=> ByRow(x -> x == 0 ? 0 : 1) .=> [:A1C1C, :A1C0C, :A0C1C, :A0C0C]
-	)
-end;
-
-# ╔═╡ 9bbd237a-905a-45f9-9c7d-d9e5a6d363ad
-Recorded_Data = mapreduce(vcat, csv_list) do csv
-	dt = CSV.read(csv, DataFrame, stringtype = String)
-	if "textbox_2.text" ∈ names(dt)
-		rename!(dt, :"textbox_2.text"  => "rate")
-	else
-		rename!(dt, :"Estimation.text" => "rate")
-	end
-	dropmissing!(dt, :Image)
-	dropmissing!(dt, :rate)              # 1-10; Total 179
-	subset!(dt, :rate => ByRow(<=(100))) # > 100 Total 29
-	transform!(dt, :rate => ByRow(x -> x / 100) => :rate)
-	transform!(dt,
-		:Image => ByRow(x -> replace(x, "stimuli/" => "")) => :image
-	)
-	select!(dt, ["image", "participant", "rate"])
-	return dt
-end;
-
-# ╔═╡ c6a540c3-ad50-4e01-a23b-15246f0dcdf6
-df0 = leftjoin(Recorded_Data, Original_Stimuli, on = :image);
-
-# ╔═╡ 9c0035dd-b12f-451b-bdce-a721829c3fa5
-transform!(df0, :dltP => ByRow(x -> x > 0 ? "Positive" : "Negative") => :dltPC);
-
 # ╔═╡ ebceda55-b5cf-4bcb-98ca-e117045cb6ea
 md"""
-# Overview
+# Analyses
 """
 
-# ╔═╡ b461a1e6-386b-4a89-9213-2ce963722d11
-# describe(df0)
+# ╔═╡ 57ae0544-6eb6-4df9-a5a7-8e1774e918d4
+df0 = Read_Combine_Data();
 
-# ╔═╡ 32326ef0-a6e7-4e23-a0d9-b598eca8bdf7
-# names(df0)
+# ╔═╡ a6eb1196-2a10-4cc9-ba0c-805ad9b01e20
+Plot_Partitions(df0)
 
-# ╔═╡ bbd9e0fb-f848-4a35-a6d9-fa37f9e97a51
-gdf0 = groupby(df0, [:A1C1C, :A1C0C, :A0C1C, :A0C0C], sort = true);
+# ╔═╡ 2e55d413-d1ee-4547-8e8e-02979f133710
+df = dropmissing(df0, :dltPM); # Remove data where delta-P was not defined
 
-# ╔═╡ 0f199680-b1ed-4ff0-8f73-b927a13009ab
-GroupInfo(i; gdf = gdf0) = [
-NamedTuple(keys(gdf)[i]); 
-"MI:     $(mapreduce(x -> string(x, ", "), *, unique(gdf[i].MI))[1:end-2])"; 
-"C1GvA1: $(mapreduce(x -> string(x, ", "), *, unique(gdf[i].C1GvA1))[1:end-2])"; 
-"dltP:   $(mapreduce(x -> string(x, ", "), *, unique(gdf[i].dltP))[1:end-2])"; 
-# "dltPp:  $(mapreduce(x -> string(x, ", "), *, unique(gdf[i].dltPp))[1:end-2])"
-]
-
-# ╔═╡ fc65fc1c-ce7f-4f10-981f-6dba60bba050
-gdf0keys = keys(gdf0)
-
-# ╔═╡ ebdb3b34-8236-4627-b65f-9b4c9c5d6dfb
-function partitions(dt; gdtkeys = gdf0keys)
-	gdt = groupby(dt, [:A1C1C, :A1C0C, :A0C1C, :A0C0C], sort = true)
-	fig = Figure(resolution = (2000, 1500))
-	for (idx, key) in enumerate(gdtkeys)
-		ax = Axis(fig[key[1], key[2]][key[3], key[4]], xticks = 0:0.25:1,
-			limits = ((-0.1, 1.1), nothing),
-			xgridvisible = false, ygridvisible = false,
-			title = string(idx, ": ", NamedTuple(key))
-		)
-		pos = findfirst(==(NamedTuple(key)), NamedTuple.(keys(gdt)))
-		isnothing(pos) ||
-		hist!(ax, gdt[keys(gdt)[pos]].rate, bins = 15, normalization = :none)
-		# (key[2] > 0 || key[4] > 0) && hideydecorations!(ax)
-		# (key[1] < 1 || key[3] < 1) && hidexdecorations!(ax)
-		hidespines!(ax, :r, :t)
-		
-	end
-	Label(fig[-1, 0], tellwidth = false, text = L"A \neg C = 0", fontsize = 30, color = :red)
-	Label(fig[-1, 0][3, 0], tellwidth = false, tellheight = false, text = L"\neg A \neg C = 0", fontsize = 20, color = :red)
-	Label(fig[-1, 0][3, 1], tellwidth = false, tellheight = false, text = L"\neg A \neg C \neq 0", fontsize = 20, color = :red)
-	
-	Label(fig[-1, 1], tellwidth = false, text = L"A \neg C \neq 0", fontsize = 30, color = :blue)
-	Label(fig[-1, 1][3, 0], tellwidth = false, tellheight = false, text = L"\neg A \neg C = 0", fontsize = 20, color = :blue)
-	Label(fig[-1, 1][3, 1], tellwidth = false, tellheight = false, text = L"\neg A \neg C \neq 0", fontsize = 20, color = :blue)
-	
-	Label(fig[0, end + 1], tellheight = false, text = L"AC = 0", fontsize = 30, color = :green, rotation = -pi/2)
-	Label(fig[0, end][0, -1], tellwidth = false, tellheight = false, text = L"\neg AC = 0", fontsize = 20, color = :green, rotation = -pi/2)
-	Label(fig[0, end][1, -1], tellwidth = false, tellheight = false, text = L"\neg AC \neq 0", fontsize = 20, color = :green, rotation = -pi/2)
-
-	Label(fig[1, end], tellwidth = false, tellheight = false, text = L"AC \neq 0", fontsize = 30, color = :purple, rotation = -pi/2)
-	Label(fig[1, end][0, -1], tellwidth = false, tellheight = false, text = L"\neg AC = 0", fontsize = 20, color = :purple, rotation = -pi/2)
-	Label(fig[1, end][1, -1], tellwidth = false, tellheight = false, text = L"\neg AC \neq 0", fontsize = 20, color = :purple, rotation = -pi/2)
-
-	Box(fig[:, 0], color = :transparent, strokewidth = 4, strokecolor = :red)
-	Box(fig[:, 1], color = :transparent, strokewidth = 4, strokecolor = :blue)
-	Box(fig[0, :], color = :transparent, strokewidth = 4, strokecolor = :green)
-	Box(fig[1, :], color = :transparent, strokewidth = 4, strokecolor = :purple)
-
-	Label(fig[:, -1],    text = "Frequency", rotation = pi/2, fontsize = 40)
-	Label(fig[end+1, :], text = "Proportion", fontsize = 40)
-
-	save("ConditionalProbability.png", fig, px_per_unit = 10)
-
-	fig
-end
-
-# ╔═╡ 800b4679-bca4-4a6e-bc56-52e55ee9794c
-partitions(df0)
-
-# ╔═╡ a34878fb-f0ce-4ed2-bcad-7c8512e05ce5
-df = deepcopy(df0);
-
-# ╔═╡ cd72a095-aaab-47e4-a929-c95d7944cfc4
-md"""
-# Effect of $\Delta$P
-"""
-
-# ╔═╡ a9d91421-709f-4001-b20f-3a4aa0a60137
-md"""
-## No effect in general
-"""
-
-# ╔═╡ 7b676124-cfc4-433c-8711-bfc92f6a3f9d
-fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), df)
-
-# ╔═╡ 2f567276-2076-4bf4-b506-75e003d72f2c
-fit(MixedModel, @formula(rate ~ C1GvA1 * dltP + (1 | participant) + (1|image)), df)
-
-# ╔═╡ fc7125ee-a3ac-4fea-98e1-1f84a1893d1d
-g1 = groupby(df, :dltPC);
-
-# ╔═╡ ac03428a-fd16-4a31-a925-540e4a45a026
-partitions(g1[1])
-
-# ╔═╡ 211dc5b9-619f-4733-aaef-98486c1da117
-partitions(g1[2])
-
-# ╔═╡ e45ae05f-a1db-49ef-82de-bd7840481e66
-fg11 = fit(MixedModel, 
-		@formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), g1[1])
-
-# ╔═╡ 5c040718-9ddc-40c0-9070-eb278bbb145e
-fg12 = fit(MixedModel, 
-		@formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), g1[2])
-
-# ╔═╡ cf50aa22-9aa3-4406-a250-f9748f2d1fb8
-ScatterLines(df)
-
-# ╔═╡ 216f8c2b-c0f6-47a2-800c-516760d41345
-md"""
-## No effect when $A\neg C = 0$
-"""
-
-# ╔═╡ c6f7fc2a-569a-4f85-a6d9-e251a08d1a1b
-s1 = subset(df, :A1C0 => ByRow(==(0)));
-
-# ╔═╡ 68f4be33-d6c3-4bd8-b1c9-46731d5f0800
-partitions(s1)
-
-# ╔═╡ 86baf85c-8cd5-40ed-a3c8-f9e1a9bf5c6b
-fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), s1)
-
-# ╔═╡ fa0beea6-bc35-487e-93d7-28d97bdd581c
-gs1 = groupby(s1, :dltPC);
-
-# ╔═╡ 2b5420e4-62db-4cdd-82f1-7cb507ce190b
-keys(gs1)
-
-# ╔═╡ 24da21ce-fdce-4350-8a37-59ca61a4c625
-partitions(gs1[1])
-
-# ╔═╡ 712c9beb-404d-4300-8a9a-87eff971fb33
-partitions(gs1[2])
-
-# ╔═╡ a32d4e21-4a05-46bc-9b73-678d355eefbc
-fgs11 = fit(MixedModel, 
-		@formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), gs1[1]);
-
-# ╔═╡ c01ece91-aa38-4f09-8c65-78d934ea6461
-fgs12 = fit(MixedModel, @formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), gs1[2]);
-
-# ╔═╡ f97c8cf7-94b7-4212-96af-cd33e75abe7c
-ScatterLines(s1)
-
-# ╔═╡ fcbf402a-72f8-4020-89b9-17ad56168aef
-md"""
-### Group 4: Still no effect
-"""
-
-# ╔═╡ 8f7cc0ae-0d59-4125-b011-2b5dfb1f17b6
-GroupInfo(4)
-
-# ╔═╡ 82f4465f-8173-45e2-9065-86e2286d35e9
-fit(MixedModel, @formula(rate ~ dltPC + (1 | participant) + (1|image)), gdf0[4])
-
-# ╔═╡ 83158904-0278-4277-aa11-906d975e1956
-fit(MixedModel, @formula(rate ~ dltP + (1 | participant) + (1|image)), gdf0[4])
-
-# ╔═╡ e9717416-f74f-4c5d-b9ab-63e5020408c2
-md"""
-## YES effect when $A\neg C \neq 0$
-"""
-
-# ╔═╡ 23c65bfe-accc-4719-aade-5a2615971d4c
-s2 = subset(df, :A1C0 => ByRow(!=(0)));
-
-# ╔═╡ 4c4d0e66-4dd8-46cb-8312-9d81fe4c56d2
-partitions(s2)
-
-# ╔═╡ 1ac36867-29c3-41c4-83fc-9ce18b336950
-fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), s2)
-
-# ╔═╡ 97dcdc9b-e8be-4520-b1af-34b4ae075a3e
-fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + A1C1C + (1 | participant) + (1|image)), s2)
-
-# ╔═╡ 78e98399-698d-491e-b63a-f29d8dc9c49d
-gs2 = groupby(s2, :dltPC);
-
-# ╔═╡ a35140ee-6a16-42d8-8f02-c5224ffc1c6e
-keys(gs2)
-
-# ╔═╡ 63206287-d776-4cb0-956c-274a59926c19
-partitions(gs2[1])
-
-# ╔═╡ 1c6c4a8d-f676-497f-b5db-c4df51c3a338
-partitions(gs2[2])
-
-# ╔═╡ f62cbdb4-d4b9-48a4-ac3a-f444dd6bc278
-fgs21 = fit(MixedModel, 
-		@formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), gs2[1])
-
-# ╔═╡ 9e1703e8-75d9-4a91-9591-d9e8b1803a76
-fgs22 = fit(MixedModel, 
-		@formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), gs2[2])
+# ╔═╡ 24ee6fc6-277d-4070-bdd6-01196775746a
+Plot_Partitions(df)
 
 # ╔═╡ fcce293a-d27c-4895-a970-db45d295f49d
-ScatterLines(s2)
+Plot_CP1(df)
 
-# ╔═╡ 0d4881cd-fabe-46bd-ab9d-c253e82297e7
-md"""
-### $AC = 0$: No effect
-"""
+# ╔═╡ feada43b-99d2-4610-9614-ae5b9e1393d5
+fm01 = let
+	fm = @formula(rate ~ C1GvA1 * dltP + 
+	(1 + C1GvA1 + dltP | participant) + (1 + C1GvA1 + dltP | image))
+	fit(MixedModel, fm, df; progress = false)
+end
 
-# ╔═╡ 7b0a6aca-b088-4bbd-8340-7a0385e82b92
-[GroupInfo(5); GroupInfo(6); GroupInfo(7); GroupInfo(8)]
+# ╔═╡ df4d85a3-12bb-450b-a65d-075cd8281ef7
+fm02 = let
+	fm = @formula(rate ~ C1GvA1 * dltP * A1C0 + 
+	(1 + C1GvA1 + dltP + A1C0 | participant) + (1 + C1GvA1 + dltP + A1C0 | image))
+	fit(MixedModel, fm, df; progress = false)
+end
 
-# ╔═╡ 89263c1f-591d-4608-9b3d-6c25962019ed
-s1s2 = subset(s2, :A1C1 => ByRow(==(0)));
+# ╔═╡ 8483dea9-441d-4caf-b06a-4903dea14ee5
+# MixedModels.likelihoodratiotest(fm01, fm02)
 
-# ╔═╡ 61e16b0f-d897-451b-b162-4fa2be1f92ba
-fit(MixedModel, @formula(rate ~ dltP + (1 | participant) + (1|image)), s1s2)
+# ╔═╡ 45ddaeea-8f70-4166-80a0-a1330e410609
+# freqtable(df, :C1GvA1, :dltP)
 
-# ╔═╡ 252899e2-46eb-4391-aa1b-a167abbc0558
-md"""
-### $AC \neq 0$: No effect in general !!
-"""
+# ╔═╡ e31b6ecc-07c2-4a4c-8936-67f16c87a3b8
+Plot_CP2(df)
 
-# ╔═╡ e82176d3-47a2-4ab6-8424-20d863c12328
-[GroupInfo(13); GroupInfo(14); GroupInfo(15); GroupInfo(16)]
-
-# ╔═╡ ffcea293-477e-4d29-861d-65821a46ebff
-s2s2 = subset(s2, :A1C1 => ByRow(!=(0)));
-
-# ╔═╡ 2ec29a39-b321-4e99-ba4e-d67289ad4abe
-fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), s2s2)
-
-# ╔═╡ 7e87e837-ee15-40b4-b58f-b036692779ac
-partitions(s2s2)
-
-# ╔═╡ e12fcb83-132b-4b42-9c37-f8299212a18c
-gs2s2 = groupby(s2s2, :dltPC);
-
-# ╔═╡ cfedc4e2-89c8-44fb-9d6c-77872fed6e65
-partitions(gs2s2[1])
-
-# ╔═╡ b94a6ea7-6be8-460a-9724-22a1f339c3df
-partitions(gs2s2[2])
-
-# ╔═╡ 83fea4d4-3ae3-468e-a367-fe11736a9b4e
-fgs2s21 = fit(MixedModel, 
-		@formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), gs2s2[1])
-
-# ╔═╡ fc027aeb-e9bd-4594-b9eb-b2be574f356e
-fgs2s22 = fit(MixedModel, 
-		@formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), gs2s2[2])
-
-# ╔═╡ 573bfaec-17b1-41f2-abf3-6bf4c68055dc
-ScatterLines(s2s2)
-
-# ╔═╡ bd33b753-4df2-41ec-8070-57f273e3e251
-md"""
-#### $\neg AC = 0$: No effect !!
-"""
-
-# ╔═╡ 845a46c6-1c0d-496a-9ad0-a0cf59e651a3
-s1s2s2 = subset(s2s2, :A0C1 => ByRow(==(0)));
-
-# ╔═╡ 7332e45e-7c04-401b-bf5f-68ae659f5999
-partitions(s1s2s2)
-
-# ╔═╡ b7ddf5b0-e297-4834-ad24-864267c64dd6
-fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), s1s2s2)
-
-# ╔═╡ f601147d-ae5b-4209-8571-dbb7b9a8418e
-md"""
-#### $\neg AC \neq 0$: No effect !!
-"""
-
-# ╔═╡ 0a58a756-47f5-42af-8ea4-454bb456cc65
-s2s2s2 = subset(s2s2, :A0C1 => ByRow(!=(0)));
-
-# ╔═╡ 551f9a32-d948-4097-813b-a7734aba615e
-partitions(s2s2s2)
-
-# ╔═╡ 06cb78a1-d434-4670-a59d-cfbb13cc1fb3
-md"""
-#### Group 13: No effect !!
-"""
-
-# ╔═╡ 7f9340f2-7e60-4f5c-8c80-64ffd66db9d3
-GroupInfo(13)
-
-# ╔═╡ cd23ec95-0462-4f64-8b81-ffe50358d0dc
-fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), gdf0[13])
-
-# ╔═╡ 205b37dd-48df-483c-9001-a4bd14bfc454
-md"""
-#### Group 14: Colinealized with C1GvA1
-"""
-
-# ╔═╡ 8a22a57c-6da9-4414-966d-bd426b05235c
-GroupInfo(14)
-
-# ╔═╡ af735026-3e0c-4fd7-9b53-d9cbdb2be23c
-fit(MixedModel, @formula(rate ~  C1GvA1 + (1 | participant) + (1|image)), gdf0[14])
-
-# ╔═╡ e09e7b72-d560-42a6-9360-44ba1f5da88a
-md"""
-#### Group 15: No effect !!
-"""
-
-# ╔═╡ d8bb92f6-bf41-4dc8-8d5a-0d73de4c59ad
-GroupInfo(15)
-
-# ╔═╡ db57fd30-ec44-49b2-9f60-775f9b03121c
-fit(MixedModel, @formula(rate ~ C1GvA1 + (1 | participant) + (1|image)), gdf0[15])
-
-# ╔═╡ dfa7801c-c1f8-4814-b06a-6828ea432e3b
-md"""
-#### Group 14 vs 15: No effect !!
-"""
-
-# ╔═╡ b1a0c34f-bcbb-4d2e-a3f8-5f6acc958446
-fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), reduce(vcat, gdf0[[14, 15]]))
-
-# ╔═╡ 37e9dc86-f104-4caf-a27d-d8683e3b25a4
-md"""
-#### Group 16: No effect !!
-"""
-
-# ╔═╡ e3033c14-f314-4d30-8ea7-58efa552efcc
-GroupInfo(16)
-
-# ╔═╡ ddd1d108-d92a-4170-9279-948d8cafc23f
-fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), gdf0[16])
-
-# ╔═╡ 0ba5ab56-c76b-447e-886e-85a4b2ff0cf0
-md"""
-#### Group 13 vs 16: No effect !!
-"""
-
-# ╔═╡ 6ec16e16-59de-45db-9914-5e1632539343
-fit(MixedModel, @formula(rate ~ C1GvA1 * dltPC + (1 | participant) + (1|image)), reduce(vcat, gdf0[[13, 16]]))
+# ╔═╡ d491eec2-bb87-46fd-ad02-a687fd3d62d7
+Plot_DP(df)
 
 # ╔═╡ 2f793451-f88e-4bbf-bc94-e48c6d43b159
 md"""
@@ -490,51 +109,265 @@ md"""
 
 # ╔═╡ 7a4cff1e-7165-42cc-b800-ed7276f0c13c
 md"""
-The sign of $\Delta$ P could have an effect, but its effect was counfounded by the following two factors:
-- Whether $A\neg C$ exists
-- whether $AC$ exists.
+-  $\Delta$ P could have an effect, but its effect was counfounded with whether $A\neg C$ exists or not.
 
-Only when 
--  $A\neg C$ does not exist. And
-- The existence of $AC$ could be varied, then
-
-the effects of $\Delta$P as has a simmliar effect as being descried in the Relevance theory.
+- The effects of $\Delta$P was different from that being descried in the Relevance theory.
 """
+
+# ╔═╡ d1313eaa-af91-4ebe-8814-0b83bc889ea3
+md"""
+# Appendixes: Define Functions
+"""
+
+# ╔═╡ 65231ba3-9f33-4de1-b957-9e0d4d2fceb3
+function CondProb(A1C1, A1C0, A0C1, A0C0)
+	A1 = A1C1 + A1C0
+	A0 = A0C1 + A0C0
+
+	# C|A not defined,  Delta P not defined
+	A1Z   = (A1C1 == 0) && (A1C0 == 0)
+	# C|~A not defined, Delta P not defined
+	A0Z   = (A0C1 == 0) && (A0C0 == 0)
+	# C|~A = 1, Delta P* Not defined
+	A0C0Z = (A0C1 != 0) && (A0C0 == 0)
+	# Biconditional, C|A = 0, C|~A = 1, Delta P = -1, Not Changed
+	BC1 = (A1C1 == 0) && (A1C0 != 0) && (A0C1 != 0) && (A0C0 == 0) 
+	# Biconditional, C|A = 1, C|~A = 0, Delta P = 1, Not Changed
+	BC2 = (A1C1 != 0) && (A1C0 == 0) && (A0C1 == 0) && (A0C0 != 0)
+
+	C1GvA1 = A1Z ? missing : A1C1 / A1
+	C1GvA0 = A0Z ? missing : A0C1 / A0
+	
+	dltP   = any([A1Z, A0Z])        ? missing : C1GvA1 - C1GvA0
+	dltPp  = any([A1Z, A0Z, A0C0Z]) ? missing : dltP / (1 - C1GvA0)
+	BC     = any([BC1, BC2]) ? missing : 1
+
+	return C1GvA1, C1GvA0, dltP, dltPp, BC
+end
+
+# ╔═╡ de6d1a05-090d-49a9-b138-e5b0654be036
+function Read_Combine_Data()
+	# 1. Original Stimuli
+	Original_Stimuli = let
+		df = CSV.read(
+			"Conditional_Stimuli_Adjusted.csv", DataFrame, stringtype = String)
+		rename!(df, "Image" => "image")
+		transform!(df, [:A1C1, :A1C0, :A0C1, :A0C0] 
+			.=> ByRow(x -> x == 0 ? 0 : 1) .=> [:A1C1C, :A1C0C, :A0C1C, :A0C0C]
+		)
+		replace!(df.Total, 0 => 1)
+		transform!(df, :dltP => ByRow(x -> x == 0.0 ? 0.0 : x) => :dltP)
+	end
+
+	# 2. Get CSV list
+	Csv_List = reduce(vcat, @. filter(endswith(".csv"), 
+		readdir(joinpath("Data", ["dataall", "datamac"]), join = true))
+	)
+
+	# 3. Preprocess DataFrame
+	Recorded_Data = mapreduce(vcat, Csv_List) do csv
+		dt = CSV.read(csv, DataFrame, stringtype = String)
+		if "textbox_2.text" ∈ names(dt)
+			rename!(dt, :"textbox_2.text"  => "rate")
+		else
+			rename!(dt, :"Estimation.text" => "rate")
+		end
+		dropmissing!(dt, :Image)
+		dropmissing!(dt, :rate)              # 1-10; Total 179
+		subset!(dt, :rate => ByRow(<=(100))) # > 100 Total 29
+		transform!(dt, :rate => ByRow(x -> x / 100) => :rate)
+		transform!(dt,
+			:Image => ByRow(x -> replace(x, "stimuli/" => "")) => :image
+		)
+		select!(dt, ["image", "participant", "rate"])
+		return dt
+	end
+
+	# 4. Join recorded data and original stimuli
+	df = leftjoin(Recorded_Data, Original_Stimuli, on = :image)
+
+	# 5. Categorize column dltP
+	transform!(df, :dltP => ByRow(x -> x > 0 ? "Positive" : "Negative") => :dltPC)
+
+	# 6. Determine missing values
+		transform!(df,
+		[:A1C1, :A1C0, :A0C1, :A0C0] => ByRow(CondProb) => 
+		[:C1GvA1M, :C1GvA0M, :dltPM, :dltPpM, :BC]
+	)
+
+	return df
+end
+
+# ╔═╡ d375af80-7407-4d7e-9ea2-b07274e442cc
+function Plot_Partitions(df)
+	fullDT = Read_Combine_Data()
+	gcol = [:A0C0C, :A1C1C, :A0C1C, :A1C0C]
+	gdf = groupby(fullDT, gcol, sort = true);
+	gdt = groupby(df, gcol, sort = true)
+	fig = Figure(resolution = (2000, 1500))
+	for (idx, key) in enumerate(keys(gdf))
+		ky = replace(string(idx, ": ", NamedTuple(key)), 
+			"A1C1C" => "AC", "A1C0C" => "A¬C", "A0C0C" => "¬A¬C", "A0C1C" => "¬AC",
+		)
+		ax = Axis(fig[key[1], key[2]][key[3], key[4]], 
+			xticks = 0:0.25:1,
+			limits = ((-0.1, 1.1), nothing),
+			xgridvisible = false, ygridvisible = false,
+			# title = ky
+		)
+		hist!(ax, gdf[key].rate, bins = 15, normalization = :none, color = :white)
+		pos = findfirst(==(NamedTuple(key)), NamedTuple.(keys(gdt)))
+		isnothing(pos) ||
+		hist!(ax, gdt[keys(gdt)[pos]].rate, 
+			bins = 15, normalization = :none)
+		hidespines!(ax, :r, :t)
+		
+	end
+	Label(fig[-1, 0], tellwidth = false, text = "AC = 0", fontsize = 30, color = :red)
+	Label(fig[-1, 0][3, 0], tellwidth = false, tellheight = false, text = "A¬C = 0", fontsize = 25, color = :red)
+	Label(fig[-1, 0][3, 1], tellwidth = false, tellheight = false, text = "A¬C ≠ 0", fontsize = 25, color = :red)
+	
+	Label(fig[-1, 1], tellwidth = false, text = "AC ≠ 0", fontsize = 30, color = :blue)
+	Label(fig[-1, 1][3, 0], tellwidth = false, tellheight = false, text = "A¬C = 0", fontsize = 25, color = :blue)
+	Label(fig[-1, 1][3, 1], tellwidth = false, tellheight = false, text = "A¬C ≠ 0", fontsize = 25, color = :blue)
+	
+	Label(fig[0, end + 1], tellheight = false, text = "¬A¬C = 0", fontsize = 30, color = :green, rotation = -pi/2)
+	Label(fig[0, end][0, -1], tellwidth = false, tellheight = false, text = "¬AC = 0", fontsize = 20, color = :green, rotation = -pi/2)
+	Label(fig[0, end][1, -1], tellwidth = false, tellheight = false, text = "¬AC ≠ 0", fontsize = 20, color = :green, rotation = -pi/2)
+
+	Label(fig[1, end], tellwidth = false, tellheight = false, text = "¬A¬C ≠ 0", fontsize = 30, color = :purple, rotation = -pi/2)
+	Label(fig[1, end][0, -1], tellwidth = false, tellheight = false, text = "¬AC = 0", fontsize = 20, color = :purple, rotation = -pi/2)
+	Label(fig[1, end][1, -1], tellwidth = false, tellheight = false, text = "¬AC ≠ 0", fontsize = 20, color = :purple, rotation = -pi/2)
+
+	Box(fig[:, 0], color = :transparent, strokewidth = 4, strokecolor = :red)
+	Box(fig[:, 1], color = :transparent, strokewidth = 4, strokecolor = :blue)
+	Box(fig[0, :], color = :transparent, strokewidth = 4, strokecolor = :green)
+	Box(fig[1, :], color = :transparent, strokewidth = 4, strokecolor = :purple)
+
+	Label(fig[:, -1],    text = L"Frequency", rotation = pi/2, fontsize = 40)
+	Label(fig[end+1, :], text = L"P(\text{If A, then C})", fontsize = 40)
+
+	save("CondProb_PRT_$(Dates.now()).png", fig, px_per_unit = 10)
+
+	fig
+end
+
+# ╔═╡ b602069d-8777-4f7e-9259-b914a9621670
+function Plot_CP1(df)
+	gp = groupby(df, :dltPC, sort = true)
+	kys = keys(gp)
+	form = @formula(rate ~ C1GvA1 + (1 + C1GvA1 | participant) + (1 + C1GvA1|image))
+	fm1 = fit(MixedModel, form, gp[kys[1]]; progress = false)
+	fm2 = fit(MixedModel, form, gp[kys[2]]; progress = false)
+	fig = Figure(resolution = (1000, 1000))
+	ax = Axis(fig[1, 1], 
+		limits = ((-0.1, 1.1), (-0.1, 1.1)),
+		xticks = [0.0, 0.2, 0.33, 0.5, 0.67, 0.8, 1.0], yticks = 0:0.25:1,
+		xlabel = L"P(C|A)", ylabel = L"P(\text{If A, Then C})"
+	)
+	scatter!(ax, gp[kys[1]].C1GvA1, gp[kys[1]].rate, color = (:red, 0.4))
+	scatter!(ax, gp[kys[2]].C1GvA1, gp[kys[2]].rate, color = (:blue, 0.3))
+	ablines!(ax, coef(fm1)..., color = :red,  label = kys[1].dltPC)	
+	ablines!(ax, coef(fm2)..., color = :blue, label = kys[2].dltPC)
+	axislegend(ax, position = :lt)
+
+	save("CondProb_CP1.png", fig, px_per_unit = 10)
+
+	fig
+end
+
+# ╔═╡ 2129f141-12f0-42ce-b0f6-3817c718ac34
+function Plot_CP2(df)
+	dfn = subset(df, :dltP => ByRow(∉([-1, 1, .6, -.6])));
+	gdfn = groupby(dfn, :dltP, sort = true)
+	cols = distinguishable_colors(length(gdfn), 
+		[RGB(1, 1, 1), RGB(0, 0, 0)], dropseed = true)
+	fmp = @formula(rate ~ C1GvA1 + (1|participant))
+	fig = Figure(resolution = (1000, 1000))
+	ax = Axis(fig[1, 1], 
+		limits = (nothing, (-0.1, 1.1)),
+		xticks = [0.0, 0.2, 0.33, 0.5, 0.67, 0.8, 1.0], yticks = 0:0.25:1,
+		xlabel = L"P(C|A)", ylabel = L"P(\text{If A, Then C})"
+	)
+	lins = [(
+		cf = coef(fit(MixedModel, fmp, gdfn[ky]));
+		scatter!(ax, gdfn[ky].C1GvA1, gdfn[ky].rate, color = (cols[idx], 0.2));
+		ablines!(ax, 0, cf[2], color = cols[idx])
+	) for (idx, ky) in enumerate(keys(gdfn))]
+	Legend(fig[1, 1], lins, 
+		[L"\Delta P=%$(x.dltP);\;\beta=%$(round.(coef(fit(MixedModel, fmp, gdfn[x]))[2], digits = 2))" for x in keys(gdfn)], 
+		tellheight = false, tellwidth = false, orientation = :horizontal,
+		halign = :left, valign = :top, nbanks = 10
+	)
+	save("CondProb_CP2.png", fig, px_per_unit = 10)
+	fig
+end
+
+# ╔═╡ 4fdb43f0-4847-40bf-9f3c-f37ebbdabde7
+function Plot_DP(df)
+	gdfn = groupby(df, :C1GvA1, sort = true)
+	cols = distinguishable_colors(length(gdfn), 
+		[RGB(1, 1, 1), RGB(0, 0, 0)], dropseed = true)
+	fmp = @formula(rate ~ dltP + (1|participant))
+	fig = Figure(resolution = (1000, 1000))
+	ax = Axis(fig[1, 1], 
+		limits = (nothing, (-0.1, 1.1)),
+		xticks = -1:0.25:1, yticks = 0:0.25:1,
+		xlabel = L"\Delta P", ylabel = "P(If A, then C)"
+	)
+	lins = [(
+		cf = coef(fit(MixedModel, fmp, gdfn[ky]));
+		scatter!(ax, gdfn[ky].dltP, gdfn[ky].rate, color = (cols[idx], 0.2));
+		ablines!(ax, 0.5, cf[2], color = cols[idx])
+	) for (idx, ky) in enumerate(keys(gdfn))]
+	Legend(fig[1, 1], lins, 
+		[L"C|A =%$(x.C1GvA1);\;\beta=%$(round.(coef(fit(MixedModel, fmp, gdfn[x]))[2], digits = 2))" for x in keys(gdfn)], 
+		tellheight = false, tellwidth = false, orientation = :horizontal,
+		halign = :left, valign = :top, nbanks = 11
+	)
+	save("CondProb_DTP.png", fig, px_per_unit = 10)
+	fig
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
-CategoricalArrays = "324d7699-5711-5eae-9e2f-1d82baa6b597"
+Colors = "5ae59095-9a9b-59fe-a467-6f913c188581"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 FreqTables = "da1fdf0e-e0ff-5433-a45f-9bb5ff651cb1"
 MixedModels = "ff71e718-51f3-5ec2-a782-8ffcbfa3c316"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 
 [compat]
-CSV = "~0.10.9"
-CairoMakie = "~0.10.4"
-CategoricalArrays = "~0.10.7"
+CSV = "~0.10.10"
+CairoMakie = "~0.10.5"
+Colors = "~0.12.10"
 DataFrames = "~1.5.0"
 FreqTables = "~0.4.5"
-MixedModels = "~4.12.0"
-PlutoUI = "~0.7.50"
+MixedModels = "~4.12.1"
+PlutoUI = "~0.7.51"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.8.5"
+julia_version = "1.9.0"
 manifest_format = "2.0"
-project_hash = "1c9d91fba8f1998426746526280be6459026ffb5"
+project_hash = "5784115899277a61b631fb55ab69916c2c6ce9c0"
 
 [[deps.AbstractFFTs]]
-deps = ["ChainRulesCore", "LinearAlgebra"]
+deps = ["LinearAlgebra"]
 git-tree-sha1 = "16b6dbc4cf7caee4e1e75c49485ec67b667098a0"
 uuid = "621f4979-c628-5d54-868e-fcf4e3e8185c"
 version = "1.3.1"
+weakdeps = ["ChainRulesCore"]
+
+    [deps.AbstractFFTs.extensions]
+    AbstractFFTsChainRulesCoreExt = "ChainRulesCore"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
@@ -549,9 +382,13 @@ version = "0.4.4"
 
 [[deps.Adapt]]
 deps = ["LinearAlgebra", "Requires"]
-git-tree-sha1 = "cc37d689f599e8df4f464b2fa3870ff7db7492ef"
+git-tree-sha1 = "76289dc51920fdc6e0013c872ba9551d54961c24"
 uuid = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
-version = "3.6.1"
+version = "3.6.2"
+weakdeps = ["StaticArrays"]
+
+    [deps.Adapt.extensions]
+    AdaptStaticArraysExt = "StaticArrays"
 
 [[deps.Animations]]
 deps = ["Colors"]
@@ -626,10 +463,10 @@ version = "0.4.2"
 uuid = "8bf52ea8-c179-5cab-976a-9e18b702a9bc"
 
 [[deps.CSV]]
-deps = ["CodecZlib", "Dates", "FilePathsBase", "InlineStrings", "Mmap", "Parsers", "PooledArrays", "SentinelArrays", "SnoopPrecompile", "Tables", "Unicode", "WeakRefStrings", "WorkerUtilities"]
-git-tree-sha1 = "c700cce799b51c9045473de751e9319bdd1c6e94"
+deps = ["CodecZlib", "Dates", "FilePathsBase", "InlineStrings", "Mmap", "Parsers", "PooledArrays", "PrecompileTools", "SentinelArrays", "Tables", "Unicode", "WeakRefStrings", "WorkerUtilities"]
+git-tree-sha1 = "ed28c86cbde3dc3f53cf76643c2e9bc11d56acc7"
 uuid = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
-version = "0.10.9"
+version = "0.10.10"
 
 [[deps.Cairo]]
 deps = ["Cairo_jll", "Colors", "Glib_jll", "Graphics", "Libdl", "Pango_jll"]
@@ -638,10 +475,10 @@ uuid = "159f3aea-2a34-519c-b102-8c37f9878175"
 version = "1.0.5"
 
 [[deps.CairoMakie]]
-deps = ["Base64", "Cairo", "Colors", "FFTW", "FileIO", "FreeType", "GeometryBasics", "LinearAlgebra", "Makie", "SHA", "SnoopPrecompile"]
-git-tree-sha1 = "2aba202861fd2b7603beb80496b6566491229855"
+deps = ["Base64", "Cairo", "Colors", "FFTW", "FileIO", "FreeType", "GeometryBasics", "LinearAlgebra", "Makie", "PrecompileTools", "SHA"]
+git-tree-sha1 = "9e7f01dd16e576ebbdf8b453086f9d0eff814a09"
 uuid = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
-version = "0.10.4"
+version = "0.10.5"
 
 [[deps.Cairo_jll]]
 deps = ["Artifacts", "Bzip2_jll", "CompilerSupportLibraries_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "JLLWrappers", "LZO_jll", "Libdl", "Pixman_jll", "Pkg", "Xorg_libXext_jll", "Xorg_libXrender_jll", "Zlib_jll", "libpng_jll"]
@@ -657,21 +494,22 @@ version = "0.5.1"
 
 [[deps.CategoricalArrays]]
 deps = ["DataAPI", "Future", "Missings", "Printf", "Requires", "Statistics", "Unicode"]
-git-tree-sha1 = "5084cc1a28976dd1642c9f337b28a3cb03e0f7d2"
+git-tree-sha1 = "1568b28f91293458345dabba6a5ea3f183250a61"
 uuid = "324d7699-5711-5eae-9e2f-1d82baa6b597"
-version = "0.10.7"
+version = "0.10.8"
+weakdeps = ["JSON", "RecipesBase", "SentinelArrays", "StructTypes"]
+
+    [deps.CategoricalArrays.extensions]
+    CategoricalArraysJSONExt = "JSON"
+    CategoricalArraysRecipesBaseExt = "RecipesBase"
+    CategoricalArraysSentinelArraysExt = "SentinelArrays"
+    CategoricalArraysStructTypesExt = "StructTypes"
 
 [[deps.ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
-git-tree-sha1 = "c6d890a52d2c4d55d326439580c3b8d0875a77d9"
+git-tree-sha1 = "e30f2f4e20f7f186dc36529910beaedc60cfa644"
 uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-version = "1.15.7"
-
-[[deps.ChangesOfVariables]]
-deps = ["ChainRulesCore", "LinearAlgebra", "Test"]
-git-tree-sha1 = "485193efd2176b88e6622a39a246f8c5b600e74e"
-uuid = "9e997f8a-9a97-42d5-a9f1-ce6bfc15e2c0"
-version = "0.1.6"
+version = "1.16.0"
 
 [[deps.CodecBzip2]]
 deps = ["Bzip2_jll", "Libdl", "TranscodingStreams"]
@@ -704,10 +542,10 @@ uuid = "a2cac450-b92f-5266-8821-25eda20663c8"
 version = "0.4.0"
 
 [[deps.ColorSchemes]]
-deps = ["ColorTypes", "ColorVectorSpace", "Colors", "FixedPointNumbers", "Random", "SnoopPrecompile"]
-git-tree-sha1 = "aa3edc8f8dea6cbfa176ee12f7c2fc82f0608ed3"
+deps = ["ColorTypes", "ColorVectorSpace", "Colors", "FixedPointNumbers", "PrecompileTools", "Random"]
+git-tree-sha1 = "be6ab11021cd29f0344d5c4357b163af05a48cba"
 uuid = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
-version = "3.20.0"
+version = "3.21.0"
 
 [[deps.ColorTypes]]
 deps = ["FixedPointNumbers", "Random"]
@@ -739,21 +577,30 @@ uuid = "bbf7d656-a473-5ed7-a52c-81e309532950"
 version = "0.3.0"
 
 [[deps.Compat]]
-deps = ["Dates", "LinearAlgebra", "UUIDs"]
+deps = ["UUIDs"]
 git-tree-sha1 = "7a60c856b9fa189eb34f5f8a6f6b5529b7942957"
 uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
 version = "4.6.1"
+weakdeps = ["Dates", "LinearAlgebra"]
+
+    [deps.Compat.extensions]
+    CompatLinearAlgebraExt = "LinearAlgebra"
 
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "1.0.1+0"
+version = "1.0.2+0"
 
 [[deps.ConstructionBase]]
 deps = ["LinearAlgebra"]
-git-tree-sha1 = "89a9db8d28102b094992472d333674bd1a83ce2a"
+git-tree-sha1 = "738fec4d684a9a6ee9598a8bfee305b26831f28c"
 uuid = "187b0558-2788-49d3-abe0-74a17ed4e7c9"
-version = "1.5.1"
+version = "1.5.2"
+weakdeps = ["IntervalSets", "StaticArrays"]
+
+    [deps.ConstructionBase.extensions]
+    ConstructionBaseIntervalSetsExt = "IntervalSets"
+    ConstructionBaseStaticArraysExt = "StaticArrays"
 
 [[deps.Contour]]
 git-tree-sha1 = "d05d9e7b7aedff4e5b51a029dced05cfb6125781"
@@ -766,9 +613,9 @@ uuid = "a8cc5b0e-0ffa-5ad4-8c14-923d3ee1735f"
 version = "4.1.1"
 
 [[deps.DataAPI]]
-git-tree-sha1 = "e8119c1a33d267e16108be441a287a6981ba1630"
+git-tree-sha1 = "8da84edb865b0b5b0100c0666a9bc9a0b71c553c"
 uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
-version = "1.14.0"
+version = "1.15.0"
 
 [[deps.DataFrames]]
 deps = ["Compat", "DataAPI", "Future", "InlineStrings", "InvertedIndices", "IteratorInterfaceExtensions", "LinearAlgebra", "Markdown", "Missings", "PooledArrays", "PrettyTables", "Printf", "REPL", "Random", "Reexport", "SentinelArrays", "SnoopPrecompile", "SortingAlgorithms", "Statistics", "TableTraits", "Tables", "Unicode"]
@@ -793,13 +640,9 @@ uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
 
 [[deps.DelimitedFiles]]
 deps = ["Mmap"]
+git-tree-sha1 = "9e2f36d3c96a820c678f2f1f1782582fcf685bae"
 uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
-
-[[deps.DensityInterface]]
-deps = ["InverseFunctions", "Test"]
-git-tree-sha1 = "80c3e8639e3353e5d2912fb3a1916b8455e2494b"
-uuid = "b429d917-457f-4dbc-8f4c-0cc954292b1d"
-version = "0.4.0"
+version = "1.9.1"
 
 [[deps.Dictionaries]]
 deps = ["Indexing", "Random", "Serialization"]
@@ -824,10 +667,18 @@ deps = ["Random", "Serialization", "Sockets"]
 uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[deps.Distributions]]
-deps = ["ChainRulesCore", "DensityInterface", "FillArrays", "LinearAlgebra", "PDMats", "Printf", "QuadGK", "Random", "SparseArrays", "SpecialFunctions", "Statistics", "StatsBase", "StatsFuns", "Test"]
-git-tree-sha1 = "13027f188d26206b9e7b863036f87d2f2e7d013a"
+deps = ["FillArrays", "LinearAlgebra", "PDMats", "Printf", "QuadGK", "Random", "SparseArrays", "SpecialFunctions", "Statistics", "StatsAPI", "StatsBase", "StatsFuns", "Test"]
+git-tree-sha1 = "aa8ae1e8e8d4b5ef38a8fbc028fc75f3c5cad73d"
 uuid = "31c24e10-a181-5473-b8eb-7969acd0382f"
-version = "0.25.87"
+version = "0.25.94"
+
+    [deps.Distributions.extensions]
+    DistributionsChainRulesCoreExt = "ChainRulesCore"
+    DistributionsDensityInterfaceExt = "DensityInterface"
+
+    [deps.Distributions.weakdeps]
+    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+    DensityInterface = "b429d917-457f-4dbc-8f4c-0cc954292b1d"
 
 [[deps.DocStringExtensions]]
 deps = ["LibGit2"]
@@ -894,9 +745,9 @@ version = "3.3.10+0"
 
 [[deps.FileIO]]
 deps = ["Pkg", "Requires", "UUIDs"]
-git-tree-sha1 = "7be5f99f7d15578798f338f5433b6c432ea8037b"
+git-tree-sha1 = "299dc33549f68299137e51e6d49a13b5b1da9673"
 uuid = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
-version = "1.16.0"
+version = "1.16.1"
 
 [[deps.FilePathsBase]]
 deps = ["Compat", "Dates", "Mmap", "Printf", "Test", "UUIDs"]
@@ -909,9 +760,9 @@ uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
 
 [[deps.FillArrays]]
 deps = ["LinearAlgebra", "Random", "SparseArrays", "Statistics"]
-git-tree-sha1 = "fc86b4fd3eff76c3ce4f5e96e2fdfa6282722885"
+git-tree-sha1 = "fa10570aee20250d446c9951b459c63529b1107c"
 uuid = "1a297f60-69ca-5386-bcde-b61e274b549b"
-version = "1.0.0"
+version = "1.0.2"
 
 [[deps.FixedPointNumbers]]
 deps = ["Statistics"]
@@ -932,10 +783,14 @@ uuid = "59287772-0a20-5a39-b81b-1366585eb4c0"
 version = "0.4.2"
 
 [[deps.ForwardDiff]]
-deps = ["CommonSubexpressions", "DiffResults", "DiffRules", "LinearAlgebra", "LogExpFunctions", "NaNMath", "Preferences", "Printf", "Random", "SpecialFunctions", "StaticArrays"]
+deps = ["CommonSubexpressions", "DiffResults", "DiffRules", "LinearAlgebra", "LogExpFunctions", "NaNMath", "Preferences", "Printf", "Random", "SpecialFunctions"]
 git-tree-sha1 = "00e252f4d706b3d55a8863432e742bf5717b498d"
 uuid = "f6369f11-7733-5829-9624-2563aa707210"
 version = "0.10.35"
+weakdeps = ["StaticArrays"]
+
+    [deps.ForwardDiff.extensions]
+    ForwardDiffStaticArraysExt = "StaticArrays"
 
 [[deps.FreeType]]
 deps = ["CEnum", "FreeType2_jll"]
@@ -973,27 +828,27 @@ uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
 
 [[deps.GLM]]
 deps = ["Distributions", "LinearAlgebra", "Printf", "Reexport", "SparseArrays", "SpecialFunctions", "Statistics", "StatsAPI", "StatsBase", "StatsFuns", "StatsModels"]
-git-tree-sha1 = "cd3e314957dc11c4c905d54d1f5a65c979e4748a"
+git-tree-sha1 = "97829cfda0df99ddaeaafb5b370d6cab87b7013e"
 uuid = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
-version = "1.8.2"
+version = "1.8.3"
 
 [[deps.GPUArraysCore]]
 deps = ["Adapt"]
-git-tree-sha1 = "1cd7f0af1aa58abc02ea1d872953a97359cb87fa"
+git-tree-sha1 = "2d6ca471a6c7b536127afccfa7564b5b39227fe0"
 uuid = "46192b85-c4d5-4398-a991-12ede77f4527"
-version = "0.1.4"
+version = "0.1.5"
 
 [[deps.GeoInterface]]
 deps = ["Extents"]
-git-tree-sha1 = "0eb6de0b312688f852f347171aba888658e29f20"
+git-tree-sha1 = "bb198ff907228523f3dee1070ceee63b9359b6ab"
 uuid = "cf35fbd7-0cd7-5166-be24-54bfbe79505f"
-version = "1.3.0"
+version = "1.3.1"
 
 [[deps.GeometryBasics]]
 deps = ["EarCut_jll", "GeoInterface", "IterTools", "LinearAlgebra", "StaticArrays", "StructArrays", "Tables"]
-git-tree-sha1 = "303202358e38d2b01ba46844b92e48a3c238fd9e"
+git-tree-sha1 = "659140c9375afa2f685e37c1a0b9c9a60ef56b40"
 uuid = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
-version = "0.4.6"
+version = "0.4.7"
 
 [[deps.Gettext_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Libiconv_jll", "Pkg", "XML2_jll"]
@@ -1038,9 +893,9 @@ version = "2.8.1+1"
 
 [[deps.HypergeometricFunctions]]
 deps = ["DualNumbers", "LinearAlgebra", "OpenLibm_jll", "SpecialFunctions"]
-git-tree-sha1 = "432b5b03176f8182bd6841fbfc42c718506a2d5f"
+git-tree-sha1 = "84204eae2dd237500835990bcade263e27674a93"
 uuid = "34004b35-14d8-5ef3-9330-4cdb6864b03a"
-version = "0.3.15"
+version = "0.3.16"
 
 [[deps.Hyperscript]]
 deps = ["Test"]
@@ -1056,9 +911,9 @@ version = "0.9.4"
 
 [[deps.IOCapture]]
 deps = ["Logging", "Random"]
-git-tree-sha1 = "f7be53659ab06ddc986428d3a9dcc95f6fa6705a"
+git-tree-sha1 = "d75853a0bdbfb1ac815478bacd89cd27b550ace6"
 uuid = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
-version = "0.2.2"
+version = "0.2.3"
 
 [[deps.ImageAxes]]
 deps = ["AxisArrays", "ImageBase", "ImageCore", "Reexport", "SimpleTraits"]
@@ -1139,12 +994,6 @@ git-tree-sha1 = "16c0cc91853084cb5f58a78bd209513900206ce6"
 uuid = "8197267c-284f-5f27-9208-e0e47529a953"
 version = "0.7.4"
 
-[[deps.InverseFunctions]]
-deps = ["Test"]
-git-tree-sha1 = "49510dfcb407e572524ba94aeae2fced1f3feb0f"
-uuid = "3587e190-3f89-42d0-90ee-14403ec27112"
-version = "0.1.8"
-
 [[deps.InvertedIndices]]
 git-tree-sha1 = "0dc7b50b8d436461be01300fd8cd45aa0274b038"
 uuid = "41ab1584-1d38-5bbf-9106-f11c6c58b48f"
@@ -1203,9 +1052,9 @@ version = "2.1.91+0"
 
 [[deps.KernelDensity]]
 deps = ["Distributions", "DocStringExtensions", "FFTW", "Interpolations", "StatsBase"]
-git-tree-sha1 = "9816b296736292a80b9a3200eb7fbb57aaa3917a"
+git-tree-sha1 = "90442c50e202a5cdf21a7899c66b240fdef14035"
 uuid = "5ab0869b-81aa-558d-bb23-cbf5423bbe9b"
-version = "0.6.5"
+version = "0.6.7"
 
 [[deps.LAME_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1292,14 +1141,24 @@ uuid = "38a345b3-de98-5d2b-a5d3-14cd9215e700"
 version = "2.36.0+0"
 
 [[deps.LinearAlgebra]]
-deps = ["Libdl", "libblastrampoline_jll"]
+deps = ["Libdl", "OpenBLAS_jll", "libblastrampoline_jll"]
 uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [[deps.LogExpFunctions]]
-deps = ["ChainRulesCore", "ChangesOfVariables", "DocStringExtensions", "InverseFunctions", "IrrationalConstants", "LinearAlgebra"]
+deps = ["DocStringExtensions", "IrrationalConstants", "LinearAlgebra"]
 git-tree-sha1 = "0a1b7c2863e44523180fdb3146534e265a91870b"
 uuid = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
 version = "0.3.23"
+
+    [deps.LogExpFunctions.extensions]
+    LogExpFunctionsChainRulesCoreExt = "ChainRulesCore"
+    LogExpFunctionsChangesOfVariablesExt = "ChangesOfVariables"
+    LogExpFunctionsInverseFunctionsExt = "InverseFunctions"
+
+    [deps.LogExpFunctions.weakdeps]
+    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+    ChangesOfVariables = "9e997f8a-9a97-42d5-a9f1-ce6bfc15e2c0"
+    InverseFunctions = "3587e190-3f89-42d0-90ee-14403ec27112"
 
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
@@ -1334,10 +1193,10 @@ uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 version = "0.5.10"
 
 [[deps.Makie]]
-deps = ["Animations", "Base64", "ColorBrewer", "ColorSchemes", "ColorTypes", "Colors", "Contour", "Distributions", "DocStringExtensions", "Downloads", "FFMPEG", "FileIO", "FixedPointNumbers", "Formatting", "FreeType", "FreeTypeAbstraction", "GeometryBasics", "GridLayoutBase", "ImageIO", "InteractiveUtils", "IntervalSets", "Isoband", "KernelDensity", "LaTeXStrings", "LinearAlgebra", "MakieCore", "Markdown", "Match", "MathTeXEngine", "MiniQhull", "Observables", "OffsetArrays", "Packing", "PlotUtils", "PolygonOps", "Printf", "Random", "RelocatableFolders", "Setfield", "Showoff", "SignedDistanceFields", "SnoopPrecompile", "SparseArrays", "StableHashTraits", "Statistics", "StatsBase", "StatsFuns", "StructArrays", "TriplotBase", "UnicodeFun"]
-git-tree-sha1 = "74657542dc85c3b72b8a5a9392d57713d8b7a999"
+deps = ["Animations", "Base64", "ColorBrewer", "ColorSchemes", "ColorTypes", "Colors", "Contour", "Distributions", "DocStringExtensions", "Downloads", "FFMPEG", "FileIO", "FixedPointNumbers", "Formatting", "FreeType", "FreeTypeAbstraction", "GeometryBasics", "GridLayoutBase", "ImageIO", "InteractiveUtils", "IntervalSets", "Isoband", "KernelDensity", "LaTeXStrings", "LinearAlgebra", "MacroTools", "MakieCore", "Markdown", "Match", "MathTeXEngine", "MiniQhull", "Observables", "OffsetArrays", "Packing", "PlotUtils", "PolygonOps", "PrecompileTools", "Printf", "REPL", "Random", "RelocatableFolders", "Setfield", "Showoff", "SignedDistanceFields", "SparseArrays", "StableHashTraits", "Statistics", "StatsBase", "StatsFuns", "StructArrays", "TriplotBase", "UnicodeFun"]
+git-tree-sha1 = "3a9ca622a78dcbab3a034df35d1acd3ca7ad487d"
 uuid = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
-version = "0.19.4"
+version = "0.19.5"
 
 [[deps.MakieCore]]
 deps = ["Observables"]
@@ -1346,9 +1205,9 @@ uuid = "20f20a25-4f0e-4fdf-b5d1-57303727442b"
 version = "0.6.3"
 
 [[deps.MappedArrays]]
-git-tree-sha1 = "e8b359ef06ec72e8c030463fe02efe5527ee5142"
+git-tree-sha1 = "2dab0221fe2b0f2cb6754eaa743cc266339f527e"
 uuid = "dbb5928d-eab1-5f90-85c2-b9b0edb7c900"
-version = "0.4.1"
+version = "0.4.2"
 
 [[deps.Markdown]]
 deps = ["Base64"]
@@ -1360,10 +1219,10 @@ uuid = "7eb4fadd-790c-5f42-8a69-bfa0b872bfbf"
 version = "1.2.0"
 
 [[deps.MathOptInterface]]
-deps = ["BenchmarkTools", "CodecBzip2", "CodecZlib", "DataStructures", "ForwardDiff", "JSON", "LinearAlgebra", "MutableArithmetics", "NaNMath", "OrderedCollections", "Printf", "SnoopPrecompile", "SparseArrays", "SpecialFunctions", "Test", "Unicode"]
-git-tree-sha1 = "3b38f6fbd62cbd61d8dbf625136d7b75478bf2c5"
+deps = ["BenchmarkTools", "CodecBzip2", "CodecZlib", "DataStructures", "ForwardDiff", "JSON", "LinearAlgebra", "MutableArithmetics", "NaNMath", "OrderedCollections", "PrecompileTools", "Printf", "SparseArrays", "SpecialFunctions", "Test", "Unicode"]
+git-tree-sha1 = "6ba094e471106981b278f60179170d8b10985052"
 uuid = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
-version = "1.15.0"
+version = "1.16.0"
 
 [[deps.MathProgBase]]
 deps = ["LinearAlgebra", "SparseArrays"]
@@ -1380,7 +1239,7 @@ version = "0.5.6"
 [[deps.MbedTLS_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
-version = "2.28.0+0"
+version = "2.28.2+0"
 
 [[deps.MiniQhull]]
 deps = ["QhullMiniWrapper_jll"]
@@ -1395,10 +1254,10 @@ uuid = "e1d29d7a-bbdc-5cf2-9ac0-f12de2c33e28"
 version = "1.1.0"
 
 [[deps.MixedModels]]
-deps = ["Arrow", "DataAPI", "Distributions", "GLM", "JSON3", "LazyArtifacts", "LinearAlgebra", "Markdown", "NLopt", "PooledArrays", "ProgressMeter", "Random", "SnoopPrecompile", "SparseArrays", "StaticArrays", "Statistics", "StatsAPI", "StatsBase", "StatsFuns", "StatsModels", "StructTypes", "Tables", "TypedTables"]
-git-tree-sha1 = "6d21808e96593d3a7f36ace8a255ae04497a0a66"
+deps = ["Arrow", "DataAPI", "Distributions", "GLM", "JSON3", "LazyArtifacts", "LinearAlgebra", "Markdown", "NLopt", "PooledArrays", "PrecompileTools", "ProgressMeter", "Random", "SparseArrays", "StaticArrays", "Statistics", "StatsAPI", "StatsBase", "StatsFuns", "StatsModels", "StructTypes", "Tables", "TypedTables"]
+git-tree-sha1 = "829c88415124256495ad666ee3518630b75cd8f5"
 uuid = "ff71e718-51f3-5ec2-a782-8ffcbfa3c316"
-version = "4.12.0"
+version = "4.12.1"
 
 [[deps.Mmap]]
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
@@ -1417,13 +1276,13 @@ version = "0.3.4"
 
 [[deps.MozillaCACerts_jll]]
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
-version = "2022.2.1"
+version = "2022.10.11"
 
 [[deps.MutableArithmetics]]
 deps = ["LinearAlgebra", "SparseArrays", "Test"]
-git-tree-sha1 = "3295d296288ab1a0a2528feb424b854418acff57"
+git-tree-sha1 = "964cb1a7069723727025ae295408747a0b36a854"
 uuid = "d8a4904e-b15c-11e9-3269-09a3773c0cb0"
-version = "1.2.3"
+version = "1.3.0"
 
 [[deps.NLopt]]
 deps = ["MathOptInterface", "MathProgBase", "NLopt_jll"]
@@ -1479,7 +1338,7 @@ version = "1.3.5+1"
 [[deps.OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
 uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
-version = "0.3.20+0"
+version = "0.3.21+4"
 
 [[deps.OpenEXR]]
 deps = ["Colors", "FileIO", "OpenEXR_jll"]
@@ -1524,7 +1383,7 @@ version = "1.6.0"
 [[deps.PCRE2_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "efcefdf7-47ab-520b-bdef-62a2eaa19f15"
-version = "10.40.0+0"
+version = "10.42.0+0"
 
 [[deps.PDMats]]
 deps = ["LinearAlgebra", "SparseArrays", "SuiteSparse"]
@@ -1557,10 +1416,10 @@ uuid = "36c8627f-9965-5494-a995-c6b170f724f3"
 version = "1.50.9+0"
 
 [[deps.Parsers]]
-deps = ["Dates", "SnoopPrecompile"]
-git-tree-sha1 = "478ac6c952fddd4399e71d4779797c538d0ff2bf"
+deps = ["Dates", "PrecompileTools", "UUIDs"]
+git-tree-sha1 = "a5aef8d4a6e8d81f171b2bd4be5265b01384c74c"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
-version = "2.5.8"
+version = "2.5.10"
 
 [[deps.Pixman_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1569,9 +1428,9 @@ uuid = "30392449-352a-5448-841d-b1acce4e97dc"
 version = "0.40.1+0"
 
 [[deps.Pkg]]
-deps = ["Artifacts", "Dates", "Downloads", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]
+deps = ["Artifacts", "Dates", "Downloads", "FileWatching", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]
 uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
-version = "1.8.0"
+version = "1.9.0"
 
 [[deps.PkgVersion]]
 deps = ["Pkg"]
@@ -1580,16 +1439,16 @@ uuid = "eebad327-c553-4316-9ea0-9fa01ccd7688"
 version = "0.3.2"
 
 [[deps.PlotUtils]]
-deps = ["ColorSchemes", "Colors", "Dates", "Printf", "Random", "Reexport", "SnoopPrecompile", "Statistics"]
-git-tree-sha1 = "c95373e73290cf50a8a22c3375e4625ded5c5280"
+deps = ["ColorSchemes", "Colors", "Dates", "PrecompileTools", "Printf", "Random", "Reexport", "Statistics"]
+git-tree-sha1 = "f92e1315dadf8c46561fb9396e525f7200cdc227"
 uuid = "995b91a9-d308-5afd-9ec6-746e21dbc043"
-version = "1.3.4"
+version = "1.3.5"
 
 [[deps.PlutoUI]]
 deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
-git-tree-sha1 = "5bb5129fdd62a2bbbe17c2756932259acf467386"
+git-tree-sha1 = "b478a748be27bd2f2c73a7690da219d0844db305"
 uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
-version = "0.7.50"
+version = "0.7.51"
 
 [[deps.PolygonOps]]
 git-tree-sha1 = "77b3d3605fc1cd0b42d95eba87dfcd2bf67d5ff6"
@@ -1602,17 +1461,23 @@ git-tree-sha1 = "a6062fe4063cdafe78f4a0a81cfffb89721b30e7"
 uuid = "2dfb63ee-cc39-5dd5-95bd-886bf059d720"
 version = "1.4.2"
 
+[[deps.PrecompileTools]]
+deps = ["Preferences"]
+git-tree-sha1 = "259e206946c293698122f63e2b513a7c99a244e8"
+uuid = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
+version = "1.1.1"
+
 [[deps.Preferences]]
 deps = ["TOML"]
-git-tree-sha1 = "47e5f437cc0e7ef2ce8406ce1e7e24d44915f88d"
+git-tree-sha1 = "7eb1686b4f04b82f96ed7a4ea5890a4f0c7a09f1"
 uuid = "21216c6a-2e73-6563-6e65-726566657250"
-version = "1.3.0"
+version = "1.4.0"
 
 [[deps.PrettyTables]]
 deps = ["Crayons", "Formatting", "LaTeXStrings", "Markdown", "Reexport", "StringManipulation", "Tables"]
-git-tree-sha1 = "548793c7859e28ef026dba514752275ee871169f"
+git-tree-sha1 = "213579618ec1f42dea7dd637a42785a608b1ea9c"
 uuid = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
-version = "2.2.3"
+version = "2.2.4"
 
 [[deps.Printf]]
 deps = ["Unicode"]
@@ -1641,10 +1506,10 @@ uuid = "460c41e3-6112-5d7f-b78c-b6823adb3f2d"
 version = "1.0.0+1"
 
 [[deps.Qhull_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "238dd7e2cc577281976b9681702174850f8d4cbc"
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "be2449911f4d6cfddacdf7efc895eceda3eee5c1"
 uuid = "784f63db-0788-585a-bace-daefebcd302b"
-version = "8.0.1001+0"
+version = "8.0.1003+0"
 
 [[deps.QuadGK]]
 deps = ["DataStructures", "LinearAlgebra"]
@@ -1667,15 +1532,19 @@ version = "0.3.2"
 
 [[deps.Ratios]]
 deps = ["Requires"]
-git-tree-sha1 = "dc84268fe0e3335a62e315a3a7cf2afa7178a734"
+git-tree-sha1 = "6d7bb727e76147ba18eed998700998e17b8e4911"
 uuid = "c84ed2f1-dad5-54f0-aa8e-dbefe2724439"
-version = "0.4.3"
+version = "0.4.4"
+weakdeps = ["FixedPointNumbers"]
+
+    [deps.Ratios.extensions]
+    RatiosFixedPointNumbersExt = "FixedPointNumbers"
 
 [[deps.RecipesBase]]
-deps = ["SnoopPrecompile"]
-git-tree-sha1 = "261dddd3b862bd2c940cf6ca4d1c8fe593e457c8"
+deps = ["PrecompileTools"]
+git-tree-sha1 = "5c3d09cc4f31f5fc6af001c250bf1278733100ff"
 uuid = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
-version = "1.3.3"
+version = "1.3.4"
 
 [[deps.Reexport]]
 git-tree-sha1 = "45e428421666073eab6f2da5c9d310d99bb12f9b"
@@ -1711,10 +1580,10 @@ uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 version = "0.7.0"
 
 [[deps.SIMD]]
-deps = ["SnoopPrecompile"]
-git-tree-sha1 = "8b20084a97b004588125caebf418d8cab9e393d1"
+deps = ["PrecompileTools"]
+git-tree-sha1 = "0e270732477b9e551d884e6b07e23bb2ec947790"
 uuid = "fdea26ae-647d-5447-a871-4b548cad5224"
-version = "3.4.4"
+version = "3.4.5"
 
 [[deps.ScanByte]]
 deps = ["Libdl", "SIMD"]
@@ -1792,14 +1661,18 @@ uuid = "a2af1166-a08f-5f64-846c-94a0d3cef48c"
 version = "1.1.0"
 
 [[deps.SparseArrays]]
-deps = ["LinearAlgebra", "Random"]
+deps = ["Libdl", "LinearAlgebra", "Random", "Serialization", "SuiteSparse_jll"]
 uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [[deps.SpecialFunctions]]
-deps = ["ChainRulesCore", "IrrationalConstants", "LogExpFunctions", "OpenLibm_jll", "OpenSpecFun_jll"]
+deps = ["IrrationalConstants", "LogExpFunctions", "OpenLibm_jll", "OpenSpecFun_jll"]
 git-tree-sha1 = "ef28127915f4229c971eb43f3fc075dd3fe91880"
 uuid = "276daf66-3868-5448-9aa4-cd146d93841b"
 version = "2.2.0"
+weakdeps = ["ChainRulesCore"]
+
+    [deps.SpecialFunctions.extensions]
+    SpecialFunctionsChainRulesCoreExt = "ChainRulesCore"
 
 [[deps.SplitApplyCombine]]
 deps = ["Dictionaries", "Indexing"]
@@ -1821,9 +1694,9 @@ version = "0.1.1"
 
 [[deps.StaticArrays]]
 deps = ["LinearAlgebra", "Random", "StaticArraysCore", "Statistics"]
-git-tree-sha1 = "63e84b7fdf5021026d0f17f76af7c57772313d99"
+git-tree-sha1 = "8982b3607a212b070a5e46eea83eb62b4744ae12"
 uuid = "90137ffa-7385-5640-81b9-e52037218182"
-version = "1.5.21"
+version = "1.5.25"
 
 [[deps.StaticArraysCore]]
 git-tree-sha1 = "6b7ba252635a5eff6a0b0664a41ee140a1c9e72a"
@@ -1833,6 +1706,7 @@ version = "1.4.0"
 [[deps.Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
 uuid = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+version = "1.9.0"
 
 [[deps.StatsAPI]]
 deps = ["LinearAlgebra"]
@@ -1847,16 +1721,24 @@ uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 version = "0.33.21"
 
 [[deps.StatsFuns]]
-deps = ["ChainRulesCore", "HypergeometricFunctions", "InverseFunctions", "IrrationalConstants", "LogExpFunctions", "Reexport", "Rmath", "SpecialFunctions"]
+deps = ["HypergeometricFunctions", "IrrationalConstants", "LogExpFunctions", "Reexport", "Rmath", "SpecialFunctions"]
 git-tree-sha1 = "f625d686d5a88bcd2b15cd81f18f98186fdc0c9a"
 uuid = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
 version = "1.3.0"
 
+    [deps.StatsFuns.extensions]
+    StatsFunsChainRulesCoreExt = "ChainRulesCore"
+    StatsFunsInverseFunctionsExt = "InverseFunctions"
+
+    [deps.StatsFuns.weakdeps]
+    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+    InverseFunctions = "3587e190-3f89-42d0-90ee-14403ec27112"
+
 [[deps.StatsModels]]
 deps = ["DataAPI", "DataStructures", "LinearAlgebra", "Printf", "REPL", "ShiftedArrays", "SparseArrays", "StatsBase", "StatsFuns", "Tables"]
-git-tree-sha1 = "51cdf1afd9d78552e7a08536930d7abc3b288a5c"
+git-tree-sha1 = "8cc7a5385ecaa420f0b3426f9b0135d0df0638ed"
 uuid = "3eaba693-59b7-5ba5-a881-562e759f1c8d"
-version = "0.7.1"
+version = "0.7.2"
 
 [[deps.StringManipulation]]
 git-tree-sha1 = "46da2434b41f41ac3594ee9816ce5541c6096123"
@@ -1879,10 +1761,15 @@ version = "1.10.0"
 deps = ["Libdl", "LinearAlgebra", "Serialization", "SparseArrays"]
 uuid = "4607b0f0-06f3-5cda-b6b1-a6196a1729e9"
 
+[[deps.SuiteSparse_jll]]
+deps = ["Artifacts", "Libdl", "Pkg", "libblastrampoline_jll"]
+uuid = "bea87d4a-7f5b-5778-9afe-8cc45184846c"
+version = "5.10.1+6"
+
 [[deps.TOML]]
 deps = ["Dates"]
 uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
-version = "1.0.0"
+version = "1.0.3"
 
 [[deps.TableTraits]]
 deps = ["IteratorInterfaceExtensions"]
@@ -1899,7 +1786,7 @@ version = "1.10.1"
 [[deps.Tar]]
 deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
-version = "1.10.1"
+version = "1.10.0"
 
 [[deps.TensorCore]]
 deps = ["LinearAlgebra"]
@@ -1919,15 +1806,15 @@ version = "0.6.4"
 
 [[deps.TimeZones]]
 deps = ["Dates", "Downloads", "InlineStrings", "LazyArtifacts", "Mocking", "Printf", "RecipesBase", "Scratch", "Unicode"]
-git-tree-sha1 = "a92ec4466fc6e3dd704e2668b5e7f24add36d242"
+git-tree-sha1 = "a5404eddfee0cf451cabb8ea8846413323712e25"
 uuid = "f269a46b-ccf7-5d73-abea-4c690281aa53"
-version = "1.9.1"
+version = "1.9.2"
 
 [[deps.TranscodingStreams]]
 deps = ["Random", "Test"]
-git-tree-sha1 = "0b829474fed270a4b0ab07117dce9b9a2fa7581a"
+git-tree-sha1 = "9a6ae7ed916312b41236fcef7e0af564ef934769"
 uuid = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
-version = "0.9.12"
+version = "0.9.13"
 
 [[deps.Tricks]]
 git-tree-sha1 = "aadb748be58b492045b4f56166b5188aa63ce549"
@@ -2048,7 +1935,7 @@ version = "1.4.0+3"
 [[deps.Zlib_jll]]
 deps = ["Libdl"]
 uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
-version = "1.2.12+3"
+version = "1.2.13+0"
 
 [[deps.Zstd_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -2075,9 +1962,9 @@ uuid = "0ac62f75-1d6f-5e53-bd7c-93b484bb37c0"
 version = "0.15.1+0"
 
 [[deps.libblastrampoline_jll]]
-deps = ["Artifacts", "Libdl", "OpenBLAS_jll"]
+deps = ["Artifacts", "Libdl"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
-version = "5.1.1+0"
+version = "5.7.0+0"
 
 [[deps.libfdk_aac_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -2130,102 +2017,28 @@ version = "3.5.0+0"
 # ╟─360ba393-f01e-47c3-ae7b-19d82c6fa84c
 # ╟─4eeecbe3-2126-4f90-97f7-7334630a213e
 # ╠═c6a37acc-828c-42cf-81c1-f06793a1e331
-# ╟─9e5ba0ff-0ede-47bf-b04c-cfef742e77b6
-# ╠═ebdb3b34-8236-4627-b65f-9b4c9c5d6dfb
-# ╠═08040cd2-afd4-4d91-86c1-e3403196085a
-# ╠═0f199680-b1ed-4ff0-8f73-b927a13009ab
 # ╟─d63d50b1-4346-458c-96f8-9282b7ffa858
 # ╟─77fbd47a-2427-4d91-a971-b6c2185d6532
-# ╟─3d136e0c-1cbc-434d-a509-b5044af2fd7b
-# ╠═22e82469-98a5-47c4-b2fa-34a5e9bfd36b
-# ╠═a8b183c7-5139-4bbe-9abe-2598642934d5
-# ╠═cb7bd33b-60ad-4b14-be4a-70a253b3ac28
-# ╠═9bbd237a-905a-45f9-9c7d-d9e5a6d363ad
-# ╠═c6a540c3-ad50-4e01-a23b-15246f0dcdf6
-# ╠═9c0035dd-b12f-451b-bdce-a721829c3fa5
 # ╟─ebceda55-b5cf-4bcb-98ca-e117045cb6ea
-# ╠═b461a1e6-386b-4a89-9213-2ce963722d11
-# ╠═32326ef0-a6e7-4e23-a0d9-b598eca8bdf7
-# ╠═bbd9e0fb-f848-4a35-a6d9-fa37f9e97a51
-# ╠═fc65fc1c-ce7f-4f10-981f-6dba60bba050
-# ╠═800b4679-bca4-4a6e-bc56-52e55ee9794c
-# ╠═a34878fb-f0ce-4ed2-bcad-7c8512e05ce5
-# ╟─cd72a095-aaab-47e4-a929-c95d7944cfc4
-# ╟─a9d91421-709f-4001-b20f-3a4aa0a60137
-# ╠═7b676124-cfc4-433c-8711-bfc92f6a3f9d
-# ╠═2f567276-2076-4bf4-b506-75e003d72f2c
-# ╠═fc7125ee-a3ac-4fea-98e1-1f84a1893d1d
-# ╠═ac03428a-fd16-4a31-a925-540e4a45a026
-# ╠═211dc5b9-619f-4733-aaef-98486c1da117
-# ╠═e45ae05f-a1db-49ef-82de-bd7840481e66
-# ╠═5c040718-9ddc-40c0-9070-eb278bbb145e
-# ╠═cf50aa22-9aa3-4406-a250-f9748f2d1fb8
-# ╟─216f8c2b-c0f6-47a2-800c-516760d41345
-# ╠═c6f7fc2a-569a-4f85-a6d9-e251a08d1a1b
-# ╠═68f4be33-d6c3-4bd8-b1c9-46731d5f0800
-# ╠═86baf85c-8cd5-40ed-a3c8-f9e1a9bf5c6b
-# ╠═fa0beea6-bc35-487e-93d7-28d97bdd581c
-# ╠═2b5420e4-62db-4cdd-82f1-7cb507ce190b
-# ╠═24da21ce-fdce-4350-8a37-59ca61a4c625
-# ╠═712c9beb-404d-4300-8a9a-87eff971fb33
-# ╠═a32d4e21-4a05-46bc-9b73-678d355eefbc
-# ╠═c01ece91-aa38-4f09-8c65-78d934ea6461
-# ╠═f97c8cf7-94b7-4212-96af-cd33e75abe7c
-# ╟─fcbf402a-72f8-4020-89b9-17ad56168aef
-# ╠═8f7cc0ae-0d59-4125-b011-2b5dfb1f17b6
-# ╠═82f4465f-8173-45e2-9065-86e2286d35e9
-# ╠═83158904-0278-4277-aa11-906d975e1956
-# ╟─e9717416-f74f-4c5d-b9ab-63e5020408c2
-# ╠═23c65bfe-accc-4719-aade-5a2615971d4c
-# ╠═4c4d0e66-4dd8-46cb-8312-9d81fe4c56d2
-# ╠═1ac36867-29c3-41c4-83fc-9ce18b336950
-# ╠═97dcdc9b-e8be-4520-b1af-34b4ae075a3e
-# ╠═78e98399-698d-491e-b63a-f29d8dc9c49d
-# ╠═a35140ee-6a16-42d8-8f02-c5224ffc1c6e
-# ╠═63206287-d776-4cb0-956c-274a59926c19
-# ╠═1c6c4a8d-f676-497f-b5db-c4df51c3a338
-# ╠═f62cbdb4-d4b9-48a4-ac3a-f444dd6bc278
-# ╠═9e1703e8-75d9-4a91-9591-d9e8b1803a76
+# ╠═57ae0544-6eb6-4df9-a5a7-8e1774e918d4
+# ╠═a6eb1196-2a10-4cc9-ba0c-805ad9b01e20
+# ╠═2e55d413-d1ee-4547-8e8e-02979f133710
+# ╠═24ee6fc6-277d-4070-bdd6-01196775746a
 # ╠═fcce293a-d27c-4895-a970-db45d295f49d
-# ╟─0d4881cd-fabe-46bd-ab9d-c253e82297e7
-# ╠═7b0a6aca-b088-4bbd-8340-7a0385e82b92
-# ╠═89263c1f-591d-4608-9b3d-6c25962019ed
-# ╠═61e16b0f-d897-451b-b162-4fa2be1f92ba
-# ╟─252899e2-46eb-4391-aa1b-a167abbc0558
-# ╠═e82176d3-47a2-4ab6-8424-20d863c12328
-# ╠═ffcea293-477e-4d29-861d-65821a46ebff
-# ╠═2ec29a39-b321-4e99-ba4e-d67289ad4abe
-# ╠═7e87e837-ee15-40b4-b58f-b036692779ac
-# ╠═e12fcb83-132b-4b42-9c37-f8299212a18c
-# ╠═cfedc4e2-89c8-44fb-9d6c-77872fed6e65
-# ╠═b94a6ea7-6be8-460a-9724-22a1f339c3df
-# ╠═83fea4d4-3ae3-468e-a367-fe11736a9b4e
-# ╠═fc027aeb-e9bd-4594-b9eb-b2be574f356e
-# ╠═573bfaec-17b1-41f2-abf3-6bf4c68055dc
-# ╟─bd33b753-4df2-41ec-8070-57f273e3e251
-# ╠═845a46c6-1c0d-496a-9ad0-a0cf59e651a3
-# ╠═7332e45e-7c04-401b-bf5f-68ae659f5999
-# ╠═b7ddf5b0-e297-4834-ad24-864267c64dd6
-# ╟─f601147d-ae5b-4209-8571-dbb7b9a8418e
-# ╠═0a58a756-47f5-42af-8ea4-454bb456cc65
-# ╠═551f9a32-d948-4097-813b-a7734aba615e
-# ╟─06cb78a1-d434-4670-a59d-cfbb13cc1fb3
-# ╠═7f9340f2-7e60-4f5c-8c80-64ffd66db9d3
-# ╠═cd23ec95-0462-4f64-8b81-ffe50358d0dc
-# ╟─205b37dd-48df-483c-9001-a4bd14bfc454
-# ╠═8a22a57c-6da9-4414-966d-bd426b05235c
-# ╠═af735026-3e0c-4fd7-9b53-d9cbdb2be23c
-# ╟─e09e7b72-d560-42a6-9360-44ba1f5da88a
-# ╠═d8bb92f6-bf41-4dc8-8d5a-0d73de4c59ad
-# ╠═db57fd30-ec44-49b2-9f60-775f9b03121c
-# ╟─dfa7801c-c1f8-4814-b06a-6828ea432e3b
-# ╠═b1a0c34f-bcbb-4d2e-a3f8-5f6acc958446
-# ╠═37e9dc86-f104-4caf-a27d-d8683e3b25a4
-# ╠═e3033c14-f314-4d30-8ea7-58efa552efcc
-# ╠═ddd1d108-d92a-4170-9279-948d8cafc23f
-# ╟─0ba5ab56-c76b-447e-886e-85a4b2ff0cf0
-# ╠═6ec16e16-59de-45db-9914-5e1632539343
+# ╠═feada43b-99d2-4610-9614-ae5b9e1393d5
+# ╠═df4d85a3-12bb-450b-a65d-075cd8281ef7
+# ╠═8483dea9-441d-4caf-b06a-4903dea14ee5
+# ╠═45ddaeea-8f70-4166-80a0-a1330e410609
+# ╠═e31b6ecc-07c2-4a4c-8936-67f16c87a3b8
+# ╠═d491eec2-bb87-46fd-ad02-a687fd3d62d7
 # ╟─2f793451-f88e-4bbf-bc94-e48c6d43b159
 # ╟─7a4cff1e-7165-42cc-b800-ed7276f0c13c
+# ╟─d1313eaa-af91-4ebe-8814-0b83bc889ea3
+# ╠═65231ba3-9f33-4de1-b957-9e0d4d2fceb3
+# ╠═de6d1a05-090d-49a9-b138-e5b0654be036
+# ╠═d375af80-7407-4d7e-9ea2-b07274e442cc
+# ╠═b602069d-8777-4f7e-9259-b914a9621670
+# ╠═2129f141-12f0-42ce-b0f6-3817c718ac34
+# ╠═4fdb43f0-4847-40bf-9f3c-f37ebbdabde7
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
