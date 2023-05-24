@@ -11,7 +11,7 @@ using PlutoUI; TableOfContents(aside = true, depth = 5)
 begin
 	using CairoMakie
 	using FreqTables, DataFrames, CSV
-	using Statistics, MixedModels
+	using Statistics, GLM, MixedModels
 	using Colors, Dates
 end
 
@@ -260,6 +260,21 @@ function Fit_CP(df)
 	invlogit(slope)
 end
 
+# ╔═╡ 485211e9-28d2-48d9-b139-b2cf7541d677
+function Generate_CPs(df)
+	res = DataFrame()
+	dfn = subset(df, :dltP => ByRow(∉([-1, 1, .6, -.6])));
+	gdfn = groupby(dfn, :dltP, sort = true)
+	for ky in keys(gdfn)
+		df = DataFrame(:DP => ky.dltP, :beta => Fit_CP(gdfn[ky]))
+		append!(res, df)
+	end
+	return res
+end
+
+# ╔═╡ 2142e9c5-245e-41ec-be8a-4cdb27fb8acc
+coeftable(lm(@formula(beta ~ DP), Generate_CPs(df)))
+
 # ╔═╡ f24946c2-8620-4791-88a8-1f07c7a91bb1
 function Fit_DP(df)
 	form = @formula(rate ~ dltP + (1 | participant) + (1 | image))
@@ -269,6 +284,20 @@ function Fit_DP(df)
 	slope = coef(fm1)[2]
 	invlogit(slope)
 end
+
+# ╔═╡ a8baf0ac-c7e5-4948-9c61-af19e56f604a
+function Generate_DPs(df)
+	res = DataFrame()
+	gdfn = groupby(df, :C1GvA1, sort = true)
+	for ky in keys(gdfn)
+		df = DataFrame(:CP => ky.C1GvA1, :beta => Fit_DP(gdfn[ky]))
+		append!(res, df)
+	end
+	return res
+end
+
+# ╔═╡ 60fa96d7-3cca-4b15-a9a9-4a12a66d38da
+coeftable(lm(@formula(beta ~ CP), Generate_DPs(df)))
 
 # ╔═╡ b602069d-8777-4f7e-9259-b914a9621670
 function Plot_CP1(df)
@@ -300,7 +329,6 @@ function Plot_CP2(df)
 	gdfn = groupby(dfn, :dltP, sort = true)
 	cols = distinguishable_colors(length(gdfn), 
 		[RGB(1, 1, 1), RGB(0, 0, 0)], dropseed = true)
-	fmp = @formula(rate ~ C1GvA1 + (1|participant))
 	fig = Figure(resolution = (1000, 1000))
 	ax = Axis(fig[1, 1], 
 		limits = (nothing, (-0.1, 1.1)),
@@ -312,7 +340,11 @@ function Plot_CP2(df)
 		ablines!(ax, 0, Fit_CP(gdfn[ky]), color = cols[idx])
 	) for (idx, ky) in enumerate(keys(gdfn))]
 	Legend(fig[1, 1], lins, 
-		[L"\Delta P=%$(x.dltP);\;\beta=%$(round.(Fit_CP(gdfn[x]), digits = 2))" for x in keys(gdfn)], 
+		[(
+			dt = rpad(ky.dltP, 5, "0");
+			bt = rpad(round(Fit_CP(gdfn[ky]), digits = 2), 4, "0");
+			L"\Delta P=%$(dt);\;\beta=%$(bt)"
+		) for ky in keys(gdfn)], 
 		tellheight = false, tellwidth = false, orientation = :horizontal,
 		halign = :left, valign = :top, nbanks = 10
 	)
@@ -328,7 +360,6 @@ function Plot_DP(df)
 	gdfn = groupby(df, :C1GvA1, sort = true)
 	cols = distinguishable_colors(length(gdfn), 
 		[RGB(1, 1, 1), RGB(0, 0, 0)], dropseed = true)
-	fmp = @formula(rate ~ dltP + (1|participant))
 	fig = Figure(resolution = (1000, 1000))
 	ax = Axis(fig[1, 1], 
 		limits = (nothing, (-0.1, 1.1)),
@@ -336,12 +367,15 @@ function Plot_DP(df)
 		xlabel = L"\Delta P", ylabel = "P(If A, then C)"
 	)
 	lins = [(
-		cf = coef(fit(MixedModel, fmp, gdfn[ky]));
 		scatter!(ax, gdfn[ky].dltP, gdfn[ky].rate, color = (cols[idx], 0.2));
 		ablines!(ax, 0.5, Fit_DP(gdfn[ky]), color = cols[idx])
 	) for (idx, ky) in enumerate(keys(gdfn))]
 	Legend(fig[1, 1], lins, 
-		[L"C|A =%$(x.C1GvA1);\;\beta=%$(round.(Fit_DP(gdfn[x]), digits = 2))" for x in keys(gdfn)], 
+		[(
+			cp = rpad(ky.C1GvA1, 4, "0");
+			bt = rpad(round(Fit_DP(gdfn[ky]), digits = 2), 4, "0");
+			L"C|A =%$(cp);\;\beta=%$(bt)"
+		) for ky in keys(gdfn)], 
 		tellheight = false, tellwidth = false, orientation = :horizontal,
 		halign = :left, valign = :top, nbanks = 11
 	)
@@ -361,6 +395,7 @@ Colors = "5ae59095-9a9b-59fe-a467-6f913c188581"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 FreqTables = "da1fdf0e-e0ff-5433-a45f-9bb5ff651cb1"
+GLM = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
 MixedModels = "ff71e718-51f3-5ec2-a782-8ffcbfa3c316"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
@@ -371,6 +406,7 @@ CairoMakie = "~0.10.5"
 Colors = "~0.12.10"
 DataFrames = "~1.5.0"
 FreqTables = "~0.4.5"
+GLM = "~1.8.3"
 MixedModels = "~4.12.1"
 PlutoUI = "~0.7.51"
 """
@@ -381,7 +417,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.9.0"
 manifest_format = "2.0"
-project_hash = "9367a1fa9881344858b3d502b37539cec2683eeb"
+project_hash = "c7b6d0a3c0b522c1f5369926ba25fec36c7b9c0e"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -2056,7 +2092,9 @@ version = "3.5.0+0"
 # ╠═8483dea9-441d-4caf-b06a-4903dea14ee5
 # ╠═45ddaeea-8f70-4166-80a0-a1330e410609
 # ╠═e31b6ecc-07c2-4a4c-8936-67f16c87a3b8
+# ╠═2142e9c5-245e-41ec-be8a-4cdb27fb8acc
 # ╠═d491eec2-bb87-46fd-ad02-a687fd3d62d7
+# ╠═60fa96d7-3cca-4b15-a9a9-4a12a66d38da
 # ╟─2f793451-f88e-4bbf-bc94-e48c6d43b159
 # ╟─7a4cff1e-7165-42cc-b800-ed7276f0c13c
 # ╟─d1313eaa-af91-4ebe-8814-0b83bc889ea3
@@ -2064,7 +2102,9 @@ version = "3.5.0+0"
 # ╠═de6d1a05-090d-49a9-b138-e5b0654be036
 # ╠═d375af80-7407-4d7e-9ea2-b07274e442cc
 # ╠═6024e253-614b-4765-a095-7a19aa5fa841
+# ╠═485211e9-28d2-48d9-b139-b2cf7541d677
 # ╠═f24946c2-8620-4791-88a8-1f07c7a91bb1
+# ╠═a8baf0ac-c7e5-4948-9c61-af19e56f604a
 # ╠═b602069d-8777-4f7e-9259-b914a9621670
 # ╠═2129f141-12f0-42ce-b0f6-3817c718ac34
 # ╠═4fdb43f0-4847-40bf-9f3c-f37ebbdabde7
