@@ -73,12 +73,12 @@ md"""
 md"""
 -  $\Delta$ P could have an effect, but its effect was counfounded with whether $A\neg C$ exists or not.
 
-- The effects of $\Delta$P was different from that being descried in the Relevance theory.
+- The effects of $\Delta$P was different from that being described in the Relevance theory.
 """
 
 # ╔═╡ d1313eaa-af91-4ebe-8814-0b83bc889ea3
 md"""
-# Appendixes: Define Functions
+# Appendixes: Functions
 """
 
 # ╔═╡ 65231ba3-9f33-4de1-b957-9e0d4d2fceb3
@@ -97,37 +97,25 @@ function CondProb(A1C1, A1C0, A0C1, A0C0)
 	# Biconditional, C|A = 1, C|~A = 0, Delta P = 1, Not Changed
 	BC2 = (A1C1 != 0) && (A1C0 == 0) && (A0C1 == 0) && (A0C0 != 0)
 
-	C1GvA1 = A1Z ? missing : A1C1 / A1
-	C1GvA0 = A0Z ? missing : A0C1 / A0
+	C1GvA1 = A1Z ? missing : round(A1C1 / A1, digits = 2)
+	C1GvA0 = A0Z ? missing : round(A0C1 / A0, digits = 2)
 	
-	dltP   = any([A1Z, A0Z])        ? missing : C1GvA1 - C1GvA0
-	dltPp  = any([A1Z, A0Z, A0C0Z]) ? missing : dltP / (1 - C1GvA0)
+	dltP   = any([A1Z, A0Z])        ? missing : round(C1GvA1 - C1GvA0, digits = 2)
+	dltPp  = any([A1Z, A0Z, A0C0Z]) ? missing : round(dltP/(1-C1GvA0), digits = 2)
 	BC     = any([BC1, BC2]) ? missing : 1
 
 	return C1GvA1, C1GvA0, dltP, dltPp, BC
 end
 
-# ╔═╡ de6d1a05-090d-49a9-b138-e5b0654be036
+# ╔═╡ c013bb50-02b6-486b-8078-f6d80e77a38d
 function Read_Combine_Data()
-	# 1. Original Stimuli
-	Original_Stimuli = let
-		df = CSV.read(
-			"Conditional_Stimuli_Adjusted.csv", DataFrame, stringtype = String)
-		rename!(df, "Image" => "image")
-		transform!(df, [:A1C1, :A1C0, :A0C1, :A0C0] 
-			.=> ByRow(x -> x == 0 ? 0 : 1) .=> [:A1C1C, :A1C0C, :A0C1C, :A0C0C]
-		)
-		replace!(df.Total, 0 => 1)
-		transform!(df, :dltP => ByRow(x -> x == 0.0 ? 0.0 : x) => :dltP)
-	end
-
-	# 2. Get CSV list
-	Csv_List = reduce(vcat, @. filter(endswith(".csv"), 
+	# 1. Get CSV list
+	CSVS = reduce(vcat, @. filter(endswith(".csv"), 
 		readdir(joinpath("Data", ["dataall", "datamac"]), join = true))
 	)
 
-	# 3. Preprocess DataFrame
-	Recorded_Data = mapreduce(vcat, Csv_List) do csv
+	# 2. Combine DataFrames
+	df = mapreduce(vcat, CSVS) do csv
 		dt = CSV.read(csv, DataFrame, stringtype = String)
 		if "textbox_2.text" ∈ names(dt)
 			rename!(dt, :"textbox_2.text"  => "rate")
@@ -138,24 +126,23 @@ function Read_Combine_Data()
 		dropmissing!(dt, :rate)              # 1-10; Total 179
 		subset!(dt, :rate => ByRow(<=(100))) # > 100 Total 29
 		transform!(dt, :rate => ByRow(x -> x / 100) => :rate)
-		transform!(dt,
-			:Image => ByRow(x -> replace(x, "stimuli/" => "")) => :image
-		)
-		select!(dt, ["image", "participant", "rate"])
+		transform!(dt, 
+			:Image => ByRow(x -> replace(x, "stimuli/" => "")) => :image)
+		select!(dt, [:participant, :image, :rate, :A1C1, :A1C0, :A0C1, :A0C0])
 		return dt
 	end
 
-	# 4. Join recorded data and original stimuli
-	df = leftjoin(Recorded_Data, Original_Stimuli, on = :image)
+	# 3. Generate CP, dltP, dltPp, and BC
+	transform!(df, [:A1C1, :A1C0, :A0C1, :A0C0] => ByRow(CondProb) => 
+		[:C1GvA1, :C1GvA0, :dltP, :dltPp, :BC])
 
-	# 5. Categorize column dltP
-	transform!(df, :dltP => ByRow(x -> x > 0 ? "Positive" : "Negative") => :dltPC)
+	# 4. Categorize dltP
+	DPC(DP) = ismissing(DP) ? missing : DP > 0 ? "Positive" : "Negative"
+	transform!(df, :dltP => ByRow(DPC) => :dltPC)
 
-	# 6. Determine missing values
-		transform!(df,
-		[:A1C1, :A1C0, :A0C1, :A0C0] => ByRow(CondProb) => 
-		[:C1GvA1M, :C1GvA0M, :dltPM, :dltPpM, :BC]
-	)
+	# 5. Categorize four partitions
+	transform!(df, [:A1C1, :A1C0, :A0C1, :A0C0] 
+		.=> ByRow(x -> x == 0 ? 0 : 1) .=> [:A1C1C, :A1C0C, :A0C1C, :A0C0C])
 
 	return df
 end
@@ -164,7 +151,7 @@ end
 df0 = Read_Combine_Data();
 
 # ╔═╡ 2e55d413-d1ee-4547-8e8e-02979f133710
-df = dropmissing(df0, :dltPM); # Remove data where delta-P was not defined
+df = dropmissing(df0, :dltP); # Remove data where delta-P was not defined
 
 # ╔═╡ feada43b-99d2-4610-9614-ae5b9e1393d5
 fm01 = let
@@ -261,12 +248,15 @@ function Fit_CP(df)
 end
 
 # ╔═╡ 485211e9-28d2-48d9-b139-b2cf7541d677
-function Generate_CPs(df)
+function Generate_CPs(df0)
+	df = DataFrame()
+	for gp in groupby(df0, :dltP)
+		length(unique(gp.C1GvA1)) > 1 && append!(df, gp)
+	end
+	gdf = groupby(df, :dltP, sort = true)
 	res = DataFrame()
-	dfn = subset(df, :dltP => ByRow(∉([-1, 1, .6, -.6])));
-	gdfn = groupby(dfn, :dltP, sort = true)
-	for ky in keys(gdfn)
-		df = DataFrame(:DP => ky.dltP, :beta => Fit_CP(gdfn[ky]))
+	for ky in keys(gdf)
+		df = DataFrame(:DP => ky.dltP, :beta => Fit_CP(gdf[ky]))
 		append!(res, df)
 	end
 	return res
@@ -324,10 +314,13 @@ end
 Plot_CP1(df)
 
 # ╔═╡ 2129f141-12f0-42ce-b0f6-3817c718ac34
-function Plot_CP2(df)
-	dfn = subset(df, :dltP => ByRow(∉([-1, 1, .6, -.6])));
-	gdfn = groupby(dfn, :dltP, sort = true)
-	cols = distinguishable_colors(length(gdfn), 
+function Plot_CP2(df0)
+	df = DataFrame()
+	for gp in groupby(df0, :dltP)
+		length(unique(gp.C1GvA1)) > 1 && append!(df, gp)
+	end	
+	gdf = groupby(df, :dltP, sort = true)
+	cols = distinguishable_colors(length(gdf), 
 		[RGB(1, 1, 1), RGB(0, 0, 0)], dropseed = true)
 	fig = Figure(resolution = (1000, 1000))
 	ax = Axis(fig[1, 1], 
@@ -336,15 +329,16 @@ function Plot_CP2(df)
 		xlabel = L"P(C|A)", ylabel = L"P(\text{If A, Then C})"
 	)
 	lins = [(
-		scatter!(ax, gdfn[ky].C1GvA1, gdfn[ky].rate, color = (cols[idx], 0.2));
-		ablines!(ax, 0, Fit_CP(gdfn[ky]), color = cols[idx])
-	) for (idx, ky) in enumerate(keys(gdfn))]
+		scatter!(ax, gdf[ky].C1GvA1, gdf[ky].rate, color = (cols[idx], 0.2));
+		ablines!(ax, 0, Fit_CP(gdf[ky]), color = cols[idx])
+	) for (idx, ky) in enumerate(keys(gdf))]
 	Legend(fig[1, 1], lins, 
 		[(
-			dt = rpad(ky.dltP, 5, "0");
-			bt = rpad(round(Fit_CP(gdfn[ky]), digits = 2), 4, "0");
+			dt = ky.dltP < 0 ? ky.dltP : "+" * string(ky.dltP); 
+			dt = rpad(dt, 5, "0");
+			bt = rpad(round(Fit_CP(gdf[ky]), digits = 2), 4, "0");
 			L"\Delta P=%$(dt);\;\beta=%$(bt)"
-		) for ky in keys(gdfn)], 
+		) for ky in keys(gdf)], 
 		tellheight = false, tellwidth = false, orientation = :horizontal,
 		halign = :left, valign = :top, nbanks = 10
 	)
@@ -372,7 +366,7 @@ function Plot_DP(df)
 	) for (idx, ky) in enumerate(keys(gdfn))]
 	Legend(fig[1, 1], lins, 
 		[(
-			cp = rpad(ky.C1GvA1, 4, "0");
+			cp = rpad(round(ky.C1GvA1, digits = 2), 4, "0");
 			bt = rpad(round(Fit_DP(gdfn[ky]), digits = 2), 4, "0");
 			L"C|A =%$(cp);\;\beta=%$(bt)"
 		) for ky in keys(gdfn)], 
@@ -2099,7 +2093,7 @@ version = "3.5.0+0"
 # ╟─7a4cff1e-7165-42cc-b800-ed7276f0c13c
 # ╟─d1313eaa-af91-4ebe-8814-0b83bc889ea3
 # ╠═65231ba3-9f33-4de1-b957-9e0d4d2fceb3
-# ╠═de6d1a05-090d-49a9-b138-e5b0654be036
+# ╠═c013bb50-02b6-486b-8078-f6d80e77a38d
 # ╠═d375af80-7407-4d7e-9ea2-b07274e442cc
 # ╠═6024e253-614b-4765-a095-7a19aa5fa841
 # ╠═485211e9-28d2-48d9-b139-b2cf7541d677
