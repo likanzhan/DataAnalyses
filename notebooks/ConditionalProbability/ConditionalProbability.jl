@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.25
+# v0.19.26
 
 using Markdown
 using InteractiveUtils
@@ -7,18 +7,18 @@ using InteractiveUtils
 # ╔═╡ 360ba393-f01e-47c3-ae7b-19d82c6fa84c
 using PlutoUI; TableOfContents(aside = true, depth = 5)
 
-# ╔═╡ 4eeecbe3-2126-4f90-97f7-7334630a213e
-md"""
-# Load packages
-"""
-
 # ╔═╡ c6a37acc-828c-42cf-81c1-f06793a1e331
 begin
 	using CairoMakie
 	using FreqTables, DataFrames, CSV
-	using MixedModels
+	using Statistics, MixedModels
 	using Colors, Dates
 end
+
+# ╔═╡ 4eeecbe3-2126-4f90-97f7-7334630a213e
+md"""
+# Load packages
+"""
 
 # ╔═╡ d63d50b1-4346-458c-96f8-9282b7ffa858
 md"""
@@ -61,46 +61,8 @@ md"""
 # Analyses
 """
 
-# ╔═╡ 57ae0544-6eb6-4df9-a5a7-8e1774e918d4
-df0 = Read_Combine_Data();
-
-# ╔═╡ a6eb1196-2a10-4cc9-ba0c-805ad9b01e20
-Plot_Partitions(df0)
-
-# ╔═╡ 2e55d413-d1ee-4547-8e8e-02979f133710
-df = dropmissing(df0, :dltPM); # Remove data where delta-P was not defined
-
-# ╔═╡ 24ee6fc6-277d-4070-bdd6-01196775746a
-Plot_Partitions(df)
-
-# ╔═╡ fcce293a-d27c-4895-a970-db45d295f49d
-Plot_CP1(df)
-
-# ╔═╡ feada43b-99d2-4610-9614-ae5b9e1393d5
-fm01 = let
-	fm = @formula(rate ~ C1GvA1 * dltP + 
-	(1 + C1GvA1 + dltP | participant) + (1 + C1GvA1 + dltP | image))
-	fit(MixedModel, fm, df; progress = false)
-end
-
-# ╔═╡ df4d85a3-12bb-450b-a65d-075cd8281ef7
-fm02 = let
-	fm = @formula(rate ~ C1GvA1 * dltP * A1C0 + 
-	(1 + C1GvA1 + dltP + A1C0 | participant) + (1 + C1GvA1 + dltP + A1C0 | image))
-	fit(MixedModel, fm, df; progress = false)
-end
-
-# ╔═╡ 8483dea9-441d-4caf-b06a-4903dea14ee5
-# MixedModels.likelihoodratiotest(fm01, fm02)
-
-# ╔═╡ 45ddaeea-8f70-4166-80a0-a1330e410609
-# freqtable(df, :C1GvA1, :dltP)
-
-# ╔═╡ e31b6ecc-07c2-4a4c-8936-67f16c87a3b8
-Plot_CP2(df)
-
-# ╔═╡ d491eec2-bb87-46fd-ad02-a687fd3d62d7
-Plot_DP(df)
+# ╔═╡ 4aa04a8f-0283-4b41-ab03-6b255c92d0bb
+# dropmissing!(df, :BC);
 
 # ╔═╡ 2f793451-f88e-4bbf-bc94-e48c6d43b159
 md"""
@@ -198,6 +160,36 @@ function Read_Combine_Data()
 	return df
 end
 
+# ╔═╡ 57ae0544-6eb6-4df9-a5a7-8e1774e918d4
+df0 = Read_Combine_Data();
+
+# ╔═╡ 2e55d413-d1ee-4547-8e8e-02979f133710
+df = dropmissing(df0, :dltPM); # Remove data where delta-P was not defined
+
+# ╔═╡ feada43b-99d2-4610-9614-ae5b9e1393d5
+fm01 = let
+	fm = @formula(rate ~ C1GvA1 * dltP + (1 | participant) + (1 | image))
+	fit(MixedModel, fm, df, Binomial(); wts=ones(nrow(df)), progress=false)
+end
+
+# ╔═╡ b042f36e-3fff-4aa3-ac50-cac3030ad958
+fm02 = let
+	fm = @formula(rate ~ C1GvA1 * dltP + A1C1C + (1 | participant) + (1 | image))
+	fit(MixedModel, fm, df, Binomial(); wts=ones(nrow(df)), progress=false)
+end
+
+# ╔═╡ e3739c82-9c5e-4416-9762-ea05aaac2195
+fm03 = let
+	fm = @formula(rate ~ C1GvA1 + A1C1C + (1 | participant) + (1 | image))
+	fit(MixedModel, fm, df, Binomial(); wts=ones(nrow(df)), progress=false)
+end
+
+# ╔═╡ 8483dea9-441d-4caf-b06a-4903dea14ee5
+MixedModels.likelihoodratiotest(fm02, fm03)
+
+# ╔═╡ 45ddaeea-8f70-4166-80a0-a1330e410609
+freqtable(df, :dltP, :C1GvA1)
+
 # ╔═╡ d375af80-7407-4d7e-9ea2-b07274e442cc
 function Plot_Partitions(df)
 	fullDT = Read_Combine_Data()
@@ -252,13 +244,36 @@ function Plot_Partitions(df)
 	fig
 end
 
+# ╔═╡ a6eb1196-2a10-4cc9-ba0c-805ad9b01e20
+Plot_Partitions(df0)
+
+# ╔═╡ 24ee6fc6-277d-4070-bdd6-01196775746a
+Plot_Partitions(df)
+
+# ╔═╡ 6024e253-614b-4765-a095-7a19aa5fa841
+function Fit_CP(df)
+	form = @formula(rate ~ C1GvA1 + (1 | participant) + (1 | image))
+	fm1 = fit(MixedModel, form, df, Binomial(); 
+		wts = ones(nrow(df)), progress = false)
+	invlogit(x) = exp(x)/(1+exp(x))
+	slope = coef(fm1)[2]
+	invlogit(slope)
+end
+
+# ╔═╡ f24946c2-8620-4791-88a8-1f07c7a91bb1
+function Fit_DP(df)
+	form = @formula(rate ~ dltP + (1 | participant) + (1 | image))
+	fm1 = fit(MixedModel, form, df, Binomial(); 
+		wts = ones(nrow(df)), progress = false)
+	invlogit(x) = exp(x)/(1+exp(x))
+	slope = coef(fm1)[2]
+	invlogit(slope)
+end
+
 # ╔═╡ b602069d-8777-4f7e-9259-b914a9621670
 function Plot_CP1(df)
 	gp = groupby(df, :dltPC, sort = true)
 	kys = keys(gp)
-	form = @formula(rate ~ C1GvA1 + (1 + C1GvA1 | participant) + (1 + C1GvA1|image))
-	fm1 = fit(MixedModel, form, gp[kys[1]]; progress = false)
-	fm2 = fit(MixedModel, form, gp[kys[2]]; progress = false)
 	fig = Figure(resolution = (1000, 1000))
 	ax = Axis(fig[1, 1], 
 		limits = ((-0.1, 1.1), (-0.1, 1.1)),
@@ -267,14 +282,17 @@ function Plot_CP1(df)
 	)
 	scatter!(ax, gp[kys[1]].C1GvA1, gp[kys[1]].rate, color = (:red, 0.4))
 	scatter!(ax, gp[kys[2]].C1GvA1, gp[kys[2]].rate, color = (:blue, 0.3))
-	ablines!(ax, coef(fm1)..., color = :red,  label = kys[1].dltPC)	
-	ablines!(ax, coef(fm2)..., color = :blue, label = kys[2].dltPC)
+	ablines!(ax, 0, Fit_CP(gp[kys[1]]), color = :red,  label = kys[1].dltPC)	
+	ablines!(ax, 0, Fit_CP(gp[kys[2]]), color = :blue, label = kys[2].dltPC)
 	axislegend(ax, position = :lt)
 
 	save("CondProb_CP1.png", fig, px_per_unit = 10)
 
 	fig
 end
+
+# ╔═╡ fcce293a-d27c-4895-a970-db45d295f49d
+Plot_CP1(df)
 
 # ╔═╡ 2129f141-12f0-42ce-b0f6-3817c718ac34
 function Plot_CP2(df)
@@ -290,18 +308,20 @@ function Plot_CP2(df)
 		xlabel = L"P(C|A)", ylabel = L"P(\text{If A, Then C})"
 	)
 	lins = [(
-		cf = coef(fit(MixedModel, fmp, gdfn[ky]));
 		scatter!(ax, gdfn[ky].C1GvA1, gdfn[ky].rate, color = (cols[idx], 0.2));
-		ablines!(ax, 0, cf[2], color = cols[idx])
+		ablines!(ax, 0, Fit_CP(gdfn[ky]), color = cols[idx])
 	) for (idx, ky) in enumerate(keys(gdfn))]
 	Legend(fig[1, 1], lins, 
-		[L"\Delta P=%$(x.dltP);\;\beta=%$(round.(coef(fit(MixedModel, fmp, gdfn[x]))[2], digits = 2))" for x in keys(gdfn)], 
+		[L"\Delta P=%$(x.dltP);\;\beta=%$(round.(Fit_CP(gdfn[x]), digits = 2))" for x in keys(gdfn)], 
 		tellheight = false, tellwidth = false, orientation = :horizontal,
 		halign = :left, valign = :top, nbanks = 10
 	)
 	save("CondProb_CP2.png", fig, px_per_unit = 10)
 	fig
 end
+
+# ╔═╡ e31b6ecc-07c2-4a4c-8936-67f16c87a3b8
+Plot_CP2(df)
 
 # ╔═╡ 4fdb43f0-4847-40bf-9f3c-f37ebbdabde7
 function Plot_DP(df)
@@ -318,16 +338,19 @@ function Plot_DP(df)
 	lins = [(
 		cf = coef(fit(MixedModel, fmp, gdfn[ky]));
 		scatter!(ax, gdfn[ky].dltP, gdfn[ky].rate, color = (cols[idx], 0.2));
-		ablines!(ax, 0.5, cf[2], color = cols[idx])
+		ablines!(ax, 0.5, Fit_DP(gdfn[ky]), color = cols[idx])
 	) for (idx, ky) in enumerate(keys(gdfn))]
 	Legend(fig[1, 1], lins, 
-		[L"C|A =%$(x.C1GvA1);\;\beta=%$(round.(coef(fit(MixedModel, fmp, gdfn[x]))[2], digits = 2))" for x in keys(gdfn)], 
+		[L"C|A =%$(x.C1GvA1);\;\beta=%$(round.(Fit_DP(gdfn[x]), digits = 2))" for x in keys(gdfn)], 
 		tellheight = false, tellwidth = false, orientation = :horizontal,
 		halign = :left, valign = :top, nbanks = 11
 	)
 	save("CondProb_DTP.png", fig, px_per_unit = 10)
 	fig
 end
+
+# ╔═╡ d491eec2-bb87-46fd-ad02-a687fd3d62d7
+Plot_DP(df)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -340,6 +363,7 @@ Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 FreqTables = "da1fdf0e-e0ff-5433-a45f-9bb5ff651cb1"
 MixedModels = "ff71e718-51f3-5ec2-a782-8ffcbfa3c316"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [compat]
 CSV = "~0.10.10"
@@ -357,7 +381,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.9.0"
 manifest_format = "2.0"
-project_hash = "5784115899277a61b631fb55ab69916c2c6ce9c0"
+project_hash = "9367a1fa9881344858b3d502b37539cec2683eeb"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -2023,10 +2047,12 @@ version = "3.5.0+0"
 # ╠═57ae0544-6eb6-4df9-a5a7-8e1774e918d4
 # ╠═a6eb1196-2a10-4cc9-ba0c-805ad9b01e20
 # ╠═2e55d413-d1ee-4547-8e8e-02979f133710
+# ╠═4aa04a8f-0283-4b41-ab03-6b255c92d0bb
 # ╠═24ee6fc6-277d-4070-bdd6-01196775746a
 # ╠═fcce293a-d27c-4895-a970-db45d295f49d
 # ╠═feada43b-99d2-4610-9614-ae5b9e1393d5
-# ╠═df4d85a3-12bb-450b-a65d-075cd8281ef7
+# ╠═b042f36e-3fff-4aa3-ac50-cac3030ad958
+# ╠═e3739c82-9c5e-4416-9762-ea05aaac2195
 # ╠═8483dea9-441d-4caf-b06a-4903dea14ee5
 # ╠═45ddaeea-8f70-4166-80a0-a1330e410609
 # ╠═e31b6ecc-07c2-4a4c-8936-67f16c87a3b8
@@ -2037,6 +2063,8 @@ version = "3.5.0+0"
 # ╠═65231ba3-9f33-4de1-b957-9e0d4d2fceb3
 # ╠═de6d1a05-090d-49a9-b138-e5b0654be036
 # ╠═d375af80-7407-4d7e-9ea2-b07274e442cc
+# ╠═6024e253-614b-4765-a095-7a19aa5fa841
+# ╠═f24946c2-8620-4791-88a8-1f07c7a91bb1
 # ╠═b602069d-8777-4f7e-9259-b914a9621670
 # ╠═2129f141-12f0-42ce-b0f6-3817c718ac34
 # ╠═4fdb43f0-4847-40bf-9f3c-f37ebbdabde7
