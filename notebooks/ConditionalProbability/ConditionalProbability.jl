@@ -100,7 +100,7 @@ function CondProb(A1C1, A1C0, A0C1, A0C0)
 	C1GvA1 = A1Z ? missing : round(A1C1 / A1, digits = 2)
 	C1GvA0 = A0Z ? missing : round(A0C1 / A0, digits = 2)
 	
-	dltP   = any([A1Z, A0Z])        ? missing : round(C1GvA1 - C1GvA0, digits = 2)
+	dltP   = any([A1Z, A0Z])        ? missing : round(C1GvA1-C1GvA0, digits = 2)
 	dltPp  = any([A1Z, A0Z, A0C0Z]) ? missing : round(dltP/(1-C1GvA0), digits = 2)
 	BC     = any([BC1, BC2]) ? missing : 1
 
@@ -174,6 +174,12 @@ end
 # ╔═╡ 8483dea9-441d-4caf-b06a-4903dea14ee5
 MixedModels.likelihoodratiotest(fm02, fm03)
 
+# ╔═╡ fdb959f5-1d92-43d2-aec0-fb3cde8e2b65
+let
+	fm = @formula(rate ~ C1GvA1 * C1GvA0 + (1 | participant) + (1 | image))
+	fit(MixedModel, fm, df, Binomial(); wts=ones(nrow(df)), progress=false)
+end
+
 # ╔═╡ 45ddaeea-8f70-4166-80a0-a1330e410609
 freqtable(df, :dltP, :C1GvA1)
 
@@ -223,7 +229,7 @@ function Plot_Partitions(df)
 	Box(fig[0, :], color = :transparent, strokewidth = 4, strokecolor = :green)
 	Box(fig[1, :], color = :transparent, strokewidth = 4, strokecolor = :purple)
 
-	Label(fig[:, -1],    text = L"Frequency", rotation = pi/2, fontsize = 40)
+	Label(fig[:, -1],    text = L"\text{Frequency}", rotation = pi/2, fontsize = 40)
 	Label(fig[end+1, :], text = L"P(\text{If A, then C})", fontsize = 40)
 
 	save("CondProb_PRT_$(Dates.now()).png", fig, px_per_unit = 10)
@@ -242,7 +248,7 @@ function Fit_CP(df)
 	form = @formula(rate ~ C1GvA1 + (1 | participant) + (1 | image))
 	fm1 = fit(MixedModel, form, df, Binomial(); 
 		wts = ones(nrow(df)), progress = false)
-	invlogit(x) = exp(x)/(1+exp(x))
+	invlogit(x) = exp(x) / (1 + exp(x))
 	slope = coef(fm1)[2]
 	invlogit(slope)
 end
@@ -270,7 +276,7 @@ function Fit_DP(df)
 	form = @formula(rate ~ dltP + (1 | participant) + (1 | image))
 	fm1 = fit(MixedModel, form, df, Binomial(); 
 		wts = ones(nrow(df)), progress = false)
-	invlogit(x) = exp(x)/(1+exp(x))
+	invlogit(x) = exp(x) / (1 + exp(x))
 	slope = coef(fm1)[2]
 	invlogit(slope)
 end
@@ -2084,6 +2090,7 @@ version = "3.5.0+0"
 # ╠═b042f36e-3fff-4aa3-ac50-cac3030ad958
 # ╠═e3739c82-9c5e-4416-9762-ea05aaac2195
 # ╠═8483dea9-441d-4caf-b06a-4903dea14ee5
+# ╠═fdb959f5-1d92-43d2-aec0-fb3cde8e2b65
 # ╠═45ddaeea-8f70-4166-80a0-a1330e410609
 # ╠═e31b6ecc-07c2-4a4c-8936-67f16c87a3b8
 # ╠═2142e9c5-245e-41ec-be8a-4cdb27fb8acc
